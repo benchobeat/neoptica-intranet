@@ -35,3 +35,65 @@ model Sucursal {
   // transferenciaStockOrigens      TransferenciaStock[] @relation("SucursalOrigen")
   // transferenciaStockDestinos     TransferenciaStock[] @relation("SucursalDestino")
 }
+
+/// Usuarios de la plataforma: clientes y empleados.
+/// Incluye autenticación, control de ciclo de vida y datos extendidos.
+model Usuario {
+  id             String    @id @default(uuid())
+  nombre_completo String
+  email          String    @unique
+  telefono       String?
+  dni            String?   @unique
+  foto_perfil    String?
+  direccion      String?
+  latitud        Float?
+  longitud       Float?
+  google_uid     String?
+  facebook_uid   String?
+  activo         Boolean   @default(true)
+  creado_en      DateTime  @default(now())
+  actualizado_en DateTime?
+  anulado_en     DateTime?
+  anulado_por    String?   // FK a Usuario (puedes modelar relación opcional a Usuario si quieres)
+  erp_id         Int?
+  erp_tipo       String?
+
+  // Relaciones
+  roles              UsuarioRol[]
+  movimientosInv     MovimientoInventario[]
+  transferenciasSolicitadas  TransferenciaStock[] @relation("SolicitadoPor")
+  transferenciasRevisadas    TransferenciaStock[] @relation("RevisadoPor")
+  citasCliente       Cita[]  @relation("CitasCliente")
+  citasOptometrista  Cita[]  @relation("CitasOptometrista")
+  historialesCliente HistorialClinico[] @relation("HistorialCliente")
+  historialesOptometrista HistorialClinico[] @relation("HistorialOptometrista")
+  archivosSubidos    ArchivoAdjunto[] @relation("ArchivosSubidosPor")
+  descansos          DescansoEmpleado[]
+  pedidos            Pedido[]        @relation("PedidosCliente")
+  pedidosAnulados    Pedido[]        @relation("PedidosAnuladosPor")
+  movimientosContables MovimientoContable[]
+  pagos              Pago[]
+  gastos             Gasto[]
+  logsAcceso         LogAcceso[]
+  logsAuditoria      LogAuditoria[]
+  logsEnvioCorreo    LogEnvioCorreo[] @relation("EnvioPor")
+}
+
+/// Roles del sistema: admin, optometrista, vendedor, etc.
+model Rol {
+  id        String    @id @default(uuid())
+  nombre    String    @unique
+  descripcion String?
+  usuarios  UsuarioRol[]
+}
+
+/// Relación N:M entre usuario y rol (soporta multirol y permite agregar metadatos si se requiere).
+model UsuarioRol {
+  id        String   @id @default(uuid())
+  usuario   Usuario  @relation(fields: [usuario_id], references: [id])
+  usuario_id String
+  rol       Rol      @relation(fields: [rol_id], references: [id])
+  rol_id    String
+  creado_en DateTime @default(now())
+  @@unique([usuario_id, rol_id])
+}
