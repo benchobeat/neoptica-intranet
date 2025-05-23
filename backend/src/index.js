@@ -2,6 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 
+//Codigo para test de Middleware JWT
+const { authenticateJWT } = require('./middlewares/auth'); // Ajusta path si es necesario
+const { success } = require('./utils/response'); // Ajusta path si es necesario
+
+
 app.get('/', (req, res) => {
   res.json({ status: 'Backend OK!' });
 });
@@ -26,4 +31,11 @@ app.get('/test-email', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+});
+
+// ... código previo de configuración (app, middlewares, etc.)
+
+app.get('/api/protegido', authenticateJWT, (req, res) => {
+  // El usuario autenticado estará en req.user (como lo pone el middleware)
+  return res.json(success(req.user));
 });

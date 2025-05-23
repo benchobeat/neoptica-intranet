@@ -174,3 +174,11 @@ if (!tienePermiso) {
 }
 ```
 
+### Middleware de autenticación JWT
+Protege endpoints sensibles exigiendo el header:
+Authorization: Bearer <token>
+
+Si el token es válido, el usuario queda accesible en req.user.
+
+Si falta, es inválido o está expirado, responde 401 Unauthorized con el helper de error uniforme.
+
