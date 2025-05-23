@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Sucursal representa cada local físico o virtual de la óptica.
+/// Incluye datos de contacto, geolocalización y ciclo de vida.
+model Sucursal {
+  id            String    @id @default(uuid())      // Clave primaria UUID
+  nombre        String                                // Nombre de la sucursal (obligatorio)
+  direccion     String?                               // Dirección física (opcional)
+  latitud       Float?                                // Latitud (opcional)
+  longitud      Float?                                // Longitud (opcional)
+  telefono      String?                               // Teléfono de contacto (opcional)
+  email         String?                               // Correo de la sucursal (opcional)
+  estado        Boolean   @default(true)              // Estado (activo/inactivo)
+  creado_en     DateTime  @default(now())             // Fecha de creación
+  actualizado_en DateTime?                            // Fecha de última actualización
+  anulado_en    DateTime?                             // Fecha de anulación
+  anulado_por   String?                               // (FK a Usuario) Usuario que anuló
+
+  // Relaciones (se agregan después, cuando estén definidos los otros modelos)
+  // inventarios      Inventario[]
+  // usuarios         Usuario[] @relation("SucursalUsuarios")
+  // citas            Cita[]
+  // pedidos          Pedido[]
+  // descansos        DescansoEmpleado[]
+  // movimientosContables MovimientoContable[]
+  // pagos            Pago[]
+  // gastos           Gasto[]
+  // transferenciaStockOrigens      TransferenciaStock[] @relation("SucursalOrigen")
+  // transferenciaStockDestinos     TransferenciaStock[] @relation("SucursalDestino")
+}
