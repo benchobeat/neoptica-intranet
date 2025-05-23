@@ -35365,6 +35365,7 @@ export namespace Prisma {
     id: string | null
     nombre_completo: string | null
     email: string | null
+    password: string | null
     telefono: string | null
     dni: string | null
     foto_perfil: string | null
@@ -35386,6 +35387,7 @@ export namespace Prisma {
     id: string | null
     nombre_completo: string | null
     email: string | null
+    password: string | null
     telefono: string | null
     dni: string | null
     foto_perfil: string | null
@@ -35407,6 +35409,7 @@ export namespace Prisma {
     id: number
     nombre_completo: number
     email: number
+    password: number
     telefono: number
     dni: number
     foto_perfil: number
@@ -35442,6 +35445,7 @@ export namespace Prisma {
     id?: true
     nombre_completo?: true
     email?: true
+    password?: true
     telefono?: true
     dni?: true
     foto_perfil?: true
@@ -35463,6 +35467,7 @@ export namespace Prisma {
     id?: true
     nombre_completo?: true
     email?: true
+    password?: true
     telefono?: true
     dni?: true
     foto_perfil?: true
@@ -35484,6 +35489,7 @@ export namespace Prisma {
     id?: true
     nombre_completo?: true
     email?: true
+    password?: true
     telefono?: true
     dni?: true
     foto_perfil?: true
@@ -35592,6 +35598,7 @@ export namespace Prisma {
     id: string
     nombre_completo: string
     email: string
+    password: string | null
     telefono: string | null
     dni: string | null
     foto_perfil: string | null
@@ -35632,6 +35639,7 @@ export namespace Prisma {
     id?: boolean
     nombre_completo?: boolean
     email?: boolean
+    password?: boolean
     telefono?: boolean
     dni?: boolean
     foto_perfil?: boolean
@@ -35675,6 +35683,7 @@ export namespace Prisma {
     id?: boolean
     nombre_completo?: boolean
     email?: boolean
+    password?: boolean
     telefono?: boolean
     dni?: boolean
     foto_perfil?: boolean
@@ -35696,6 +35705,7 @@ export namespace Prisma {
     id?: boolean
     nombre_completo?: boolean
     email?: boolean
+    password?: boolean
     telefono?: boolean
     dni?: boolean
     foto_perfil?: boolean
@@ -35717,6 +35727,7 @@ export namespace Prisma {
     id?: boolean
     nombre_completo?: boolean
     email?: boolean
+    password?: boolean
     telefono?: boolean
     dni?: boolean
     foto_perfil?: boolean
@@ -35734,7 +35745,7 @@ export namespace Prisma {
     erp_tipo?: boolean
   }
 
-  export type usuarioOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "nombre_completo" | "email" | "telefono" | "dni" | "foto_perfil" | "direccion" | "latitud" | "longitud" | "google_uid" | "facebook_uid" | "activo" | "creado_en" | "actualizado_en" | "anulado_en" | "anulado_por" | "erp_id" | "erp_tipo", ExtArgs["result"]["usuario"]>
+  export type usuarioOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "nombre_completo" | "email" | "password" | "telefono" | "dni" | "foto_perfil" | "direccion" | "latitud" | "longitud" | "google_uid" | "facebook_uid" | "activo" | "creado_en" | "actualizado_en" | "anulado_en" | "anulado_por" | "erp_id" | "erp_tipo", ExtArgs["result"]["usuario"]>
   export type usuarioInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     archivo_adjunto?: boolean | usuario$archivo_adjuntoArgs<ExtArgs>
     cita_cita_cliente_idTousuario?: boolean | usuario$cita_cita_cliente_idTousuarioArgs<ExtArgs>
@@ -35791,6 +35802,12 @@ export namespace Prisma {
       id: string
       nombre_completo: string
       email: string
+      password: string | null
+      /**
+       * password: Contraseña hasheada para login tradicional con email/contraseña.
+       * Se recomienda bcrypt (nunca almacenar en texto plano).
+       * Opcional para compatibilidad con usuarios autenticados vía Google/Facebook.
+       */
       telefono: string | null
       dni: string | null
       foto_perfil: string | null
@@ -36253,6 +36270,7 @@ export namespace Prisma {
     readonly id: FieldRef<"usuario", 'String'>
     readonly nombre_completo: FieldRef<"usuario", 'String'>
     readonly email: FieldRef<"usuario", 'String'>
+    readonly password: FieldRef<"usuario", 'String'>
     readonly telefono: FieldRef<"usuario", 'String'>
     readonly dni: FieldRef<"usuario", 'String'>
     readonly foto_perfil: FieldRef<"usuario", 'String'>
@@ -38695,6 +38713,7 @@ export namespace Prisma {
     id: 'id',
     nombre_completo: 'nombre_completo',
     email: 'email',
+    password: 'password',
     telefono: 'telefono',
     dni: 'dni',
     foto_perfil: 'foto_perfil',
@@ -41092,6 +41111,7 @@ export namespace Prisma {
     id?: UuidFilter<"usuario"> | string
     nombre_completo?: StringFilter<"usuario"> | string
     email?: StringFilter<"usuario"> | string
+    password?: StringNullableFilter<"usuario"> | string | null
     telefono?: StringNullableFilter<"usuario"> | string | null
     dni?: StringNullableFilter<"usuario"> | string | null
     foto_perfil?: StringNullableFilter<"usuario"> | string | null
@@ -41134,6 +41154,7 @@ export namespace Prisma {
     id?: SortOrder
     nombre_completo?: SortOrder
     email?: SortOrder
+    password?: SortOrderInput | SortOrder
     telefono?: SortOrderInput | SortOrder
     dni?: SortOrderInput | SortOrder
     foto_perfil?: SortOrderInput | SortOrder
@@ -41180,6 +41201,7 @@ export namespace Prisma {
     OR?: usuarioWhereInput[]
     NOT?: usuarioWhereInput | usuarioWhereInput[]
     nombre_completo?: StringFilter<"usuario"> | string
+    password?: StringNullableFilter<"usuario"> | string | null
     telefono?: StringNullableFilter<"usuario"> | string | null
     foto_perfil?: StringNullableFilter<"usuario"> | string | null
     direccion?: StringNullableFilter<"usuario"> | string | null
@@ -41221,6 +41243,7 @@ export namespace Prisma {
     id?: SortOrder
     nombre_completo?: SortOrder
     email?: SortOrder
+    password?: SortOrderInput | SortOrder
     telefono?: SortOrderInput | SortOrder
     dni?: SortOrderInput | SortOrder
     foto_perfil?: SortOrderInput | SortOrder
@@ -41250,6 +41273,7 @@ export namespace Prisma {
     id?: UuidWithAggregatesFilter<"usuario"> | string
     nombre_completo?: StringWithAggregatesFilter<"usuario"> | string
     email?: StringWithAggregatesFilter<"usuario"> | string
+    password?: StringNullableWithAggregatesFilter<"usuario"> | string | null
     telefono?: StringNullableWithAggregatesFilter<"usuario"> | string | null
     dni?: StringNullableWithAggregatesFilter<"usuario"> | string | null
     foto_perfil?: StringNullableWithAggregatesFilter<"usuario"> | string | null
@@ -43694,6 +43718,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -43736,6 +43761,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -43778,6 +43804,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43820,6 +43847,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43862,6 +43890,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -43883,6 +43912,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43904,6 +43934,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -45763,6 +45794,7 @@ export namespace Prisma {
     id?: SortOrder
     nombre_completo?: SortOrder
     email?: SortOrder
+    password?: SortOrder
     telefono?: SortOrder
     dni?: SortOrder
     foto_perfil?: SortOrder
@@ -45790,6 +45822,7 @@ export namespace Prisma {
     id?: SortOrder
     nombre_completo?: SortOrder
     email?: SortOrder
+    password?: SortOrder
     telefono?: SortOrder
     dni?: SortOrder
     foto_perfil?: SortOrder
@@ -45811,6 +45844,7 @@ export namespace Prisma {
     id?: SortOrder
     nombre_completo?: SortOrder
     email?: SortOrder
+    password?: SortOrder
     telefono?: SortOrder
     dni?: SortOrder
     foto_perfil?: SortOrder
@@ -49057,6 +49091,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -49098,6 +49133,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -49297,6 +49333,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -49338,6 +49375,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -49563,6 +49601,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -49604,6 +49643,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -49650,6 +49690,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -49691,6 +49732,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -49833,6 +49875,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -49874,6 +49917,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -49926,6 +49970,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -49967,6 +50012,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50383,6 +50429,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -50424,6 +50471,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -50470,6 +50518,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -50511,6 +50560,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -50656,6 +50706,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50697,6 +50748,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50749,6 +50801,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50790,6 +50843,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51140,6 +51194,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -51181,6 +51236,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -51361,6 +51417,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51402,6 +51459,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51543,6 +51601,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -51584,6 +51643,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -51696,6 +51756,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51737,6 +51798,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51809,6 +51871,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -51850,6 +51913,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -51896,6 +51960,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -51937,6 +52002,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -52031,6 +52097,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52072,6 +52139,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52124,6 +52192,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52165,6 +52234,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52467,6 +52537,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -52508,6 +52579,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -52565,6 +52637,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52606,6 +52679,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52647,6 +52721,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -52688,6 +52763,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -52745,6 +52821,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52786,6 +52863,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52884,6 +52962,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -52925,6 +53004,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -53045,6 +53125,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53086,6 +53167,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53127,6 +53209,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -53168,6 +53251,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -53214,6 +53298,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -53255,6 +53340,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -53312,6 +53398,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53353,6 +53440,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53405,6 +53493,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53446,6 +53535,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53716,6 +53806,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -53757,6 +53848,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -54039,6 +54131,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54080,6 +54173,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54353,6 +54447,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -54394,6 +54489,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -54531,6 +54627,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54572,6 +54669,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54658,6 +54756,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -54699,6 +54798,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -54807,6 +54907,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54848,6 +54949,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54993,6 +55095,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -55034,6 +55137,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -55218,6 +55322,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -55259,6 +55364,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -56128,6 +56234,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -56169,6 +56276,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -56215,6 +56323,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -56256,6 +56365,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -56460,6 +56570,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -56501,6 +56612,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -56553,6 +56665,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -56594,6 +56707,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -57938,6 +58052,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -57979,6 +58094,7 @@ export namespace Prisma {
     id?: string
     nombre_completo: string
     email: string
+    password?: string | null
     telefono?: string | null
     dni?: string | null
     foto_perfil?: string | null
@@ -58059,6 +58175,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
@@ -58100,6 +58217,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     nombre_completo?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
+    password?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
     dni?: NullableStringFieldUpdateOperationsInput | string | null
     foto_perfil?: NullableStringFieldUpdateOperationsInput | string | null
