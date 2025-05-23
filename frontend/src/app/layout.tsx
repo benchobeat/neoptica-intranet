@@ -1,6 +1,9 @@
+import 'antd/dist/reset.css'; // Importa los estilos globales de Ant Design
+import './globals.css'; // Tus estilos globales (ya existe por defecto)
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import 'antd/dist/reset.css'; // Importa el CSS base de Ant Design
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
