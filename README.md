@@ -160,3 +160,17 @@ Código  HTTP	    Contexto o Motivo	        Formato de respuesta
 409	    Conflicto (por ejemplo, email duplicado)	  { "ok": false, "data": null, "error": "El correo ya está registrado" }
 422	    Entidad no procesable (Validaciones)	      { "ok": false, "data": null, "error": "El campo 'email' debe ser un correo válido" }
 500	    Error interno del servidor	                { "ok": false, "data": null, "error": "Error interno del servidor" }
+
+Ejemplo en controlador:
+```typescript
+// Error de autenticación (401)
+if (!token) {
+  return res.status(401).json(fail('Token inválido o no enviado'));
+}
+
+// Error de permisos (403)
+if (!tienePermiso) {
+  return res.status(403).json(fail('No tienes permisos para realizar esta acción'));
+}
+```
+
