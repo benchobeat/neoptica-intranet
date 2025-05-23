@@ -441,6 +441,10 @@ model usuario {
   id                                                              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre_completo                                                 String                  @db.VarChar(255)
   email                                                           String                  @unique @db.VarChar(255)
+  password                                                        String?                 @db.VarChar(255) // Contraseña encriptada (bcrypt)
+  /// password: Contraseña hasheada para login tradicional con email/contraseña.
+  /// Se recomienda bcrypt (nunca almacenar en texto plano).
+  /// Opcional para compatibilidad con usuarios autenticados vía Google/Facebook.
   telefono                                                        String?                 @db.VarChar(20)
   dni                                                             String?                 @unique @db.VarChar(20)
   foto_perfil                                                     String?
