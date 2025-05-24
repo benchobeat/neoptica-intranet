@@ -3,7 +3,8 @@ import request from "supertest";
 import app from "@/app";
 
 // Helper para emails únicos
-const uniqueEmail = (prefix = "jesttest") => `${prefix}_${Date.now()}@neoptica.com`;
+const uniqueEmail = (prefix = "jesttest") =>
+  `${prefix}_${Date.now()}@neoptica.com`;
 
 describe("Usuarios API", () => {
   let token: string;
@@ -248,19 +249,275 @@ describe("Usuarios API", () => {
     });
   });
 
-  // ----- EDICIÓN -----
+  it("Debe rechazar crear usuario con teléfono inválido", async () => {
+    const email = `jesttest_tel_${Date.now()}@neoptica.com`;
+
+    // Teléfono con menos de 10 dígitos
+    let res = await request(app)
+      .post("/api/usuarios")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        nombre_completo: "Tel Inválido",
+        email,
+        password: "Clave1234!",
+        telefono: "09999999", // solo 8 dígitos
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toMatch(/tel[eé]fono/i);
+
+    // Teléfono con letras
+    res = await request(app)
+      .post("/api/usuarios")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        nombre_completo: "Tel Inválido 2",
+        email: `jesttest_tel2_${Date.now()}@neoptica.com`,
+        password: "Clave1234!",
+        telefono: "09999abcde", // contiene letras
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toMatch(/tel[eé]fono/i);
+
+    // Teléfono con más de 10 dígitos
+    res = await request(app)
+      .post("/api/usuarios")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        nombre_completo: "Tel Inválido 3",
+        email: `jesttest_tel3_${Date.now()}@neoptica.com`,
+        password: "Clave1234!",
+        telefono: "09999999999111", // más de 10 dígitos
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toMatch(/tel[eé]fono/i);
+  });
+
+  // ----- EDICIÓN DE USUARIOS -----
   describe("Editar usuario", () => {
-    // ...tus tests de edición aquí (puedes dejar como ya tienes) ...
+    let usuarioEditId: string;
+    const nuevoNombre = "Usuario Editado";
+    const nuevoTelefono = "0991234567";
+    const nuevoEmail = `jesttest_edit_${Date.now()}@neoptica.com`;
+
+    beforeAll(async () => {
+      // Crea un usuario de prueba para editar
+      const res = await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "Usuario a Editar",
+          email: nuevoEmail,
+          password: "Edita1234!",
+          telefono: "0988776655",
+          rol: "cliente",
+        });
+      usuarioEditId = res.body.data.id;
+    });
+
+    it("Admin puede editar usuario", async () => {
+      const res = await request(app)
+        .put(`/api/usuarios/${usuarioEditId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: nuevoNombre,
+          email: nuevoEmail,
+          telefono: nuevoTelefono,
+        });
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.data.nombre_completo).toBe(nuevoNombre);
+      expect(res.body.data.email).toBe(nuevoEmail);
+      expect(res.body.data.telefono).toBe(nuevoTelefono);
+    });
+
+    it("Debe rechazar si otro usuario (no admin, no self) intenta editar", async () => {
+      // Crea un usuario cliente y loguea para obtener su token
+      const emailCliente = `jesttest_edit_100@neoptica.com`;
+      await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "Cliente Otro",
+          email: emailCliente,
+          password: "ClienteOther123!",
+          telefono: "0998888555",
+          rol: "cliente",
+        });
+      const loginRes = await request(app).post("/api/auth/login").send({
+        email: emailCliente,
+        password: "ClienteOther123!",
+      });
+      const clienteToken = loginRes.body.data.token;
+
+      // El usuario cliente intenta editar a otro usuario
+      const res = await request(app)
+        .put(`/api/usuarios/${usuarioEditId}`)
+        .set("Authorization", `Bearer ${clienteToken}`)
+        .send({
+          nombre_completo: "Hackeando",
+          email: `hack@neoptica.com`,
+          telefono: "000000000",
+        });
+      expect(res.status).toBe(403);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toMatch(
+        /admin|propio|Acceso denegado: se requiere rol adecuado/i
+      );
+    });
+
+    it("Debe rechazar si el usuario no existe", async () => {
+      const res = await request(app)
+        .put("/api/usuarios/00000000-0000-0000-0000-000000000000")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "No existe",
+          email: "noexiste@neoptica.com",
+          telefono: "000000000",
+        });
+      expect(res.status).toBe(404);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toMatch(/no encontrado/i);
+    });
+
+    it("Debe rechazar si el nuevo email ya está en uso", async () => {
+      // Crea otro usuario para obtener un email duplicado
+      const emailDuplicado = `jesttest_dup_${Date.now()}@neoptica.com`;
+      await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "Duplicado",
+          email: emailDuplicado,
+          password: "Dup1234!",
+          telefono: "0997777666",
+          rol: "cliente",
+        });
+      // Intenta editar usuario anterior para ponerle ese email
+      const res = await request(app)
+        .put(`/api/usuarios/${usuarioEditId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: nuevoNombre,
+          email: emailDuplicado,
+          telefono: nuevoTelefono,
+        });
+      expect(res.status).toBe(409);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toMatch(/registrado/i);
+    });
   });
 
-  // ----- EDICIÓN PROPIA -----
-  it("El propio usuario puede editarse a sí mismo", async () => {
-    // ...como tienes ahora...
+  // ----- EDICIÓN DE DATOS PROPIOS -----
+  describe("Edición de datos propios", () => {
+    it("El propio usuario puede editarse a sí mismo", async () => {
+      const emailSelf = `jesttest_self_${Date.now()}@neoptica.com`;
+      const passwordSelf = "SelfEdit123!";
+      // Crea el usuario
+      const crearRes = await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "Self User",
+          email: emailSelf,
+          password: passwordSelf,
+          telefono: "0991111222",
+          rol: "cliente",
+        });
+      const selfId = crearRes.body.data.id;
+
+      // Haz login como ese usuario
+      const loginRes = await request(app).post("/api/auth/login").send({
+        email: emailSelf,
+        password: passwordSelf,
+      });
+      const selfToken = loginRes.body.data.token;
+
+      // El usuario se edita a sí mismo
+      const nuevoNombre = "Self Editado";
+      const nuevoTelefono = "0990000999";
+      const res = await request(app)
+        .put(`/api/usuarios/${selfId}`)
+        .set("Authorization", `Bearer ${selfToken}`)
+        .send({
+          nombre_completo: nuevoNombre,
+          email: emailSelf,
+          telefono: nuevoTelefono,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.data.nombre_completo).toBe(nuevoNombre);
+      expect(res.body.data.telefono).toBe(nuevoTelefono);
+    });
   });
 
-  // ----- ELIMINACIÓN -----
+  // ----- ELIMINACIÓN DE USUARIO -----
   describe("Eliminar usuario", () => {
-    // ...tus tests de eliminación aquí...
+    let usuarioEliminarId: string;
+
+    beforeAll(async () => {
+      // Crea un usuario de prueba para eliminar
+      const res = await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "Usuario a Eliminar",
+          email: `jesttest_delete_${Date.now()}@neoptica.com`,
+          password: "Eliminar1234!",
+          telefono: "0988888999",
+          rol: "cliente",
+        });
+      usuarioEliminarId = res.body.data.id;
+    });
+
+    it("Admin puede eliminar (desactivar) usuario", async () => {
+      const res = await request(app)
+        .delete(`/api/usuarios/${usuarioEliminarId}`)
+        .set("Authorization", `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.data).toMatch(/inactivo|eliminado/i);
+
+      // Confirma que el usuario está inactivo
+      const consulta = await request(app)
+        .get(`/api/usuarios/${usuarioEliminarId}`)
+        .set("Authorization", `Bearer ${token}`);
+      expect(consulta.body.ok).toBe(true);
+      expect(consulta.body.data.activo).toBe(false);
+    });
+
+    it("Debe rechazar si no es admin", async () => {
+      // Crea usuario cliente y loguea para token
+      const emailCliente = `jesttest_delete2_${Date.now()}@neoptica.com`;
+      await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "Cliente Eliminar",
+          email: emailCliente,
+          password: "ClienteElim123!",
+          telefono: "0990000888",
+          rol: "cliente",
+        });
+      const loginRes = await request(app).post("/api/auth/login").send({
+        email: emailCliente,
+        password: "ClienteElim123!",
+      });
+      const clienteToken = loginRes.body.data.token;
+
+      // Cliente intenta borrar otro usuario
+      const res = await request(app)
+        .delete(`/api/usuarios/${usuarioEliminarId}`)
+        .set("Authorization", `Bearer ${clienteToken}`);
+      expect(res.status).toBe(403);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toMatch(
+        /Acceso denegado: se requiere rol adecuado/i
+      );
+    });
   });
 
   // ----- ACCESO SIN JWT (SEGURIDAD) -----
