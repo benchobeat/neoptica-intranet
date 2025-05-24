@@ -1,3 +1,6 @@
+// Solo para TypeScript, esto compila a require('module-alias/register') en JS
+import 'module-alias/register';
+
 require('dotenv').config();
 const express = require('express');
 const app = express();
@@ -25,7 +28,8 @@ app.get('/test-email', async (req, res) => {
     });
     res.json({ ok: true, msg: 'Correo enviado correctamente.' });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+    res.status(500).json({ ok: false, error: errorMessage });
   }
 });
 

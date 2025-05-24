@@ -2,10 +2,17 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
+  "_moduleAliases": {
+    "@": "build",
+    "@src": "src"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node -r tsconfig-paths/register src/index.ts",
+    "build": "tsc",
+    "start": "node build/index.js"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,17 +23,21 @@
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "express": "^5.1.0",
+    "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "module-alias": "^2.2.3",
     "nodemailer": "^7.0.3",
     "prisma": "^6.8.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/express": "^4.17.22",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.21",
+    "@types/nodemailer": "^6.4.17",
     "nodemon": "^3.1.10",
-    "seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.3"
   }
 }
