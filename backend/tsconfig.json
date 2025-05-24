@@ -5,8 +5,8 @@
     "outDir": "./build",
     "rootDir": "./src",
     "strict": true,
-    "noImplicitAny": false,          // Puedes poner true más adelante para mayor rigor
-    "strictNullChecks": false,       // Actívalo cuando tu código esté más maduro
+    "noImplicitAny": false, // Lo puedes relajar por ahora
+    "strictNullChecks": false, // Igual, puedes relajar temporalmente
     "moduleResolution": "node",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
