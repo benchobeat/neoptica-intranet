@@ -29,7 +29,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     if (!usuario) {
-      res.status(404).json(fail('Usuario no encontrado'));
+      res.status(404).json(fail('Credenciales inválidas')); //Usuario no encontrado
       return;
     }
 
@@ -40,7 +40,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const isMatch = await bcrypt.compare(password, usuario.password);
     if (!isMatch) {
-      res.status(401).json(fail('Password incorrecto'));
+      res.status(401).json(fail('Credenciales inválidas')); //Password incorrecto
       return;
     }
 

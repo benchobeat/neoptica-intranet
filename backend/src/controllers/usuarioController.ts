@@ -70,12 +70,34 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
 /**
  * Crea un nuevo usuario (solo admin)
  */
+function emailValido(email: string): boolean {
+  // Regex simple, puedes reemplazar por una librería si lo prefieres
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function passwordFuerte(password: string): boolean {
+  // Mínimo 8 caracteres, una mayúscula, una minúscula y un número
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
+}
+
 export async function crearUsuario(req: Request, res: Response): Promise<void> {
-  const { nombre_completo, email, password, telefono } = req.body;
+  const { nombre_completo, email, password, telefono, rol } = req.body;
 
   // Validación mínima
   if (!nombre_completo || !email || !password) {
     res.status(400).json(fail('Faltan datos obligatorios'));
+    return;
+  }
+
+  // Validación de email
+  if (!emailValido(email)) {
+    res.status(400).json(fail('El email no es válido'));
+    return;
+  }
+
+  // Validación de password fuerte
+  if (!passwordFuerte(password)) {
+    res.status(400).json(fail('El password debe tener al menos 8 caracteres, mayúscula, minúscula y número'));
     return;
   }
 
@@ -96,6 +118,14 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     // Hashear password
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Rol a asignar: el que viene en el request, o "vendedor" por defecto
+    const rolAsignar = rol || 'vendedor';
+    const rolObj = await prisma.rol.findUnique({ where: { nombre: rolAsignar } });
+    if (!rolObj) {
+      res.status(400).json(fail('El rol especificado no existe'));
+      return;
+    }
+
     // Crear usuario
     const usuario = await prisma.usuario.create({
       data: {
@@ -107,16 +137,13 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       }
     });
 
-    // Por defecto, asocia el usuario al rol "vendedor" (ajusta si necesitas)
-    const rolVendedor = await prisma.rol.findUnique({ where: { nombre: 'vendedor' } });
-    if (rolVendedor) {
-      await prisma.usuario_rol.create({
-        data: {
-          usuario_id: usuario.id,
-          rol_id: rolVendedor.id
-        }
-      });
-    }
+    // Asocia el usuario al rol solicitado
+    await prisma.usuario_rol.create({
+      data: {
+        usuario_id: usuario.id,
+        rol_id: rolObj.id
+      }
+    });
 
     // Respuesta segura
     res.status(201).json(success({
@@ -125,7 +152,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       email: usuario.email,
       telefono: usuario.telefono,
       activo: usuario.activo,
-      rol: rolVendedor ? rolVendedor.nombre : 'vendedor'
+      rol: rolObj.nombre
     }));
 
   } catch (err) {
@@ -133,6 +160,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     res.status(500).json(fail(errorMessage));
   }
 }
+
 
 /**
  * Actualiza datos de un usuario (solo admin o self)

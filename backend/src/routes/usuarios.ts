@@ -145,7 +145,7 @@ router.post('/', authenticateJWT, requireRole('admin','vendedor'), usuarioContro
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', authenticateJWT, requireRole('admin','vendedor'), usuarioController.actualizarUsuario);
+router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista','cliente'), usuarioController.actualizarUsuario);
 
 /**
  * @swagger
