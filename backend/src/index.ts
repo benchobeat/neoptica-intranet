@@ -3,9 +3,14 @@ import dotenv from 'dotenv';
 import express from 'express';
 
 import authRoutes from '@/routes/auth';
+import usuariosRoutes from '@/routes/usuarios';
 import { authenticateJWT } from '@/middlewares/auth';
 import { success } from '@/utils/response';
 import { sendMail } from '@/utils/mailer';
+import cors from 'cors';
+
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from '@/utils/swagger';
 
 // 1. Cargar variables de entorno
 dotenv.config();
@@ -13,13 +18,21 @@ dotenv.config();
 // 2. Crear la app de Express
 const app = express();
 
+app.use(cors());
+
 // 3. Middlewares globales
 app.use(express.json()); // Para parsear JSON en requests
 
 // 4. Montar rutas
 app.use('/api/auth', authRoutes);
 
-// 5. Endpoints de prueba y utilidad
+// Documentación interactiva en /api/docs
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// 5. CRUD de usuarios
+app.use('/api/usuarios', usuariosRoutes);
+
+// 6. Endpoints de prueba y utilidad
 app.get('/', (req, res) => {
   res.json({ status: 'Backend OK!' });
 });

@@ -6,36 +6,33 @@ import { success, fail } from '@/utils/response';
 
 const prisma = new PrismaClient();
 
-/**
- * POST /api/auth/login
- * Recibe: { email, password }
- * Responde: { ok, data: { token, usuario }, error }
- */
 export async function login(req: Request, res: Response): Promise<void> {
   const { email, password } = req.body;
 
-  // Validación simple de entrada
   if (!email || !password) {
     res.status(400).json(fail('Email y password son requeridos'));
     return;
   }
 
   try {
-    // 1. Buscar usuario por email
+    // Busca el usuario e incluye sus roles
     const usuario = await prisma.usuario.findUnique({
-  where: { email },
-  include: {
-    usuario_rol: {
-      include: { rol: true }
+      where: { email },
+      include: {
+        usuario_rol: { include: { rol: true } }
+      }
+    });
+    
+    if (usuario.activo === false) {
+      res.status(403).json(fail('El usuario está inactivo. Contacte al administrador.'));
+      return;
     }
-  }
-});
+
     if (!usuario) {
       res.status(404).json(fail('Usuario no encontrado'));
       return;
     }
 
-    // 2. Verificar password (bcrypt)
     if (!usuario.password) {
       res.status(401).json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
       return;
@@ -47,27 +44,35 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // 3. Generar JWT
+    // Rol principal (puedes ajustar si soportas varios roles por usuario)
+    const rol = usuario.usuario_rol?.[0]?.rol?.nombre || 'usuario';
+
+    // Genera JWT
     const token = jwt.sign(
-  {
-    id: usuario.id,
-    email: usuario.email,
-    nombre_completo: usuario.nombre_completo,
-    rol: usuario.usuario_rol?.[0]?.rol?.nombre || 'usuario', // ahora sí existe!
-  },
-  process.env.JWT_SECRET || 'cambia-esto-en-produccion',
-  { expiresIn: '8h' }
-);
-
-    // 4. Construir la respuesta, sin incluir password
-    const usuarioSafe = { ...usuario, password: undefined };
-
-    res.json(
-      success({
-        token,
-        usuario: usuarioSafe,
-      })
+      {
+        id: usuario.id,
+        email: usuario.email,
+        nombre_completo: usuario.nombre_completo,
+        rol
+      },
+      process.env.JWT_SECRET || 'cambia-esto-en-produccion',
+      { expiresIn: '8h' }
     );
+
+    // Limpia la respuesta
+    const { password: _, ...usuarioSafe } = usuario;
+
+    res.json(success({
+      token,
+      usuario: {
+        id: usuario.id,
+        nombre_completo: usuario.nombre_completo,
+        email: usuario.email,
+        rol
+    // otros campos públicos si los necesitas
+      }
+    }));
+
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
     res.status(500).json(fail(errorMessage));
