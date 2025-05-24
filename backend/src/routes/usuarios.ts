@@ -1,33 +1,9 @@
 import { Router } from 'express';
 import * as usuarioController from '@/controllers/usuarioController';
 import { authenticateJWT } from '@/middlewares/auth';
+import { requireRole } from '@/middlewares/roles';
 
 const router = Router();
-
-/**
- * @swagger
- * /api/usuarios:
- *   get:
- *     summary: Lista todos los usuarios
- *     tags: [Usuarios]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de usuarios
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok: { type: boolean, example: true }
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Usuario'
- *                 error: { type: string, example: null }
- */
-router.get('/', authenticateJWT, usuarioController.listarUsuarios);
 
 /**
  * @swagger
@@ -62,7 +38,32 @@ router.get('/', authenticateJWT, usuarioController.listarUsuarios);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', authenticateJWT, usuarioController.obtenerUsuario);
+router.get('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista','cliente'), usuarioController.obtenerUsuario);
+
+/**
+ * @swagger
+ * /api/usuarios:
+ *   get:
+ *     summary: Lista todos los usuarios
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean, example: true }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Usuario'
+ *                 error: { type: string, example: null }
+ */
+router.get('/', authenticateJWT,requireRole('admin','vendedor','optometrista'), usuarioController.listarUsuarios);
 
 /**
  * @swagger
@@ -97,7 +98,7 @@ router.get('/:id', authenticateJWT, usuarioController.obtenerUsuario);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', authenticateJWT, usuarioController.crearUsuario);
+router.post('/', authenticateJWT, requireRole('admin','vendedor'), usuarioController.crearUsuario);
 
 /**
  * @swagger
@@ -144,7 +145,7 @@ router.post('/', authenticateJWT, usuarioController.crearUsuario);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', authenticateJWT, usuarioController.actualizarUsuario);
+router.put('/:id', authenticateJWT, requireRole('admin','vendedor'), usuarioController.actualizarUsuario);
 
 /**
  * @swagger
@@ -178,6 +179,6 @@ router.put('/:id', authenticateJWT, usuarioController.actualizarUsuario);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', authenticateJWT, usuarioController.eliminarUsuario);
+router.delete('/:id', authenticateJWT, requireRole('admin'), usuarioController.eliminarUsuario);
 
 export default router;
