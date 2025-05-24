@@ -1,16 +1,153 @@
-### Seed inicial de base de datos
+# Neóptica Intranet — Backend API
+## Repositorio oficial del backend de la plataforma Neóptica Intranet.
+Desarrollado en Node.js + Express + TypeScript + Prisma ORM + PostgreSQL, seguro y escalable, con autenticación JWT y arquitectura modular.
 
+## Tabla de contenidos
+- Características
+- Requisitos
+- Configuración inicial
+- Scripts principales
+- Estructura de carpetas
+- Variables de entorno
+- Seed de base de datos
+- Convenciones de respuesta API
+- Endpoints principales
+- Ejemplo de request/response
+- Buenas prácticas
+- Contribuciones y flujo de trabajo
+- Licencia
+
+## Características
+- TypeScript y tipado estricto
+- Express modular, imports absolutos (@/)
+- Prisma ORM con PostgreSQL
+- Autenticación JWT
+- Sistema de roles
+- Helpers estándar para responses y errores
+- Semillas (seed) iniciales de usuarios y roles
+- Testing y build para producción
+- Fácil integración con frontend (RESTful)
+
+## Requisitos
+- Node.js v18+
+- npm v9+
+- PostgreSQL 13+
+- [Opcional] Docker para entorno controlado
+
+## Configuración inicial
+1. Clona el repositorio
 ```bash
-cd backend
+git clone <tu-repo-url>
+cd neoptica-intranet/backend
+```
+2. Instala dependencias
+```bash
+npm install
+```
+3. Copia y edita el archivo de variables de entorno
+```bash
+cp .env.example .env
+# Edita tus credenciales de base de datos, JWT_SECRET, SMTP, etc.
+```
+4. Genera el cliente Prisma y aplica migraciones
+```bash
+npx prisma generate
+npx prisma migrate deploy # o migrate dev si estás en desarrollo
+```
+5. Ejecuta el seed para datos iniciales
+```bash
 npx prisma db seed
 ```
+6. Arranca el backend en desarrollo
+```bash
+npm run dev
+```
 
-###Formato de Respuesta de la API y Helper Global
-¿Por qué usamos un formato uniforme?
-Toda la API de Neóptica responde siempre con el mismo contrato, lo que facilita la integración, pruebas, debugging y consistencia en todo el stack (backend, frontend, mobile, etc.).
+## Estructura de carpetas
+```plaintext
+backend/
+│
+├── src/
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── routes/
+│   ├── utils/
+│   └── index.ts
+│
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.ts
+│
+├── build/              # Salida compilada (production)
+├── .env
+├── tsconfig.json
+├── package.json
+└── README.md
+```
 
-Estructura estándar de respuesta
-Cada endpoint retorna un objeto con la siguiente forma:
+## Variables de entorno
+Ejemplo mínimo (.env):
+```ini
+DATABASE_URL=postgresql://user:password@localhost:5432/neoptica_db
+JWT_SECRET=tu_clave_secreta_segura
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=usuario
+SMTP_PASS=clave
+```
+
+## Seed de base de datos
+- El script de seed crea los roles base (admin, optometrista, vendedor), un usuario administrador y asocia roles.
+- Ejecuta:
+```bash
+npx prisma db seed
+```
+- Verifica que los datos iniciales estén en la base o usa npx prisma studio para inspeccionar.
+
+## Scripts principales
+```json
+"scripts": {
+  "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node -r tsconfig-paths/register src/index.ts",
+  "build": "tsc",
+  "start": "node build/index.js"
+}
+```
+- dev: desarrollo con hot reload
+- build: compila TypeScript a JavaScript (/build)
+- start: ejecuta el servidor en modo producción
+
+## Helper global de respuestas
+Para garantizar consistencia en las respuestas de la API (tanto en éxito como en error), el backend utiliza un helper global centralizado en src/utils/response.ts.
+### Estructura
+Para centralizar y garantizar este formato en todo el backend, se utiliza un helper en src/utils/response.ts:
+```typescript
+// src/utils/response.ts
+
+export interface ApiResponse<T = any> {
+  ok: boolean;
+  data: T | null;
+  error: string | null;
+}
+
+export function success<T = any>(data: T): ApiResponse<T> {
+  return {
+    ok: true,
+    data,
+    error: null,
+  };
+}
+
+export function fail(error: string, data: any = null): ApiResponse {
+  return {
+    ok: false,
+    data,
+    error,
+  };
+}
+```
+
+## Convenciones de respuesta API
+Todas las respuestas siguen este formato uniforme:
 ```json
 {
   "ok": true,          // Indica éxito (true) o error (false)
@@ -42,94 +179,58 @@ Ejemplo de error:
 }
 ```
 
-Helper global de respuestas
-Para centralizar y garantizar este formato en todo el backend, se utiliza un helper en src/utils/response.ts:
 
-```typescript
-// src/utils/response.ts
+## Endpoints principales
+- POST /api/auth/login — Login, retorna JWT y datos de usuario
+- GET /api/protegido — Ruta protegida por JWT
+- GET /test-email — Prueba de envío de correo
+- [CRUD de usuarios, roles, sucursales, productos...] (próximos endpoints)
 
-export interface ApiResponse<T = any> {
-  ok: boolean;
-  data: T | null;
-  error: string | null;
-}
+## Ejemplo de request/response (login)
+Request
+```json
+POST /api/auth/login
+Content-Type: application/json
 
-export function success<T = any>(data: T): ApiResponse<T> {
-  return {
-    ok: true,
-    data,
-    error: null,
-  };
-}
-
-export function fail(error: string, data: any = null): ApiResponse {
-  return {
-    ok: false,
-    data,
-    error,
-  };
+{
+  "email": "admin@neoptica.com",
+  "password": "Admin1234!"
 }
 ```
-
-Uso recomendado en controladores (Express/Prisma):
-
-```typescript
-import { success, fail } from '../utils/response';
-
-export async function getUsuario(req, res) {
-  try {
-    const usuario = await prisma.usuario.findUnique({ where: { id: req.params.id } });
-    if (!usuario) {
-      return res.status(404).json(fail('Usuario no encontrado'));
+Response
+```json
+{
+  "ok": true,
+  "data": {
+    "token": "<jwt_token>",
+    "usuario": {
+      "id": "xxx-xxx-xxx",
+      "nombre_completo": "Administrador General",
+      "email": "admin@neoptica.com",
+      "rol": "admin"
     }
-    return res.json(success(usuario));
-  } catch (error) {
-    return res.status(500).json(fail('Error interno del servidor', error));
-  }
+  },
+  "error": null
 }
 ```
+Errores comunes
+Código  Causa	                    Formato de respuesta
+400	    Campos faltantes	        { "ok": false, "data": null, "error": "Email y password son requeridos" }
+404	    Usuario no existe	        { "ok": false, "data": null, "error": "Usuario no encontrado" }
+401     Password incorrecta/JWT	  { "ok": false, "data": null, "error": "Password incorrecto" }
+500	    Error interno	            { "ok": false, "data": null, "error": "Error detallado" }
 
-Ventajas de este enfoque
-Consistencia: Todos los endpoints responden igual, facilitando el consumo y manejo en frontend/mobile.
+## Buenas prácticas
+- Usa TypeScript estricto y corrige todos los errores del compilador.
+- Importa helpers, controladores y rutas con imports absolutos (@/controllers/...).
+- Nunca incluyas passwords en respuestas API.
+- Registra en los logs los eventos críticos (login, errores, acciones admin).
+- Versiona y documenta todos los cambios y endpoints nuevos.
 
-Facilidad de testing: Las pruebas siempre esperan la misma estructura, simplificando asserts y mocks.
+## Contribuciones y flujo de trabajo
+- Crea ramas tipo feature/nombre, fix/nombre o hotfix/nombre.
+- Haz PR hacia develop, revisa y prueba antes de mergear a main.
+- Ejecuta siempre las pruebas y el seed antes de push o deploy.
 
-Documentación clara: La estructura puede ser definida fácilmente en Swagger/OpenAPI, ayudando a terceros a entender la API.
-
-Escalabilidad: Si en el futuro necesitas agregar más información a las respuestas, lo puedes hacer desde un solo archivo.
-
-Recomendación
-Usa SIEMPRE los helpers success() y fail() en cada controlador y servicio del backend.
-Esto mejora la mantenibilidad, la seguridad y la claridad de toda la solución.
-
-Tabla de errores comunes y formato de respuesta
-Código  HTTP	    Contexto o Motivo	        Formato de respuesta
-400	    Petición  inválida (Bad Request)	          { "ok": false, "data": null, "error": "Datos inválidos o campos requeridos faltantes" }
-401	    No autenticado (Unauthorized)	              { "ok": false, "data": null, "error": "Token inválido o no enviado" }
-403	    Sin permisos (Forbidden)	                  { "ok": false, "data": null, "error": "No tienes permisos para realizar esta acción" }
-404	    No encontrado (Not Found)	                  { "ok": false, "data": null, "error": "Recurso no encontrado" }
-409	    Conflicto (por ejemplo, email duplicado)	  { "ok": false, "data": null, "error": "El correo ya está registrado" }
-422	    Entidad no procesable (Validaciones)	      { "ok": false, "data": null, "error": "El campo 'email' debe ser un correo válido" }
-500	    Error interno del servidor	                { "ok": false, "data": null, "error": "Error interno del servidor" }
-
-Ejemplo en controlador:
-```typescript
-// Error de autenticación (401)
-if (!token) {
-  return res.status(401).json(fail('Token inválido o no enviado'));
-}
-
-// Error de permisos (403)
-if (!tienePermiso) {
-  return res.status(403).json(fail('No tienes permisos para realizar esta acción'));
-}
-```
-
-### Middleware de autenticación JWT
-Protege endpoints sensibles exigiendo el header:
-Authorization: Bearer <token>
-
-Si el token es válido, el usuario queda accesible en req.user.
-
-Si falta, es inválido o está expirado, responde 401 Unauthorized con el helper de error uniforme.
-
+## Licencia
+MIT — Neóptica Intranet
