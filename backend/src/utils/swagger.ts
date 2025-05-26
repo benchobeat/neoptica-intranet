@@ -14,10 +14,6 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: "http://172.21.35.254:4000",
-      description: "Servidor red local",
-    },
-    {
       url: "http://localhost:4000",
       description: "Dev local",
     },
@@ -83,11 +79,8 @@ const swaggerDefinition = {
         properties: {
           id: { type: "string", example: "uuid..." },
           nombre: { type: "string", example: "Sucursal Quito Centro" },
-          direccion: {
-            type: "string",
-            example: "Av. Amazonas y Naciones Unidas",
-          },
-          latitud: { type: "number", example: -0.1807 },
+          direccion: { type: "string", example: "Av. Amazonas y Naciones Unidas", },
+          latitud: { type: "number", example: -0.1807 }, 
           longitud: { type: "number", example: -78.4678 },
           telefono: { type: "string", example: "0999999999" },
           email: { type: "string", example: "quito@neoptica.com" },
@@ -96,6 +89,18 @@ const swaggerDefinition = {
           actualizado_en: { type: "string", format: "date-time" },
         },
       },
+      SucursalInput: {
+          type: "object",
+          required: ["nombre"],
+          properties: {
+            nombre: { type: "string", example: "Sucursal Norte" },
+            direccion: { type: "string", example: "Av. Amazonas y NN.UU." },
+            latitud: { type: "number", example: -0.20347 },
+            longitud: { type: "number", example: -78.49512 },
+            telefono: { type: "string", example: "0999999999" },
+            email: { type: "string", example: "sucursal@neoptica.com" },
+          },
+        },
     },
   },
 };
