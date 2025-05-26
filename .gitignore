@@ -46,3 +46,5 @@ logs/
 
 # Otros
 docs/manuales/Setup.md~  # archivos temporales de edición
+neoptica-intranet.code-workspace  # archivo de workspace de VS Code
+# Archivos de configuración de Docker
