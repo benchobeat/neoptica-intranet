@@ -1,0 +1,34 @@
+// backend/src/middlewares/auth.ts
+
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import { fail } from '@/utils/response';
+
+/**
+ * Middleware de autenticación para rutas protegidas.
+ * Compatible con Express 4 y TypeScript estricto.
+ * NO retorna nada explícitamente.
+ */
+export function authenticateJWT(req: Request, res: Response, next: NextFunction): void {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json(fail('Token inválido o no enviado'));
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET no está configurado en variables de entorno');
+    }
+    const payload = jwt.verify(token, secret) as jwt.JwtPayload;
+    (req as any).user = payload;
+    next();
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+    res.status(401).json(fail(errorMessage));
+    return;
+  }
+}
