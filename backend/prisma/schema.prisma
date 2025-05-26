@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -51,6 +50,7 @@ model cita {
   usuario_cita_optometrista_idTousuario usuario?            @relation("cita_optometrista_idTousuario", fields: [optometrista_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sucursal                              sucursal?           @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   historial_clinico                     historial_clinico[]
+  recetas                               receta[] // Relación 1:N (varias recetas por cita)
 }
 
 model cuenta_contable {
@@ -209,54 +209,29 @@ model inventario {
   @@index([producto_id, sucursal_id], map: "idx_inventario_producto_sucursal")
 }
 
-model log_acceso {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usuario_id    String?   @db.Uuid
-  fecha_ingreso DateTime? @default(now()) @db.Timestamptz(6)
-  ip            String?   @db.VarChar(50)
-  exito         Boolean?
-  motivo        String?
-  usuario       usuario?  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
 model log_auditoria {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usuario_id  String?   @db.Uuid
-  accion      String?   @db.VarChar(100)
-  descripcion String?
-  fecha       DateTime? @default(now()) @db.Timestamptz(6)
-  ip          String?   @db.VarChar(50)
-  modulo      String?   @db.VarChar(50)
-  usuario     usuario?  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-model log_contable {
-  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  movimiento_id       String?              @db.Uuid
-  usuario_id          String?              @db.Uuid
-  accion              String               @db.VarChar(30)
+  id                  String               @id @default(uuid())
+  usuario             usuario              @relation(fields: [usuarioId], references: [id])
+  usuarioId           String               @db.Uuid
+  accion              String
   descripcion         String?
-  fecha               DateTime?            @default(now()) @db.Timestamptz(6)
+  fecha               DateTime             @default(now())
+  ip                  String?
+  tipo_correo         String?              @db.VarChar(40)
+  correo_destino      String?              @db.VarChar(120)
+  usuario_destino     String?
+  entidad_tipo        String?              @db.VarChar(40)
+  entidad_id          String?              @db.Uuid
+  estado_envio        String?              @db.VarChar(20)
+  mensaje_error       String?
+  enviado_por         String?              @db.Uuid
+  origen_envio        String?              @db.VarChar(40)
+  intentos            Int?                 @default(1)
+  modulo              String?
+  entidadId           String?
+  entidadTipo         String?
+  movimiento_id       String?              @db.Uuid
   movimiento_contable movimiento_contable? @relation(fields: [movimiento_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario             usuario?             @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-model log_envio_correo {
-  id                                                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  fecha_envio                                       DateTime? @default(now()) @db.Timestamptz(6)
-  tipo_correo                                       String?   @db.VarChar(40)
-  correo_destino                                    String?   @db.VarChar(120)
-  usuario_destino                                   String?   @db.Uuid
-  entidad_tipo                                      String?   @db.VarChar(40)
-  entidad_id                                        String?   @db.Uuid
-  estado_envio                                      String?   @db.VarChar(20)
-  mensaje_error                                     String?
-  enviado_por                                       String?   @db.Uuid
-  origen_envio                                      String?   @db.VarChar(40)
-  intentos                                          Int?      @default(1)
-  creado_en                                         DateTime? @default(now()) @db.Timestamptz(6)
-  usuario_log_envio_correo_enviado_porTousuario     usuario?  @relation("log_envio_correo_enviado_porTousuario", fields: [enviado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario_log_envio_correo_usuario_destinoTousuario usuario?  @relation("log_envio_correo_usuario_destinoTousuario", fields: [usuario_destino], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -282,7 +257,7 @@ model movimiento_contable {
   actualizado_en              DateTime?                     @db.Timestamptz(6)
   anulado_en                  DateTime?                     @db.Timestamptz(6)
   anulado_por                 String?                       @db.Uuid
-  log_contable                log_contable[]
+  log_auditoria               log_auditoria[]
   cuenta_contable             cuenta_contable?              @relation(fields: [cuenta_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   movimiento_contable         movimiento_contable?          @relation("movimiento_contableTomovimiento_contable", fields: [reversa_de], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_movimiento_contable   movimiento_contable[]         @relation("movimiento_contableTomovimiento_contable")
@@ -469,11 +444,7 @@ model usuario {
   gasto                                                           gasto[]
   historial_clinico_historial_clinico_cliente_idTousuario         historial_clinico[]     @relation("historial_clinico_cliente_idTousuario")
   historial_clinico_historial_clinico_optometrista_idTousuario    historial_clinico[]     @relation("historial_clinico_optometrista_idTousuario")
-  log_acceso                                                      log_acceso[]
   log_auditoria                                                   log_auditoria[]
-  log_contable                                                    log_contable[]
-  log_envio_correo_log_envio_correo_enviado_porTousuario          log_envio_correo[]      @relation("log_envio_correo_enviado_porTousuario")
-  log_envio_correo_log_envio_correo_usuario_destinoTousuario      log_envio_correo[]      @relation("log_envio_correo_usuario_destinoTousuario")
   movimiento_contable                                             movimiento_contable[]
   movimiento_inventario                                           movimiento_inventario[]
   pago                                                            pago[]
@@ -492,4 +463,27 @@ model usuario_rol {
   usuario    usuario?  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([usuario_id, rol_id])
+}
+
+model receta {
+  id              String    @id @default(uuid())
+  cita            cita      @relation(fields: [citaId], references: [id])
+  citaId          String    @db.Uuid
+  tipo            String // Ejemplo: "lejos", "cerca", "bifocal", "lentes de contacto"
+  esferaOd        Decimal // Ojo Derecho Esfera
+  esferaOi        Decimal // Ojo Izquierdo Esfera
+  cilindroOd      Decimal? // Ojo Derecho Cilindro
+  cilindroOi      Decimal? // Ojo Izquierdo Cilindro
+  ejeOd           Int? // Ojo Derecho Eje
+  ejeOi           Int? // Ojo Izquierdo Eje
+  adicion         Decimal? // Para bifocales/progresivos
+  agudezaVisualOd String? // AV Ojo Derecho
+  agudezaVisualOi String? // AV Ojo Izquierdo
+  dp              Decimal? // Distancia pupilar
+  observaciones   String?
+  estado          Boolean
+  creadoEn        DateTime  @default(now())
+  actualizadoEn   DateTime?
+  anuladoEn       DateTime?
+  anuladoPor      String?
 }

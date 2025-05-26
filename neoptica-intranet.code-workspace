@@ -1,7 +1,9 @@
 {
-    "folders": [
-        {
-            "path": "."
-        }
-    ]
+	"folders": [
+		{
+			"name": "neoptica-intranet",
+			"path": "."
+		}
+	],
+	"settings": {}
 }
