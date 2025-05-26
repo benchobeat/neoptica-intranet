@@ -1,4 +1,4 @@
-import { PrismaClient } from '../src/generated/prisma';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -11,6 +11,7 @@ async function main() {
     { nombre: 'admin', descripcion: 'Administrador global' },
     { nombre: 'optometrista', descripcion: 'Optometrista' },
     { nombre: 'vendedor', descripcion: 'Vendedor de óptica' },
+    { nombre: 'cliente', descripcion: 'Cliente registrado' },
   ];
 
   for (const rol of rolesData) {
