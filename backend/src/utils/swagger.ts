@@ -14,10 +14,6 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: "http://172.21.35.254:4000",
-      description: "Servidor red local",
-    },
-    {
       url: "http://localhost:4000",
       description: "Dev local",
     },
