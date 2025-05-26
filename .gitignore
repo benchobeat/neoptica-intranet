@@ -46,3 +46,6 @@ logs/
 
 # Otros
 docs/manuales/Setup.md~  # archivos temporales de edición
+
+neoptica-intranet.code-workspace
+# Archivos de configuración de workspace
