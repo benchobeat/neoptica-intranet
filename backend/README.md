@@ -180,11 +180,15 @@ Ejemplo de error:
 ```
 
 
-## Endpoints principales
-- POST /api/auth/login — Login, retorna JWT y datos de usuario
-- GET /api/protegido — Ruta protegida por JWT
-- GET /test-email — Prueba de envío de correo
-- [CRUD de usuarios, roles, sucursales, productos...] (próximos endpoints)
+## Endpoints REST implementados (Fase 1)
+- POST   `/api/auth/login`           — Login, retorna JWT y datos de usuario)
+- GET    `/api/protegido`            — Endpoint protegido de prueba (requiere JWT)
+- GET    `/test-email`               — Prueba de envío de correo
+- CRUD   `/api/usuarios`             — Alta, baja lógica, edición y consulta de usuarios (admin y self)
+- GET    `/api/usuarios/:id`         — Consulta de usuario por ID (admin y self)
+- PUT    `/api/usuarios/:id`         — Edita usuario (admin y self)
+- DELETE `/api/usuarios/:id`         — Desactiva usuario (admin)
+- [Próximos] CRUD roles, sucursales, productos, movimientos...
 
 ## Ejemplo de request/response (login)
 Request
@@ -220,6 +224,193 @@ Código  Causa	                    Formato de respuesta
 401     Password incorrecta/JWT	  { "ok": false, "data": null, "error": "Password incorrecto" }
 500	    Error interno	            { "ok": false, "data": null, "error": "Error detallado" }
 
+## Validaciones implementadas (usuarios)
+
+- **Email:** formato válido y único (regex)
+- **Password:** mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número
+- **Teléfono:** exactamente 10 dígitos (celular Ecuador)
+- **Rol:** Debe existir en la tabla `rol` y ser uno de los definidos (admin, optometrista, vendedor, cliente)
+- **No se permite editar contraseña ni rol desde el endpoint de edición estándar** (sólo en módulo especial admin)
+
+**Códigos de error usados:**
+- 400 Bad Request: datos inválidos o formato incorrecto
+- 409 Conflict: email duplicado
+- 403 Forbidden: intento de crear usuario sin rol admin
+
+## Seguridad y Middleware de Roles
+El backend implementa control de acceso basado en roles para todos los endpoints protegidos. Usa JWT para autenticación y un middleware dedicado para verificar permisos mínimos requeridos en cada endpoint.
+Ejemplo de uso del middleware en rutas:
+```typescript
+import { requireRole } from '@/middlewares/roles';
+
+// Solo admins pueden crear usuarios
+router.post('/', authenticateJWT, requireRole('admin'), usuarioController.crearUsuario);
+```
+
+### Opciones de roles disponibles:
+- admin
+- optometrista
+- vendedor
+- cliente
+
+### Recuerda:
+- El endpoint de creación de usuario permite especificar el rol.
+- El sistema impide modificar el rol y la contraseña desde el endpoint de edición estándar (solo por módulos especiales de administración).
+
+
+## Pruebas automáticas (Jest)
+El backend incluye pruebas automáticas de integración usando Jest y Supertest.
+Las pruebas cubren autenticación, CRUD de usuarios y reglas de negocio básicas, garantizando que todos los endpoints respondan en el formato uniforme **{ ok, data, error }**.
+Ejecutar tests:
+```bash
+npx jest
+```
+### Recomendaciones:
+- Antes de correr los tests, asegúrate de tener la base en estado limpio (**npx prisma db seed**).
+- Los tests de usuarios limpian la base de datos (excepto el usuario admin) al finalizar.
+- Puedes ejecutar en paralelo el backend (**npm run dev**) y los tests.
+
+## Documentación Swagger/OpenAPI
+Toda la API está documentada con Swagger/OpenAPI disponible en:
+```bash
+GET /api/docs
+```
+### Incluye:
+- Schemas detallados para request/response.
+- Ejemplos por cada endpoint.
+- Documentación de errores y validaciones.
+- Autenticación JWT Bearer (token) configurable en la UI.
+
+¿No ves el botón "Authorize" o los endpoints protegidos fallan por token?
+Verifica que en **src/utils/swagger.ts** esté configurada la seguridad así:
+```typescript
+components: {
+  securitySchemes: {
+    BearerAuth: {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+    }
+  }
+},
+security: [
+  {
+    BearerAuth: []
+  }
+]
+```
+Y que tus endpoints incluyan **@swagger** con **security: [ { BearerAuth: [] } ]** donde corresponda.
+
+## Validaciones y mensajes de error
+Todos los campos sensibles (email, password, teléfono) tienen validaciones estrictas.
+- Email: formato válido requerido (valida con regex).
+- Password: debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.
+- Teléfono: formato celular ecuatoriano (10 dígitos).
+Errores de validación retornan código 400 y mensaje claro en el campo error del response.
+
+## Ejemplo de tests automáticos recomendados
+Incluye en tu archivo **tests/usuarios.test.ts** pruebas como:
+- No permite crear usuario con email inválido
+- No permite crear usuario con password débil
+- No permite crear usuario con número celular inválido
+- No permite editar usuario si no es admin ni self
+- El propio usuario puede editar sus datos
+- No permite login si usuario está inactivo
+### Estrategia de limpieza en tests automáticos
+Las pruebas automáticas limpian la base de datos eliminando todos los usuarios excepto el admin.  
+**Importante:** Se eliminan primero las asociaciones `usuario_rol`, luego los usuarios, para evitar errores de integridad referencial.
+```typescript
+await prisma.usuario_rol.deleteMany({ ... });
+await prisma.usuario.deleteMany({ ... });
+```
+## Advertencia: Los roles del sistema no pueden ser modificados vía API
+### Roles predefinidos y protegidos
+En Neóptica Intranet, los roles de usuario (admin, optometrista, vendedor, cliente) están predefinidos y son parte de la lógica central del sistema. Por motivos de seguridad y coherencia:
+- No existe ningún endpoint para crear, editar ni eliminar roles.
+- Ni siquiera los usuarios con rol admin pueden modificar la tabla de roles vía API.
+- Los roles solo pueden ser consultados mediante el endpoint de lectura (GET /api/roles).
+- Intentar cualquier otro método (POST, PUT, DELETE) en /api/roles devolverá un error 405 (Método no permitido).
+### ¿Por qué?
+Permitir la manipulación dinámica de roles podría afectar la integridad, seguridad y lógica de permisos en toda la plataforma. Los cambios en roles requieren migraciones y validaciones estrictas a nivel de base de datos y código fuente.
+
+## Ejemplo de uso del endpoint seguro de roles
+Consulta de roles (solo lectura)
+```sql
+GET /api/roles
+Authorization: Bearer <JWT>
+```
+Respuesta esperada:
+```json
+{
+  "ok": true,
+  "data": [
+    { "id": "uuid1", "nombre": "admin", "descripcion": "Administrador global" },
+    { "id": "uuid2", "nombre": "optometrista", "descripcion": "Optometrista" },
+    { "id": "uuid3", "nombre": "vendedor", "descripcion": "Vendedor de óptica" },
+    { "id": "uuid4", "nombre": "cliente", "descripcion": "Cliente de la óptica" }
+  ],
+  "error": null
+}
+```
+
+## Documentación Swagger recomendada (Roles)
+Agrega esto en tu archivo de rutas o controladores de roles para Swagger (puedes ajustar la sintaxis):
+```typescript
+/**
+ * @swagger
+ * tags:
+ *   name: Roles
+ *   description: Gestión de roles de usuario (SOLO lectura)
+ *
+ * /api/roles:
+ *   get:
+ *     summary: Lista todos los roles predefinidos (solo lectura)
+ *     tags: [Roles]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de roles.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Rol'
+ *                 error:
+ *                   type: string
+ *                   example: null
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       405:
+ *         description: Método no permitido para roles.
+ */
+```
+En tus schemas de Swagger:
+```yaml
+components:
+  schemas:
+    Rol:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "1c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f"
+        nombre:
+          type: string
+          example: "admin"
+        descripcion:
+          type: string
+          example: "Administrador global"
+```
+
 ## Buenas prácticas
 - Usa TypeScript estricto y corrige todos los errores del compilador.
 - Importa helpers, controladores y rutas con imports absolutos (@/controllers/...).
@@ -234,3 +425,4 @@ Código  Causa	                    Formato de respuesta
 
 ## Licencia
 MIT — Neóptica Intranet
+

@@ -454,6 +454,139 @@ describe("Usuarios API", () => {
     });
   });
 
+  // ----- CAMBIO DE CONTRASEÑA -----
+  describe("Cambio de contraseña", () => {
+    let selfId: string;
+    const email = `jesttest_pw_${Date.now()}@neoptica.com`;
+    const oldPass = "PasswordTest123!";
+    const newPass = "NuevaClave2024!";
+
+    beforeAll(async () => {
+      // Crear usuario de prueba
+      const crearRes = await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "Test CambioPW",
+          email,
+          password: oldPass,
+          telefono: "0991111234",
+          rol: "cliente",
+        });
+      selfId = crearRes.body.data.id;
+    });
+
+    it("El usuario puede cambiar su propia contraseña", async () => {
+      // Login para obtener token
+      const loginRes = await request(app).post("/api/auth/login").send({
+        email,
+        password: oldPass,
+      });
+      expect(loginRes.body.ok).toBe(true);
+      const userToken = loginRes.body.data.token;
+
+      // Cambia la contraseña
+      const res = await request(app)
+        .put(`/api/usuarios/${selfId}/password`)
+        .set("Authorization", `Bearer ${userToken}`)
+        .send({
+          password_actual: oldPass,
+          password_nuevo: newPass,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.data).toMatch(/contraseña/i);
+
+      // Intenta login con la contraseña antigua (debe fallar)
+      const loginFail = await request(app).post("/api/auth/login").send({
+        email,
+        password: oldPass,
+      });
+      expect(loginFail.body.ok).toBe(false);
+
+      // Intenta login con la nueva contraseña (debe funcionar)
+      const loginOk = await request(app).post("/api/auth/login").send({
+        email,
+        password: newPass,
+      });
+      expect(loginOk.body.ok).toBe(true);
+    });
+
+    it("Debe rechazar cambio si el password actual es incorrecto", async () => {
+      const loginRes = await request(app).post("/api/auth/login").send({
+        email,
+        password: newPass,
+      });
+      const userToken = loginRes.body.data.token;
+
+      const res = await request(app)
+        .put(`/api/usuarios/${selfId}/password`)
+        .set("Authorization", `Bearer ${userToken}`)
+        .send({
+          password_actual: "incorrecto123!",
+          password_nuevo: "OtroPass2024!",
+        });
+      expect(res.status).toBe(401);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toMatch(/actual/i);
+    });
+
+    it("Debe rechazar si el password nuevo es débil", async () => {
+      const loginRes = await request(app).post("/api/auth/login").send({
+        email,
+        password: newPass,
+      });
+      const userToken = loginRes.body.data.token;
+
+      const res = await request(app)
+        .put(`/api/usuarios/${selfId}/password`)
+        .set("Authorization", `Bearer ${userToken}`)
+        .send({
+          password_actual: newPass,
+          password_nuevo: "123",
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toMatch(/password/i);
+    });
+
+    it("Debe rechazar si otro usuario intenta cambiar la contraseña", async () => {
+      // Crea un segundo usuario y loguea
+      const email2 = `jesttest_pw2_${Date.now()}@neoptica.com`;
+      const pass2 = "OtroUser123!";
+      const crearRes = await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "User2",
+          email: email2,
+          password: pass2,
+          telefono: "0992222333",
+          rol: "cliente",
+        });
+      const otherId = crearRes.body.data.id;
+
+      const loginOther = await request(app).post("/api/auth/login").send({
+        email: email2,
+        password: pass2,
+      });
+      const otherToken = loginOther.body.data.token;
+
+      // Intenta cambiar la contraseña de otro usuario
+      const res = await request(app)
+        .put(`/api/usuarios/${selfId}/password`)
+        .set("Authorization", `Bearer ${otherToken}`)
+        .send({
+          password_actual: newPass,
+          password_nuevo: "NoDebeCambiar123!",
+        });
+      expect(res.status).toBe(403);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toMatch(/propia/i);
+    });
+  });
+
   // ----- ELIMINACIÓN DE USUARIO -----
   describe("Eliminar usuario", () => {
     let usuarioEliminarId: string;
@@ -517,6 +650,81 @@ describe("Usuarios API", () => {
       expect(res.body.error).toMatch(
         /Acceso denegado: se requiere rol adecuado/i
       );
+    });
+  });
+
+  // ----- CAMBIO DE CONTRASEÑA POR USUARIO ADMIN ------
+  describe("Reset password por admin", () => {
+    let usuarioId: string;
+    let emailReset: string;
+    const passwordOriginal = "ResetTest123!";
+    const passwordNuevo = "ResetAdmin2024!";
+
+    beforeAll(async () => {
+      // Definir un solo email de test para toda la suite
+      emailReset = `jesttest_reset_${Date.now()}@neoptica.com`;
+
+      // Crear usuario de prueba
+      const crearRes = await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`) // token de admin
+        .send({
+          nombre_completo: "Usuario Reset",
+          email: emailReset,
+          password: passwordOriginal,
+          telefono: "0991111100",
+          rol: "cliente",
+        });
+      usuarioId = crearRes.body.data.id;
+    });
+
+    it("Admin puede restablecer la contraseña de otro usuario", async () => {
+      const res = await request(app)
+        .put(`/api/usuarios/${usuarioId}/reset-password`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ password_nuevo: passwordNuevo });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+
+      // El usuario debe poder loguear con el nuevo password
+      const login = await request(app).post("/api/auth/login").send({
+        email: emailReset, // usar el mismo email definido antes
+        password: passwordNuevo,
+      });
+      expect(login.body.ok).toBe(true);
+    });
+
+    it("Debe rechazar si el token no es admin", async () => {
+      // Crear usuario normal para probar acceso denegado
+      const emailCliente = `jesttest_reset2_${Date.now()}@neoptica.com`;
+      const passCliente = "Cliente1234!";
+      // Crea usuario
+      await request(app)
+        .post("/api/usuarios")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          nombre_completo: "Cliente Reset",
+          email: emailCliente,
+          password: passCliente,
+          telefono: "0990000888",
+          rol: "cliente",
+        });
+
+      // Login como cliente para obtener token
+      const loginRes = await request(app).post("/api/auth/login").send({
+        email: emailCliente,
+        password: passCliente,
+      });
+      const userToken = loginRes.body.data.token;
+
+      // Intenta resetear la contraseña de otro usuario
+      const res = await request(app)
+        .put(`/api/usuarios/${usuarioId}/reset-password`)
+        .set("Authorization", `Bearer ${userToken}`)
+        .send({ password_nuevo: "NoDebeCambiar123!" });
+      expect(res.status).toBe(403);
+      expect(res.body.ok).toBe(false);
     });
   });
 

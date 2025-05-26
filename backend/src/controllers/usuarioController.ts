@@ -301,3 +301,100 @@ export async function eliminarUsuario(
     res.status(500).json(fail(errorMessage));
   }
 }
+
+/**
+ * Cambia la contraseña del propio usuario
+ */
+export async function cambiarPassword(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { password_actual, password_nuevo } = req.body;
+
+  // Verifica que el usuario autenticado es el mismo
+  const userId = (req as any).user?.id;
+  if (userId !== id) {
+    res.status(403).json(fail('Solo puedes cambiar tu propia contraseña'));
+    return;
+  }
+
+  // Validación básica
+  if (!password_actual || !password_nuevo) {
+    res.status(400).json(fail('Se requieren el password actual y el nuevo'));
+    return;
+  }
+  // Password fuerte: mínimo 8 caracteres, mayúscula, minúscula, número
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password_nuevo)) {
+    res.status(400).json(fail('El password nuevo debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y números'));
+    return;
+  }
+
+  try {
+    const usuario = await prisma.usuario.findUnique({ where: { id } });
+    if (!usuario) {
+      res.status(404).json(fail('Usuario no encontrado'));
+      return;
+    }
+    if (!usuario.password) {
+      res.status(400).json(fail('El usuario no tiene password local configurado'));
+      return;
+    }
+    const ok = await bcrypt.compare(password_actual, usuario.password);
+    if (!ok) {
+      res.status(401).json(fail('El password actual es incorrecto'));
+      return;
+    }
+    // Hashear el nuevo password
+    const nuevoHash = await bcrypt.hash(password_nuevo, 10);
+    await prisma.usuario.update({
+      where: { id },
+      data: { password: nuevoHash }
+    });
+    res.json(success('Contraseña actualizada correctamente'));
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+    res.status(500).json(fail(errorMessage));
+  }
+}
+
+/**
+ * Restablece la contraseña de un usuario (solo admin)
+ */
+export async function resetPasswordAdmin(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { password_nuevo } = req.body;
+
+  // Control de acceso: solo admin
+  const userRol = (req as any).user?.rol;
+  if (userRol !== 'admin') {
+    res.status(403).json(fail('Solo admin puede restablecer contraseñas'));
+    return;
+  }
+
+  // Validación mínima
+  if (!password_nuevo) {
+    res.status(400).json(fail('Debes enviar el nuevo password'));
+    return;
+  }
+  // Validación de fuerza
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password_nuevo)) {
+    res.status(400).json(fail('El password nuevo debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y números'));
+    return;
+  }
+
+  try {
+    const usuario = await prisma.usuario.findUnique({ where: { id } });
+    if (!usuario) {
+      res.status(404).json(fail('Usuario no encontrado'));
+      return;
+    }
+
+    const nuevoHash = await bcrypt.hash(password_nuevo, 10);
+    await prisma.usuario.update({
+      where: { id },
+      data: { password: nuevoHash }
+    });
+    res.json(success('Contraseña restablecida correctamente'));
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+    res.status(500).json(fail(errorMessage));
+  }
+}

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import * as usuarioController from '@/controllers/usuarioController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
+import { cambiarPassword } from '@/controllers/usuarioController';
+import { resetPasswordAdmin } from '@/controllers/usuarioController';
 
 const router = Router();
 
@@ -180,5 +182,102 @@ router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista
  *               $ref: '#/components/schemas/Error'
  */
 router.delete('/:id', authenticateJWT, requireRole('admin'), usuarioController.eliminarUsuario);
+
+/**
+ * @swagger
+ * /api/usuarios/{id}/password:
+ *   put:
+ *     summary: Cambia la contraseña del usuario autenticado (self-service)
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *         description: ID del usuario (debe coincidir con el usuario autenticado)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password_actual, password_nuevo]
+ *             properties:
+ *               password_actual:
+ *                 type: string
+ *                 example: "Admin1234!"
+ *               password_nuevo:
+ *                 type: string
+ *                 example: "NuevoPass2024!"
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Error en la petición (faltan datos, password débil, etc)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Password actual incorrecto o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: No tienes permiso para cambiar esa contraseña
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/:id/password', authenticateJWT, cambiarPassword);
+
+/**
+ * @swagger
+ * /api/usuarios/{id}/reset-password:
+ *   put:
+ *     summary: Restablece la contraseña de un usuario (solo admin)
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *         description: ID del usuario a restablecer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password_nuevo]
+ *             properties:
+ *               password_nuevo:
+ *                 type: string
+ *                 example: "NuevoAdmin123!"
+ *     responses:
+ *       200:
+ *         description: Contraseña restablecida correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ */
+router.put('/:id/reset-password', authenticateJWT, requireRole('admin'), resetPasswordAdmin);
 
 export default router;
