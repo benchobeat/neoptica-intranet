@@ -47,6 +47,5 @@ logs/
 # Otros
 docs/manuales/Setup.md~  # archivos temporales de edición
 
-# Archivos de configuración de workspace de Visual Studio Code
 neoptica-intranet.code-workspace
 # Archivos de configuración de workspace
