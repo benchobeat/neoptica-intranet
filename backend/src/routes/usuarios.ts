@@ -4,6 +4,7 @@ import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 import { cambiarPassword } from '@/controllers/usuarioController';
 import { resetPasswordAdmin } from '@/controllers/usuarioController';
+import { eliminarUsuario } from '../controllers/usuarioController';
 
 const router = Router();
 
@@ -181,7 +182,7 @@ router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', authenticateJWT, requireRole('admin'), usuarioController.eliminarUsuario);
+router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarUsuario);
 
 /**
  * @swagger

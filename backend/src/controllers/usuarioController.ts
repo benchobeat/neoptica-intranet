@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { success, fail } from "@/utils/response";
 import bcrypt from "bcrypt";
+import { registrarAuditoria } from "@/utils/auditoria";
 
 const prisma = new PrismaClient();
 
@@ -28,6 +29,16 @@ export async function listarUsuarios(
       activo: usuario.activo,
       rol: usuario.usuario_rol?.[0]?.rol?.nombre || "usuario",
     }));
+
+    // Registrar auditoría de consulta de usuarios
+    await registrarAuditoria({
+      usuarioId: (req as any).user?.id || null,
+      accion: "listar_usuarios",
+      descripcion: `Se listaron ${data.length} usuarios`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      modulo: "usuarios",
+    });
 
     res.json(success(data));
   } catch (err) {
@@ -67,6 +78,17 @@ export async function obtenerUsuario(
       rol: usuario.usuario_rol?.[0]?.rol?.nombre || "usuario",
     };
 
+    // Registrar auditoría de consulta de usuario
+    await registrarAuditoria({
+      usuarioId: (req as any).user?.id || null,
+      accion: "obtener_usuario",
+      descripcion: `Se consultó el usuario: ${usuario.email}`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: usuario.id,
+      modulo: "usuarios",
+    });
+
     res.json(success(data));
   } catch (err) {
     const errorMessage =
@@ -95,42 +117,81 @@ function telefonoValido(telefono: string): boolean {
 
 export async function crearUsuario(req: Request, res: Response): Promise<void> {
   const { nombre_completo, email, password, telefono, rol } = req.body;
+  const usuarioId = (req as any).user?.id || "sistema";
+  let mensajeError = "";
 
   // Validación mínima
   if (!nombre_completo || !email || !password) {
-    res.status(400).json(fail("Faltan datos obligatorios"));
+    mensajeError = "Faltan datos obligatorios";
+    res.status(400).json(fail(mensajeError));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "crear_usuario_fallido",
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      modulo: "usuarios",
+    });
     return;
   }
 
-  // Validación de teléfono celular de 10 dígitos
-  if (!telefonoValido(telefono)) {
-    res
-      .status(400)
-      .json(fail("El teléfono debe ser un número celular de 10 dígitos"));
+  // Validación de teléfono solo si viene
+  if (telefono && !telefonoValido(telefono)) {
+    mensajeError = "El teléfono debe ser un número celular de 10 dígitos";
+    res.status(400).json(fail(mensajeError));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "crear_usuario_fallido",
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      modulo: "usuarios",
+    });
     return;
   }
 
   // Validación de email
   if (!emailValido(email)) {
-    res.status(400).json(fail("El email no es válido"));
+    mensajeError = "El email no es válido";
+    res.status(400).json(fail(mensajeError));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "crear_usuario_fallido",
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      modulo: "usuarios",
+    });
     return;
   }
 
   // Validación de password fuerte
   if (!passwordFuerte(password)) {
-    res
-      .status(400)
-      .json(
-        fail(
-          "El password debe tener al menos 8 caracteres, mayúscula, minúscula y número"
-        )
-      );
+    mensajeError = "El password debe tener al menos 8 caracteres, mayúscula, minúscula y número";
+    res.status(400).json(fail(mensajeError));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "crear_usuario_fallido",
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      modulo: "usuarios",
+    });
     return;
   }
 
   // Control de acceso (solo admin)
   if ((req as any).user?.rol !== "admin") {
-    res.status(403).json(fail("Solo admin puede crear usuarios"));
+    mensajeError = "Solo admin puede crear usuarios";
+    res.status(403).json(fail(mensajeError));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "crear_usuario_fallido",
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      modulo: "usuarios",
+    });
     return;
   }
 
@@ -138,20 +199,38 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     // ¿El email ya existe?
     const yaExiste = await prisma.usuario.findUnique({ where: { email } });
     if (yaExiste) {
-      res.status(409).json(fail("El email ya está registrado"));
+      mensajeError = "El email ya está registrado";
+      res.status(409).json(fail(mensajeError));
+      await registrarAuditoria({
+        usuarioId,
+        accion: "crear_usuario_fallido",
+        descripcion: mensajeError,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        modulo: "usuarios",
+      });
       return;
     }
 
     // Hashear password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Rol a asignar: el que viene en el request, o "vendedor" por defecto
-    const rolAsignar = rol || "vendedor";
+    // Rol a asignar: el que viene en el request, o "cliente" por defecto
+    const rolAsignar = rol || "cliente";
     const rolObj = await prisma.rol.findUnique({
       where: { nombre: rolAsignar },
     });
     if (!rolObj) {
-      res.status(400).json(fail("El rol especificado no existe"));
+      mensajeError = "El rol especificado no existe";
+      res.status(400).json(fail(mensajeError));
+      await registrarAuditoria({
+        usuarioId,
+        accion: "crear_usuario_fallido",
+        descripcion: mensajeError,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        modulo: "usuarios",
+      });
       return;
     }
 
@@ -174,6 +253,17 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       },
     });
 
+    // Registrar auditoría con el rol en la descripción
+    await registrarAuditoria({
+      usuarioId,
+      accion: "crear_usuario_exitoso",
+      descripcion: `Usuario creado: ${usuario.email} (rol: ${rolObj.nombre})`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: usuario.id,
+      modulo: "usuarios",
+    });
+
     // Respuesta segura
     res.status(201).json(
       success({
@@ -186,9 +276,16 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       })
     );
   } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Error desconocido";
-    res.status(500).json(fail(errorMessage));
+    mensajeError = err instanceof Error ? err.message : "Error desconocido";
+    res.status(500).json(fail(mensajeError));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "crear_usuario_fallido",
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      modulo: "usuarios",
+    });
   }
 }
 
@@ -200,52 +297,132 @@ export async function actualizarUsuario(
   res: Response
 ): Promise<void> {
   const { id } = req.params;
-  const { nombre_completo, email, telefono } = req.body;
-
-  // Validación mínima
-  if (!nombre_completo || !email) {
-    res.status(400).json(fail("Faltan datos obligatorios"));
-    return;
-  }
-
-  // Permitir solo si es admin o es el propio usuario
-  const userId = (req as any).user?.id;
-  const userRol = (req as any).user?.rol;
-  if (userRol !== "admin" && userId !== id) {
-    res.status(403).json(fail("Solo admin o el propio usuario pueden editar"));
-    return;
-  }
+  const { nombre_completo, email, telefono, dni } = req.body;
+  const usuarioId = (req as any).user?.id || "sistema";
+  let mensajeError = "";
 
   try {
     const usuario = await prisma.usuario.findUnique({ where: { id } });
     if (!usuario) {
-      res.status(404).json(fail("Usuario no encontrado"));
+      mensajeError = "Usuario no encontrado";
+      res.status(404).json(fail(mensajeError));
+      await registrarAuditoria({
+        usuarioId,
+        accion: "modificar_usuario_fallido",
+        descripcion: mensajeError,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        entidadId: id,
+        modulo: "usuarios",
+      });
       return;
     }
 
-    // ¿El nuevo email está en uso por otro usuario?
-    if (email !== usuario.email) {
-      const emailUsado = await prisma.usuario.findUnique({ where: { email } });
-      if (emailUsado && emailUsado.id !== id) {
-        res.status(409).json(fail("El email ya está registrado"));
+    // Validación de email
+    if (email && !emailValido(email)) {
+      mensajeError = "El email no es válido";
+      res.status(400).json(fail(mensajeError));
+      await registrarAuditoria({
+        usuarioId,
+        accion: "modificar_usuario_fallido",
+        descripcion: mensajeError,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        entidadId: id,
+        modulo: "usuarios",
+      });
+      return;
+    }
+    // Validación de teléfono
+    if (telefono && !telefonoValido(telefono)) {
+      mensajeError = "El teléfono debe ser un número celular de 10 dígitos";
+      res.status(400).json(fail(mensajeError));
+      await registrarAuditoria({
+        usuarioId,
+        accion: "modificar_usuario_fallido",
+        descripcion: mensajeError,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        entidadId: id,
+        modulo: "usuarios",
+      });
+      return;
+    }
+
+    // Lógica para dni: solo permitir si actualmente es null
+    let nuevoDni = usuario.dni;
+    if (dni !== undefined) {
+      if (usuario.dni !== null) {
+        mensajeError = "El DNI ya está registrado y no puede ser modificado";
+        res.status(400).json(fail(mensajeError));
+        await registrarAuditoria({
+          usuarioId,
+          accion: "modificar_usuario_fallido",
+          descripcion: mensajeError,
+          ip: req.ip,
+          entidadTipo: "usuario",
+          entidadId: id,
+          modulo: "usuarios",
+        });
+        return;
+      } else {
+        nuevoDni = dni;
+      }
+    }
+
+    // Validación de email duplicado (si se quiere cambiar el email)
+    if (email && email !== usuario.email) {
+      const emailExistente = await prisma.usuario.findUnique({ where: { email } });
+      if (emailExistente && emailExistente.id !== usuario.id) {
+        mensajeError = "El email ya está registrado por otro usuario";
+        res.status(409).json(fail(mensajeError));
+        await registrarAuditoria({
+          usuarioId,
+          accion: "modificar_usuario_fallido",
+          descripcion: mensajeError,
+          ip: req.ip,
+          entidadTipo: "usuario",
+          entidadId: id,
+          modulo: "usuarios",
+        });
         return;
       }
     }
 
-    // Actualizar usuario
+    // Detectar cambios
+    const cambios: string[] = [];
+    if (nombre_completo && nombre_completo !== usuario.nombre_completo) {
+      cambios.push(`nombre_completo: "${usuario.nombre_completo}" → "${nombre_completo}"`);
+    }
+    if (email && email !== usuario.email) {
+      cambios.push(`email: "${usuario.email}" → "${email}"`);
+    }
+    if (telefono !== undefined && telefono !== usuario.telefono) {
+      cambios.push(`telefono: "${usuario.telefono || ""}" → "${telefono || ""}"`);
+    }
+    if (nuevoDni !== usuario.dni) {
+      cambios.push(`dni: "${usuario.dni || ""}" → "${nuevoDni || ""}"`);
+    }
+
+    // Actualiza el usuario
     const usuarioActualizado = await prisma.usuario.update({
       where: { id },
       data: {
         nombre_completo,
         email,
         telefono,
+        dni: nuevoDni,
       },
     });
 
-    // Buscar rol principal del usuario (si lo necesitas mostrar)
-    const usuarioRol = await prisma.usuario_rol.findFirst({
-      where: { usuario_id: usuarioActualizado.id },
-      include: { rol: true },
+    await registrarAuditoria({
+      usuarioId,
+      accion: "modificar_usuario_exitoso",
+      descripcion: `Usuario modificado: ${usuarioActualizado.email}. Cambios: ${cambios.length > 0 ? cambios.join("; ") : "sin cambios"}`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: usuarioActualizado.id,
+      modulo: "usuarios",
     });
 
     res.json(
@@ -254,14 +431,22 @@ export async function actualizarUsuario(
         nombre_completo: usuarioActualizado.nombre_completo,
         email: usuarioActualizado.email,
         telefono: usuarioActualizado.telefono,
+        dni: usuarioActualizado.dni,
         activo: usuarioActualizado.activo,
-        rol: usuarioRol?.rol?.nombre || "usuario",
       })
     );
   } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Error desconocido";
-    res.status(500).json(fail(errorMessage));
+    mensajeError = err instanceof Error ? err.message : "Error desconocido";
+    res.status(500).json(fail(mensajeError));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "modificar_usuario_fallido",
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: id,
+      modulo: "usuarios",
+    });
   }
 }
 
@@ -274,13 +459,6 @@ export async function eliminarUsuario(
 ): Promise<void> {
   const { id } = req.params;
 
-  // Solo admin puede eliminar usuarios
-  const userRol = (req as any).user?.rol;
-  if (userRol !== "admin") {
-    res.status(403).json(fail("Solo admin puede eliminar usuarios"));
-    return;
-  }
-
   try {
     const usuario = await prisma.usuario.findUnique({ where: { id } });
     if (!usuario) {
@@ -288,13 +466,28 @@ export async function eliminarUsuario(
       return;
     }
 
-    // Borrado lógico: marca el usuario como inactivo
+    // Eliminación lógica: marcar como inactivo y guardar fecha/anulador
     await prisma.usuario.update({
       where: { id },
-      data: { activo: false },
+      data: {
+        activo: false,
+        anulado_en: new Date(),
+        anulado_por: (req as any).user?.id || null,
+      },
     });
 
-    res.json(success("Usuario marcado como inactivo"));
+    // Registrar auditoría
+    await registrarAuditoria({
+      usuarioId: (req as any).user?.id || null,
+      accion: "eliminar_usuario",
+      descripcion: `El usuario ${usuario.email} fue eliminado lógicamente.`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: id,
+      modulo: "usuarios",
+    });
+
+    res.json(success("Usuario eliminado lógicamente"));
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Error desconocido";
@@ -348,6 +541,18 @@ export async function cambiarPassword(req: Request, res: Response): Promise<void
       where: { id },
       data: { password: nuevoHash }
     });
+
+    // Registrar auditoría (sin password)
+    await registrarAuditoria({
+      usuarioId: id,
+      accion: "cambiar_password",
+      descripcion: `El usuario cambió su contraseña.`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: id,
+      modulo: "usuarios",
+    });
+
     res.json(success('Contraseña actualizada correctamente'));
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
@@ -392,6 +597,18 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
       where: { id },
       data: { password: nuevoHash }
     });
+
+    // Registrar auditoría (sin password)
+    await registrarAuditoria({
+      usuarioId: (req as any).user?.id || null,
+      accion: "reset_password_admin",
+      descripcion: `El admin restableció la contraseña del usuario ${usuario.email}.`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: id,
+      modulo: "usuarios",
+    });
+
     res.json(success('Contraseña restablecida correctamente'));
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Error desconocido';

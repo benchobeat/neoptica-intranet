@@ -3,13 +3,23 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { success, fail } from '@/utils/response';
+import { registrarAuditoria } from "@/utils/auditoria";
 
 const prisma = new PrismaClient();
 
 export async function login(req: Request, res: Response): Promise<void> {
   const { email, password } = req.body;
+  let mensajeError = "";
 
   if (!email || !password) {
+    await registrarAuditoria({
+      usuarioId: null,
+      accion: "login_fallido",
+      descripcion: "Email y password son requeridos",
+      ip: req.ip,
+      entidadTipo: "usuario",
+      modulo: "auth",
+    });
     res.status(400).json(fail('Email y password son requeridos'));
     return;
   }
@@ -23,24 +33,61 @@ export async function login(req: Request, res: Response): Promise<void> {
       }
     });
     
+    if (!usuario) {
+      mensajeError = "Credenciales inválidas o usuario inactivo";
+      await registrarAuditoria({
+        usuarioId: "desconocido",
+        accion: "login_fallido",
+        descripcion: `Intento de login fallido para email: ${email}`,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        modulo: "auth",
+      });
+      res.status(401).json(fail(mensajeError));
+      return;
+    }
+
     if (usuario.activo === false) {
+      await registrarAuditoria({
+        usuarioId: usuario.id,
+        accion: "login_fallido",
+        descripcion: `Intento de login fallido (usuario inactivo): ${usuario.email}`,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        entidadId: usuario.id,
+        modulo: "auth",
+      });
       res.status(403).json(fail('El usuario está inactivo. Contacte al administrador.'));
       return;
     }
 
-    if (!usuario) {
-      res.status(404).json(fail('Credenciales inválidas')); //Usuario no encontrado
-      return;
-    }
-
     if (!usuario.password) {
+      await registrarAuditoria({
+        usuarioId: usuario.id,
+        accion: "login_fallido",
+        descripcion: `Intento de login fallido (sin password local): ${usuario.email}`,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        entidadId: usuario.id,
+        modulo: "auth",
+      });
       res.status(401).json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
       return;
     }
 
-    const isMatch = await bcrypt.compare(password, usuario.password);
-    if (!isMatch) {
-      res.status(401).json(fail('Credenciales inválidas')); //Password incorrecto
+    const passwordOk = await bcrypt.compare(password, usuario.password);
+    if (!passwordOk) {
+      await registrarAuditoria({
+        usuarioId: usuario.id,
+        accion: "login_fallido",
+        descripcion: `Intento de login fallido (password incorrecto): ${usuario.email}`,
+        ip: req.ip,
+        entidadTipo: "usuario",
+        entidadId: usuario.id,
+        modulo: "auth",
+      });
+      mensajeError = "Credenciales inválidas";
+      res.status(401).json(fail(mensajeError));
       return;
     }
 
@@ -59,6 +106,17 @@ export async function login(req: Request, res: Response): Promise<void> {
       { expiresIn: '8h' }
     );
 
+    // Registrar log de acceso exitoso
+    await registrarAuditoria({
+      usuarioId: usuario.id,
+      accion: "login_exitoso",
+      descripcion: `Usuario accedió al sistema: ${usuario.email}`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: usuario.id,
+      modulo: "auth",
+    });
+
     // Limpia la respuesta
     const { password: _, ...usuarioSafe } = usuario;
 
@@ -74,7 +132,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     }));
 
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-    res.status(500).json(fail(errorMessage));
+    mensajeError = err instanceof Error ? err.message : "Error desconocido";
+    res.status(500).json(fail(mensajeError));
   }
 }

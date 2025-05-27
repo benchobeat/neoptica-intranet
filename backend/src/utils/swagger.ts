@@ -3,7 +3,7 @@ import swaggerJSDoc from "swagger-jsdoc";
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "Neóptica Intranet API",
+    title: "API Neoptica",
     version: "1.0.0",
     description:
       "Documentación de la API REST del backend de Neóptica Intranet.",
@@ -31,14 +31,21 @@ const swaggerDefinition = {
       },
     },
     schemas: {
-      // Objeto de error estándar
+      Success: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          data: { type: "string", example: "Contraseña restablecida correctamente" },
+          error: { type: "string", example: null }
+        }
+      },
       Error: {
         type: "object",
         properties: {
           ok: { type: "boolean", example: false },
-          data: { type: "null", example: null },
-          error: { type: "string", example: "Mensaje de error detallado" },
-        },
+          data: { type: "string", example: null },
+          error: { type: "string", example: "Mensaje de error" }
+        }
       },
       // Usuario devuelto por la API
       Usuario: {
@@ -106,7 +113,35 @@ const swaggerDefinition = {
           },
         },
     },
+    responses: {
+      BadRequest: {
+        description: "Error en la petición",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/Error" }
+          }
+        }
+      },
+      Forbidden: {
+        description: "No tienes permisos para esta acción",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/Error" }
+          }
+        }
+      },
+      NotFound: {
+        description: "Recurso no encontrado",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/Error" }
+          }
+        }
+      },
+    }
   },
+  // Si quieres que todos los endpoints requieran autenticación por defecto, agrega:
+  // security: [{ bearerAuth: [] }],
 };
 
 export const swaggerOptions = {
