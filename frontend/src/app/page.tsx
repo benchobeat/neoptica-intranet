@@ -62,7 +62,7 @@ export default function LoginPage() {
             message.success("¡Inicio de sesión exitoso! Rol Vendedor.");
             window.location.href = "/vendedor";
             break;
-          case "opromentista": // Corregido: "optometrista" si ese es el rol correcto
+          case "optometrista": // Corregido: "optometrista" si ese es el rol correcto
             message.success("¡Inicio de sesión exitoso! Rol Optometrista.");
             window.location.href = "/optometrista"; // Corregido: "/optometrista"
             break;
