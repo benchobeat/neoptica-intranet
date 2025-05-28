@@ -71,7 +71,7 @@ export default function LoginPage() {
             window.location.href = "/cliente";
             break;
           default:
-            message.warn("Rol no reconocido. Redirigiendo a la página principal.");
+            message.warning("Rol no reconocido. Redirigiendo a la página principal.");
             window.location.href = "/"; // Redirección por defecto si el rol no coincide
         }
       } else {
