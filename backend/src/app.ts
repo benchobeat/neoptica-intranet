@@ -3,6 +3,7 @@
 import 'module-alias/register';
 import dotenv from 'dotenv';
 import express from 'express';
+import cors from 'cors';
 
 import authRoutes from '@/routes/auth';
 import usuariosRoutes from '@/routes/usuarios';
@@ -18,6 +19,11 @@ import { swaggerSpec } from '@/utils/swagger';
 dotenv.config();
 
 const app = express();
+
+app.use(cors({
+  origin: 'http://localhost:3000', // o usa '*' solo para pruebas locales
+  credentials: true
+}));
 
 app.use(express.json());
 app.use('/api/auth', authRoutes);
