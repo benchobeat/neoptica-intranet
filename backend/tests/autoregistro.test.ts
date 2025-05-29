@@ -1,0 +1,153 @@
+import request from "supertest";
+import app from "@/app";
+import prisma from "@/utils/prisma";
+
+describe("Autoregistro de cliente", () => {
+  jest.setTimeout(20000); // 20 segundos para todos los tests de este archivo
+
+afterAll(async () => {
+    // Limpieza de usuarios de test
+    await prisma.usuario.deleteMany({
+      where: {
+        OR: [
+          { email: { contains: "autotest" } },
+          { oauth_id: "oauth_test_id" }
+        ]
+      }
+    });
+    // await prisma.$disconnect(); // Comentado para evitar cierre anticipado
+  });
+
+  // --- BÁSICAS ---
+
+  it("Debe registrar cliente por formulario tradicional", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        nombre_completo: "Auto Test",
+        email: "autotest_form@neoptica.com",
+        password: "Test1234!",
+        telefono: "0999999999"
+      });
+    console.log("RESPUESTA TEST:", res.status, res.body);
+    expect(res.status).toBe(201);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.data.rol).toBe("cliente");
+  }, 20000); // Timeout específico para este test
+
+
+  it("Debe registrar cliente con Google OAuth", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        email: "autotest_google@neoptica.com",
+        proveedor_oauth: "google",
+        oauth_id: "oauth_test_id_google"
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.data.rol).toBe("cliente");
+    expect(res.body.data.proveedor_oauth).toBe("google");
+  });
+
+  // --- MEDIAS ---
+
+  it("Debe rechazar registro si falta email (formulario)", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        nombre_completo: "Sin Email",
+        password: "Test1234!"
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+  });
+
+  it("Debe rechazar registro social si falta oauth_id", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        email: "autotest_faltaid@neoptica.com",
+        proveedor_oauth: "facebook"
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+  });
+
+  it("Debe rechazar registro duplicado por email", async () => {
+    // Primer registro
+    await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        nombre_completo: "Duplicado",
+        email: "autotest_dup@neoptica.com",
+        password: "Test1234!"
+      });
+    // Segundo intento
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        nombre_completo: "Duplicado",
+        email: "autotest_dup@neoptica.com",
+        password: "Test1234!"
+      });
+    expect(res.status).toBe(409);
+    expect(res.body.ok).toBe(false);
+  });
+
+  // --- AVANZADAS ---
+
+  it("Debe registrar cliente con Facebook OAuth y guardar proveedor correctamente", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        email: "autotest_facebook@neoptica.com",
+        proveedor_oauth: "facebook",
+        oauth_id: "oauth_test_id_facebook"
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.proveedor_oauth).toBe("facebook");
+    expect(res.body.data.rol).toBe("cliente");
+  });
+
+  it("Debe registrar cliente con Instagram OAuth y guardar proveedor correctamente", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        email: "autotest_instagram@neoptica.com",
+        proveedor_oauth: "instagram",
+        oauth_id: "oauth_test_id_instagram"
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.proveedor_oauth).toBe("instagram");
+    expect(res.body.data.rol).toBe("cliente");
+  });
+
+  it("No debe permitir crear usuario con rol diferente a cliente", async () => {
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        nombre_completo: "Intento Admin",
+        email: "autotest_admin@neoptica.com",
+        password: "Test1234!",
+        rol: "admin"
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.rol).toBe("cliente");
+  });
+
+  it("Debe guardar correctamente los datos recibidos de Google (nombre, email, etc)", async () => {
+    // Simula que Google envía nombre y email
+    const res = await request(app)
+      .post("/api/usuarios/autoregistro")
+      .send({
+        nombre_completo: "Google User",
+        email: "autotest_googleinfo@neoptica.com",
+        proveedor_oauth: "google",
+        oauth_id: "oauth_test_id_googleinfo"
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.nombre_completo).toBe("Google User");
+    expect(res.body.data.email).toBe("autotest_googleinfo@neoptica.com");
+  });
+});

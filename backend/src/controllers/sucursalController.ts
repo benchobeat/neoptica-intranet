@@ -22,7 +22,7 @@ export async function listarSucursales(req: Request, res: Response): Promise<voi
         email: true,
         estado: true,
         creado_en: true,
-        actualizado_en: true,
+        modificado_en: true,
       }
     });
     res.json(success(sucursales));
