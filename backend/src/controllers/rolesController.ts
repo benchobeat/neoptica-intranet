@@ -7,8 +7,11 @@ const prisma = new PrismaClient();
 /**
  * Lista todos los roles
  */
+/**
+ * GET /api/roles — Solo lectura
+ * Lista todos los roles predefinidos del sistema.
+ */
 export async function listarRoles(req: Request, res: Response): Promise<void> {
-  console.log('req.user en roles:', (req as any).user);
   try {
     const roles = await prisma.rol.findMany();
     res.json(success(roles));
@@ -17,3 +20,12 @@ export async function listarRoles(req: Request, res: Response): Promise<void> {
     res.status(500).json(fail(errorMessage));
   }
 }
+
+/**
+ * Métodos no permitidos para roles (POST, PUT, DELETE)
+ * Siempre responde 405 y mensaje claro.
+ */
+export function metodoNoPermitido(_req: Request, res: Response): void {
+  res.status(405).json(fail('Operación no permitida: los roles del sistema solo pueden ser consultados (solo lectura). Método no permitido.'));
+}
+

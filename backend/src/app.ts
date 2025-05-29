@@ -9,6 +9,7 @@ import authRoutes from '@/routes/auth';
 import usuariosRoutes from '@/routes/usuarios';
 import rolesRoutes from '@/routes/roles';
 import sucursalesRoutes from '@/routes/sucursales';
+import productoRoutes from '@/routes/producto'; // Importamos la nueva ruta
 import { authenticateJWT } from '@/middlewares/auth';
 import { success } from '@/utils/response';
 import { sendMail } from '@/utils/mailer';
@@ -30,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/sucursales', sucursalesRoutes);
+app.use('/api/productos', productoRoutes); // Registramos la nueva ruta
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get('/', (req, res) => {

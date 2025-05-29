@@ -5,9 +5,9 @@ Desarrollado en Node.js + Express + TypeScript + Prisma ORM + PostgreSQL, seguro
 ## Tabla de contenidos
 - Características
 - Requisitos
-- Configuración inicial
+- Instalación y puesta en marcha
 - Scripts principales
-- Estructura de carpetas
+- Estructura de carpetas (actualizada)
 - Variables de entorno
 - Seed de base de datos
 - Convenciones de respuesta API
@@ -34,59 +34,38 @@ Desarrollado en Node.js + Express + TypeScript + Prisma ORM + PostgreSQL, seguro
 - PostgreSQL 13+
 - [Opcional] Docker para entorno controlado
 
-## Configuración inicial
-1. Clona el repositorio
-```bash
-git clone <tu-repo-url>
-cd neoptica-intranet/backend
-```
-2. Instala dependencias
-```bash
-npm install
-```
-3. Copia y edita el archivo de variables de entorno
-```bash
-cp .env.example .env
-# Edita tus credenciales de base de datos, JWT_SECRET, SMTP, etc.
-```
-4. Genera el cliente Prisma y aplica migraciones
-```bash
-npx prisma generate
-npx prisma migrate deploy # o migrate dev si estás en desarrollo
-```
-5. Ejecuta el seed para datos iniciales
-```bash
-npx prisma db seed
-```
-6. Arranca el backend en desarrollo
-```bash
-npm run dev
-```
 
 ## Estructura de carpetas
 ```plaintext
 backend/
-│
-├── src/
-│   ├── controllers/
-│   ├── middlewares/
-│   ├── routes/
-│   ├── utils/
-│   └── index.ts
-│
-├── prisma/
-│   ├── schema.prisma
-│   └── seed.ts
-│
-├── build/              # Salida compilada (production)
-├── .env
-├── tsconfig.json
+├── .env                  # Variables de entorno
+├── .gitignore
+├── README.md
+├── jest.config.js        # Configuración de tests
 ├── package.json
-└── README.md
+├── package-lock.json
+├── tsconfig.json         # Configuración TS
+├── tsconfig.test.json    # Configuración TS para tests
+├── coverage/             # Reportes de cobertura
+├── node_modules/
+├── prisma/
+│   ├── schema.prisma     # Esquema de base de datos
+│   ├── seed.ts           # Script de datos iniciales
+│   └── migrations/       # Migraciones Prisma
+├── src/
+│   ├── app.ts            # Configuración principal Express
+│   ├── index.ts          # Entry point
+│   ├── controllers/      # Lógica de negocio (usuarioController.ts, etc.)
+│   ├── middlewares/      # Middlewares personalizados
+│   ├── prisma/           # Cliente Prisma
+│   ├── routes/           # Definición de rutas (API)
+│   └── utils/            # Utilidades y helpers
+├── tests/
+│   └── usuarios.test.ts  # Test avanzado de usuarios y edge cases
 ```
 
 ## Variables de entorno
-Ejemplo mínimo (.env):
+Ejemplo mínimo (`.env`):
 ```ini
 DATABASE_URL=postgresql://user:password@localhost:5432/neoptica_db
 JWT_SECRET=tu_clave_secreta_segura
@@ -95,6 +74,8 @@ SMTP_PORT=587
 SMTP_USER=usuario
 SMTP_PASS=clave
 ```
+- Ajusta las variables según tu entorno local o de producción.
+- **Nunca subas tus credenciales reales al repositorio.**
 
 ## Seed de base de datos
 - El script de seed crea los roles base (admin, optometrista, vendedor), un usuario administrador y asocia roles.

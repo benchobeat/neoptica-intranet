@@ -14,11 +14,11 @@ const swaggerDefinition = {
   },
   servers: [
     {
-    url: process.env.SWAGGER_BASE_URL,
+      url: process.env.SWAGGER_BASE_URL,
       description: "API base URL",
     },
     {
-    url: "http://localhost:4000",
+      url: "http://localhost:4000",
       description: "API base URL",
     },
   ],
@@ -36,18 +36,17 @@ const swaggerDefinition = {
         properties: {
           ok: { type: "boolean", example: true },
           data: { type: "string", example: "Contraseña restablecida correctamente" },
-          error: { type: "string", example: null }
-        }
+          error: { type: "string", example: null },
+        },
       },
       Error: {
         type: "object",
         properties: {
           ok: { type: "boolean", example: false },
           data: { type: "string", example: null },
-          error: { type: "string", example: "Mensaje de error" }
-        }
+          error: { type: "string", example: "Mensaje de error" },
+        },
       },
-      // Usuario devuelto por la API
       Usuario: {
         type: "object",
         properties: {
@@ -62,16 +61,47 @@ const swaggerDefinition = {
           rol: { type: "string", example: "admin" },
         },
       },
-      // Datos requeridos para crear/actualizar usuario
-      UsuarioInput: {
+      Producto: {
         type: "object",
         properties: {
-          nombre_completo: { type: "string", example: "Juan Pérez" },
-          email: { type: "string", example: "juan@email.com" },
-          password: { type: "string", example: "1234" },
-          telefono: { type: "string", example: "0999999999" },
+          id: {
+            type: "string",
+            example: "123e4567-e89b-12d3-a456-426614174000",
+          },
+          nombre: {
+            type: "string",
+            example: "Lentes de Sol",
+          },
+          descripcion: {
+            type: "string",
+            example: "Lentes de sol polarizados",
+          },
+          precio: {
+            type: "number",
+            example: 49.99,
+          },
+          categoria: {
+            type: "string",
+            example: "Accesorios",
+          },
+          imagen_url: {
+            type: "string",
+            example: "https://example.com/lentes.jpg",
+          },
+          modelo_3d_url: {
+            type: "string",
+            example: "https://example.com/lentes-3d.glb",
+          },
+          activo: {
+            type: "boolean",
+            example: true,
+          },
+          creado_en: {
+            type: "string",
+            format: "date-time",
+            example: "2025-05-27T12:34:56Z",
+          },
         },
-        required: ["nombre_completo", "email", "password"],
       },
       Rol: {
         type: "object",
@@ -90,8 +120,8 @@ const swaggerDefinition = {
         properties: {
           id: { type: "string", example: "uuid..." },
           nombre: { type: "string", example: "Sucursal Quito Centro" },
-          direccion: { type: "string", example: "Av. Amazonas y Naciones Unidas", },
-          latitud: { type: "number", example: -0.1807 }, 
+          direccion: { type: "string", example: "Av. Amazonas y Naciones Unidas" },
+          latitud: { type: "number", example: -0.1807 },
           longitud: { type: "number", example: -78.4678 },
           telefono: { type: "string", example: "0999999999" },
           email: { type: "string", example: "quito@neoptica.com" },
@@ -101,47 +131,45 @@ const swaggerDefinition = {
         },
       },
       SucursalInput: {
-          type: "object",
-          required: ["nombre"],
-          properties: {
-            nombre: { type: "string", example: "Sucursal Norte" },
-            direccion: { type: "string", example: "Av. Amazonas y NN.UU." },
-            latitud: { type: "number", example: -0.20347 },
-            longitud: { type: "number", example: -78.49512 },
-            telefono: { type: "string", example: "0999999999" },
-            email: { type: "string", example: "sucursal@neoptica.com" },
-          },
+        type: "object",
+        required: ["nombre"],
+        properties: {
+          nombre: { type: "string", example: "Sucursal Norte" },
+          direccion: { type: "string", example: "Av. Amazonas y NN.UU." },
+          latitud: { type: "number", example: -0.20347 },
+          longitud: { type: "number", example: -78.49512 },
+          telefono: { type: "string", example: "0999999999" },
+          email: { type: "string", example: "sucursal@neoptica.com" },
         },
+      },
     },
     responses: {
       BadRequest: {
         description: "Error en la petición",
         content: {
           "application/json": {
-            schema: { $ref: "#/components/schemas/Error" }
-          }
-        }
+            schema: { $ref: "#/components/schemas/Error" },
+          },
+        },
       },
       Forbidden: {
         description: "No tienes permisos para esta acción",
         content: {
           "application/json": {
-            schema: { $ref: "#/components/schemas/Error" }
-          }
-        }
+            schema: { $ref: "#/components/schemas/Error" },
+          },
+        },
       },
       NotFound: {
         description: "Recurso no encontrado",
         content: {
           "application/json": {
-            schema: { $ref: "#/components/schemas/Error" }
-          }
-        }
+            schema: { $ref: "#/components/schemas/Error" },
+          },
+        },
       },
-    }
+    },
   },
-  // Si quieres que todos los endpoints requieran autenticación por defecto, agrega:
-  // security: [{ bearerAuth: [] }],
 };
 
 export const swaggerOptions = {
