@@ -269,6 +269,57 @@ Para mayor información revisar docs/manuales/email.md
 # 7. MANEJO DE ESTADOS, ANULACIÓN Y CICLO DE VIDA
 Para mayor información revisar docs/manuales/estados.md
 
+
+# 8. ESTADO ACTUAL Y RECOMENDACIONES PARA AUTENTICACIÓN SOCIAL (OAUTH)
+
+## Estado actual de la configuración OAuth (Google, Facebook, Instagram)
+
+Actualmente, el sistema de autenticación social está configurado para funcionar **exclusivamente en entorno local de desarrollo**. Las URLs de callback de los proveedores (Google, Facebook, Instagram) están definidas para apuntar a `localhost` y al backend local (puerto 4000), por ejemplo:
+
+- `http://localhost:4000/api/auth/google/callback`
+- `http://localhost:4000/api/auth/facebook/callback`
+- `http://localhost:4000/api/auth/instagram/callback`
+
+Esto permite desarrollar y probar la autenticación social sin exponer credenciales reales ni depender de dominios públicos.
+
+**Importante:** Si intentas usar el login social en un entorno publicado (producción) sin actualizar estas URLs, obtendrás errores del tipo `redirect_uri_mismatch` y el flujo OAuth fallará.
+
+## ¿Cuándo migrar a la URL real del proyecto?
+
+**Recomendación:**
+- Mantén la configuración en `localhost` mientras desarrollas y pruebas localmente.
+- **Solo cambia a la URL real del proyecto cuando tu aplicación esté publicada en un dominio definitivo** (ejemplo: `https://intranet.neoptica.com`).
+- Realiza la migración de URLs de callback y orígenes autorizados en los paneles de desarrollador de Google, Facebook e Instagram **antes de anunciar o abrir el login social a usuarios reales**.
+
+## Pasos para migrar a producción
+
+1. **Publica tu aplicación en el dominio definitivo** (ejemplo: `https://intranet.neoptica.com`).
+2. **Actualiza las variables de entorno del backend** (`.env`):
+   ```
+   GOOGLE_CALLBACK_URL=https://intranet.neoptica.com/api/auth/google/callback
+   FACEBOOK_CALLBACK_URL=https://intranet.neoptica.com/api/auth/facebook/callback
+   INSTAGRAM_CALLBACK_URL=https://intranet.neoptica.com/api/auth/instagram/callback
+   FRONTEND_URL=https://intranet.neoptica.com
+   ```
+3. **En Google Cloud Console, Facebook Developers e Instagram Developers:**
+   - Registra exactamente las mismas URLs de callback y orígenes autorizados.
+   - Ejemplo para Google:
+     - Origen autorizado: `https://intranet.neoptica.com`
+     - URI de redirección autorizada: `https://intranet.neoptica.com/api/auth/google/callback`
+4. **Reinicia el backend** para que tome los nuevos valores de entorno.
+5. **Verifica el flujo en producción**: realiza login social desde el dominio publicado.
+6. **Nunca publiques el sistema con URLs de callback apuntando a localhost**.
+
+## Advertencias y mejores prácticas
+- **Nunca compartas ni subas tus secretos OAuth a un repositorio público.** Usa variables de entorno.
+- **No uses credenciales de desarrollo en producción.** Genera nuevos IDs/secrets para el entorno productivo.
+- **Verifica siempre que las URLs de callback coincidan exactamente** (protocolo, dominio, path, sin espacios extra).
+- **Si cambias el dominio, repite el proceso** en todos los proveedores OAuth.
+
+---
+
+> **Estado actual:** Solo se permite login social en entorno local (`localhost:4000`). Para habilitarlo en producción, sigue los pasos detallados arriba.
+
 # 8. GESTIÓN DE ARCHIVOS Y ADJUNTOS
 Para mayor información revisar docs/manuales/archivos.md
 
@@ -296,7 +347,104 @@ Para ver el esquema prisma de la base de datos puedes usar el archivo backend/pr
 # 16. CRONOGRAMA
 Para mayor información revisar docs/manuales/cronograma.md
 
-# 17. AUTENTICACIÓN CON GOOGLE, FACEBOOK, INSTAGRAM
+# 17. AUTENTICACIÓN CON REDES SOCIALES (GOOGLE, FACEBOOK, INSTAGRAM)
+
+Este proyecto soporta autenticación de usuarios a través de Google, Facebook e Instagram usando Passport.js en el backend y JWT para la gestión de sesiones.
+
+## Flujo General
+1. El usuario hace click en “Registrarse con Google/Facebook/Instagram” en el frontend.
+2. El frontend redirige al backend (`/api/auth/google`, `/api/auth/facebook`, `/api/auth/instagram`).
+3. El usuario autoriza la app en la red social.
+4. La red social redirige al backend (`/api/auth/{proveedor}/callback`).
+5. El backend valida el perfil y genera un JWT.
+6. El backend redirige al frontend con el token JWT como parámetro en la URL (`/oauth-success?token=...`).
+7. El frontend captura el token, lo almacena y autentica al usuario en la app.
+
+---
+
+## Configuración Backend (Node/Express)
+
+- **Passport.js:** Configurado con estrategias para Google, Facebook e Instagram.
+- **JWT:** El backend emite un token JWT válido por 7 días tras el login social o tradicional.
+- **Rutas OAuth:**
+  - `/api/auth/google` y `/api/auth/google/callback`
+  - `/api/auth/facebook` y `/api/auth/facebook/callback`
+  - `/api/auth/instagram` y `/api/auth/instagram/callback`
+- **Protección de rutas:** Usa el middleware `authenticateJWT` para proteger endpoints que requieran autenticación.
+- **Variables de entorno requeridas:**
+
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+FACEBOOK_CLIENT_ID=...
+FACEBOOK_CLIENT_SECRET=...
+FACEBOOK_CALLBACK_URL=http://localhost:3000/auth/facebook/callback
+INSTAGRAM_CLIENT_ID=...
+INSTAGRAM_CLIENT_SECRET=...
+INSTAGRAM_CALLBACK_URL=http://localhost:3000/auth/instagram/callback
+JWT_SECRET=clave_secreta_segura
+FRONTEND_URL=http://localhost:3000
+```
+
+- **Modelo Prisma recomendado:**
+```prisma
+model usuario {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  proveedor_oauth String?
+  oauth_id        String?
+  // ...otros campos...
+  @@unique([proveedor_oauth, oauth_id])
+}
+```
+
+---
+
+## Configuración Frontend
+
+- **Redirección:** Al pulsar un botón social, redirige al endpoint `/api/auth/{proveedor}` del backend.
+- **Captura del token:** Crea una ruta `/oauth-success` que lea el token de la URL (`window.location.search`), lo almacene en `localStorage` y redirija al dashboard.
+- **Uso del token:** En cada request protegido, envía el JWT en el header:
+  - `Authorization: Bearer <token>`
+- **Ejemplo de captura en React:**
+
+```jsx
+// /src/pages/OauthSuccess.jsx
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+export default function OauthSuccess() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      localStorage.setItem('token', token);
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  }, [navigate]);
+  return <div>Autenticando...</div>;
+}
+```
+
+- **Botones de login social:** Cada botón debe redirigir a `/api/auth/google`, `/api/auth/facebook` o `/api/auth/instagram`.
+
+---
+
+## Resumen de Seguridad y Buenas Prácticas
+- El backend nunca expone secretos OAuth al frontend.
+- El JWT solo lo emite el backend tras validar el perfil social.
+- Las rutas protegidas requieren el header `Authorization: Bearer <token>`.
+- El frontend debe manejar el almacenamiento seguro del token y cerrar sesión eliminándolo.
+
+---
+
+Para dudas o problemas, revisar la sección de autenticación en este README o contactar al equipo de desarrollo.
+
+# 18. AUTENTICACIÓN CON GOOGLE, FACEBOOK, INSTAGRAM
 Para esta autenticación se debe usar passport.js   
 ## Backend (Node/Express):
 Usa Passport.js. Es robusto, ampliamente documentado y soporta todos los proveedores populares.
@@ -308,3 +456,597 @@ El frontend obtiene el token de Google.
 El frontend envía el token al backend.
 El backend valida el token con Google y extrae el perfil.
 El backend crea el usuario (si no existe) y lo autentica.
+
+# 19. ESQUEMA RELACIONAL DE BASE DE DATOS
+
+## Diagrama Entidad-Relación
+
+El sistema Neóptica Intranet utiliza un esquema de base de datos relacional PostgreSQL gestionado a través de Prisma ORM. La estructura principal se organiza en los siguientes grupos funcionales:
+
+### Gestión de Usuarios y Autenticación
+- `usuario` ↔️ `rol` (a través de `usuario_rol`)
+- `usuario` ↔️ `reset_token` (tokens para recuperación de contraseñas)
+
+### Gestión Clínica
+- `cita` ↔️ `usuario` (como cliente y como optometrista)
+- `cita` ↔️ `sucursal`
+- `cita` ↔️ `historial_clinico`
+- `cita` ↔️ `receta`
+
+### Gestión de Inventario
+- `producto` ↔️ `marca`
+- `producto` ↔️ `color`
+- `producto` ↔️ `inventario` ↔️ `sucursal`
+- `inventario` ↔️ `movimiento_inventario`
+- `transferencia_stock` (gestiona movimientos entre sucursales)
+
+### Ventas y Facturación
+- `pedido` ↔️ `usuario` (como cliente)
+- `pedido` ↔️ `detalle_pedido` ↔️ `producto`
+- `pedido` ↔️ `factura`
+- `pedido` ↔️ `pago`
+- `factura` ↔️ `archivo_adjunto` (PDFs y XMLs)
+
+### Contabilidad
+- `cuenta_contable` (estructura jerárquica)
+- `asiento_contable` ↔️ `movimiento_contable`
+- `movimiento_contable` ↔️ `cuenta_contable`
+- `asiento_contable` ↔️ `factura`, `gasto`, `pago`, `pedido`
+
+### Sistema de Archivos
+- `archivo_adjunto` ↔️ `archivo_entidad` (sistema polimórfico para adjuntos)
+
+### Auditoría y Logs
+- `log_auditoria` (registra acciones en todo el sistema)
+
+## Anomalías y Áreas de Mejora
+
+~~En el análisis detallado del esquema se identificaron las siguientes anomalías y oportunidades de mejora, que ahora han sido implementadas:~~
+
+✅ **1. Tabla `cupon` sin relaciones**: ~~Actualmente es una tabla huérfana sin conexiones con otras entidades.~~ Ahora se han implementado las siguientes relaciones:
+   - Relación con `pedido` para registrar uso de cupones y descuentos aplicados
+   - Relación muchos a muchos con `producto` mediante la tabla `producto_cupon`
+   - Relación con `usuario` para cupones personalizados por cliente
+
+✅ **2. Redundancia en contabilidad**: ~~Algunas entidades como `pedido` tenían tanto `asiento_contable_id` como `movimiento_contable_id`.~~ Se ha eliminado el campo redundante `movimiento_contable_id` de la tabla `pedido`, manteniendo solo la relación con `asiento_contable_id` para simplificar el modelo y evitar inconsistencias.
+
+✅ **3. Inconsistencia en campos temporales**: ~~La tabla `receta` usaba tipos diferentes para los campos temporales.~~ Se han estandarizado los campos de control temporal en la tabla `receta` para seguir el mismo patrón que el resto de tablas, usando `DateTime?` con `@db.Timestamptz(6)` y tipos UUID para los campos de usuario.
+
+✅ **4. Nomenclatura inconsistente en relaciones**: Aunque se mantienen algunas relaciones con nomenclatura extensa por compatibilidad, las nuevas relaciones implementadas siguen un formato simple y descriptivo (ej. `productos_cupones`, `cupones`).
+
+✅ **5. Entidad `integracion_erp` mejorada**: ~~Anteriormente utilizaba campos genéricos como `entidad_tipo` y `estado` con strings.~~ Ahora implementa enums tipados:
+   - `EntidadTipoERP` para especificar el tipo de entidad (PRODUCTO, PEDIDO, FACTURA, etc.)
+   - `EstadoIntegracionERP` para estados del proceso (PENDIENTE, PROCESANDO, COMPLETADO, ERROR, CANCELADO)
+
+## ✅ Mejoras Implementadas en el Esquema
+
+Las recomendaciones propuestas han sido implementadas exitosamente en el esquema de base de datos. A continuación se detalla lo que se ha logrado:
+
+### 1. Vinculación de la tabla `cupon`
+
+Se ha implementado una solución más robusta que la inicialmente propuesta, utilizando una tabla asociativa para la relación muchos a muchos con productos:
+
+```prisma
+model cupon {
+  // Relaciones implementadas
+  pedidos           pedido[] // Relación con pedidos donde se ha usado este cupón
+  usuario_id        String?  @db.Uuid // Para cupones personalizados por usuario
+  usuario           usuario? @relation(fields: [usuario_id], references: [id])
+  productos_cupones producto_cupon[] // Relación muchos a muchos con productos
+  tipo              String?  @db.VarChar(30) // Clasifica el tipo de cupón
+}
+
+model producto_cupon {
+  // Relación muchos a muchos
+  producto_id String @db.Uuid
+  cupon_id    String @db.Uuid
+  producto    producto @relation(fields: [producto_id], references: [id], onDelete: Cascade)
+  cupon       cupon    @relation(fields: [cupon_id], references: [id], onDelete: Cascade)
+  @@unique([producto_id, cupon_id])
+}
+
+model pedido {
+  // Campos y relación con cupón
+  cupon_id          String?  @db.Uuid
+  descuento_aplicado Decimal? @db.Decimal(10, 2) // Monto exacto del descuento
+  cupon             cupon?   @relation(fields: [cupon_id], references: [id])
+}
+```
+
+### 2. Estandarización de campos temporales
+
+Se ha actualizado el modelo `receta` para seguir el estándar de campos de control:
+
+```prisma
+model receta {
+  // Campos de control estandarizados
+  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
+  creado_por     String?   @db.Uuid
+  modificado_en  DateTime? @db.Timestamptz(6)
+  modificado_por String?   @db.Uuid
+  anulado_en     DateTime? @db.Timestamptz(6)
+  anulado_por    String?   @db.Uuid
+}
+```
+
+### 3. Eliminación de redundancia en contabilidad
+
+Se ha eliminado el campo redundante en el modelo `pedido`:
+
+```prisma
+model pedido {
+  // Campo redundante eliminado
+  // movimiento_contable_id String? @db.Uuid
+  
+  // Se mantiene solo la relación con asiento_contable
+  asiento_contable_id String? @db.Uuid
+  asiento_contable   asiento_contable? @relation(fields: [asiento_contable_id], references: [id])
+}
+```
+
+### 4. Mejora en la integración ERP
+
+Se han implementado enums para mejorar la tipificación y prevenir errores:
+
+```prisma
+// Enums para tipos de entidades y estados en ERP
+enum EntidadTipoERP {
+  PRODUCTO
+  PEDIDO
+  FACTURA
+  CLIENTE
+  USUARIO
+  PAGO
+  GASTO
+  MOVIMIENTO
+  ASIENTO
+}
+
+enum EstadoIntegracionERP {
+  PENDIENTE
+  PROCESANDO
+  COMPLETADO
+  ERROR
+  CANCELADO
+}
+
+model integracion_erp {
+  entidad_tipo     EntidadTipoERP?
+  estado           EstadoIntegracionERP? @default(PENDIENTE)
+  // resto del modelo
+}
+```
+
+## Cómo utilizar las nuevas funcionalidades
+
+### 1. Sistema de Cupones
+
+#### Crear un cupón para productos específicos
+
+```typescript
+// Ejemplo de creación de cupón para productos específicos
+async function crearCuponParaProductos(datosCupon, productosIds) {
+  return await prisma.cupon.create({
+    data: {
+      codigo: datosCupon.codigo,
+      descripcion: datosCupon.descripcion,
+      monto_descuento: datosCupon.monto_descuento,
+      vigencia_inicio: datosCupon.vigencia_inicio,
+      vigencia_fin: datosCupon.vigencia_fin,
+      tipo: 'producto',
+      productos_cupones: {
+        create: productosIds.map(productoId => ({
+          producto_id: productoId,
+          creado_por: datosCupon.usuario_id
+        }))
+      },
+      creado_por: datosCupon.usuario_id
+    }
+  });
+}
+```
+
+#### Aplicar un cupón a un pedido
+
+```typescript
+// Ejemplo de aplicación de cupón a un pedido
+async function aplicarCuponAPedido(pedidoId, cuponCodigo, usuarioId) {
+  // Obtener cupón por código
+  const cupon = await prisma.cupon.findUnique({
+    where: { codigo: cuponCodigo },
+    include: {
+      productos_cupones: { include: { producto: true } }
+    }
+  });
+  
+  if (!cupon || !cupon.activo) throw new Error('Cupón inválido');
+  
+  // Calcular descuento según tipo de cupón
+  // [...] Lógica de cálculo según tipo
+  
+  // Aplicar cupón en transacción
+  return await prisma.$transaction(async (tx) => {
+    // Actualizar pedido
+    const pedidoActualizado = await tx.pedido.update({
+      where: { id: pedidoId },
+      data: {
+        cupon_id: cupon.id,
+        descuento_aplicado: descuento,
+        total: { decrement: descuento },
+        modificado_por: usuarioId,
+        modificado_en: new Date()
+      }
+    });
+    
+    // Incrementar uso del cupón
+    await tx.cupon.update({
+      where: { id: cupon.id },
+      data: {
+        usos_realizados: { increment: 1 },
+        modificado_por: usuarioId
+      }
+    });
+    
+    // Registrar en audit log
+    await tx.log_auditoria.create({
+      data: {
+        usuarioId: usuarioId,
+        accion: 'APLICAR_CUPON',
+        descripcion: `Cupón ${cupon.codigo} aplicado al pedido ${pedidoId}`,
+        entidad_tipo: 'pedido',
+        entidad_id: pedidoId,
+        modulo: 'pedidos'
+      }
+    });
+    
+    return pedidoActualizado;
+  });
+}
+```
+
+### 2. Uso de Enums para Integración ERP
+
+```typescript
+// Ejemplo de uso de los enums para integración ERP
+import { PrismaClient, EntidadTipoERP, EstadoIntegracionERP } from '@prisma/client';
+
+async function registrarIntegracionERP(entidad, datos, usuarioId) {
+  const prisma = new PrismaClient();
+  
+  // Usar enums tipados
+  return await prisma.integracion_erp.create({
+    data: {
+      entidad_tipo: EntidadTipoERP.PRODUCTO, // Valor enum tipado
+      entidad_id: entidad.id,
+      estado: EstadoIntegracionERP.PENDIENTE, // Valor enum tipado
+      request_payload: datos,
+      creado_por: usuarioId
+    }
+  });
+}
+
+async function actualizarEstadoIntegracion(id, estado, respuesta, usuarioId) {
+  const prisma = new PrismaClient();
+  
+  return await prisma.integracion_erp.update({
+    where: { id },
+    data: {
+      estado, // EstadoIntegracionERP.COMPLETADO o EstadoIntegracionERP.ERROR
+      response_payload: respuesta,
+      modificado_por: usuarioId,
+      modificado_en: new Date()
+    }
+  });
+}
+```
+
+## Próximos pasos recomendados
+
+### 1. Optimización de índices
+
+Aunque las relaciones principales han sido implementadas, se recomienda añadir índices adicionales para optimizar consultas frecuentes:
+
+```prisma
+// Ejemplos de índices adicionales a considerar
+model log_auditoria {
+  // ...
+  @@index([entidad_tipo, entidad_id], map: "idx_log_entidad")
+  @@index([fecha, accion], map: "idx_log_fecha_accion")
+}
+
+model cupon {
+  // ...
+  @@index([vigencia_inicio, vigencia_fin, activo], map: "idx_cupon_vigencia")
+}
+```
+
+### 2. Implementación de controladores y endpoints
+
+Aprovechar las nuevas relaciones implementando los controladores y rutas correspondientes para cupones y gestión ERP, siguiendo el patrón CRUD establecido en otros módulos del sistema como sucursales, marcas y colores.
+
+### 3. Mejora en integridad referencial
+
+Revisar las reglas de eliminación (`onDelete`) en todas las relaciones para asegurar consistencia con la lógica de negocio, especialmente para las nuevas relaciones implementadas.
+
+Las mejoras implementadas han fortalecido significativamente la estructura de la base de datos, eliminando tablas huérfanas, estandarizando campos y mejorando la integridad referencial, lo que facilitará el mantenimiento y escalabilidad del sistema.
+
+# 20. RESUMEN DE MODELOS Y RELACIONES DEL ESQUEMA DE BASE DE DATOS
+
+Esta sección proporciona una visión general de todos los modelos de la base de datos, sus propósitos principales y relaciones, facilitando la comprensión del esquema sin necesidad de revisar directamente el archivo schema.prisma.
+
+## Modelos Principales y sus Relaciones
+
+### Sistema de Usuarios y Autenticación
+
+#### `usuario`
+**Descripción**: Almacena todos los usuarios del sistema, tanto clientes como empleados con diferentes roles.
+**Campos principales**: `id`, `nombre_completo`, `email`, `password`, `telefono`, `dni`, `foto_perfil`, `direccion`, `activo`
+**Relaciones**:
+- `usuario_rol[]` → Roles asignados al usuario
+- `pedido[]` → Pedidos realizados por el usuario
+- `cita[]` (como cliente y como optometrista) → Citas médicas programadas
+- `factura[]` → Facturas asociadas al usuario
+- `reset_token[]` → Tokens para recuperación de contraseña
+- `cupones[]` → Cupones personalizados para el usuario
+
+#### `rol`
+**Descripción**: Define los roles disponibles en el sistema (admin, vendedor, optometrista, cliente, etc.)
+**Campos principales**: `id`, `nombre`, `descripcion`
+**Relaciones**:
+- `usuario_rol[]` → Asignaciones de este rol a usuarios
+
+#### `usuario_rol`
+**Descripción**: Tabla asociativa para la relación muchos a muchos entre usuarios y roles.
+**Campos principales**: `id`, `usuario_id`, `rol_id`
+**Relaciones**:
+- `usuario` → Usuario al que se asigna el rol
+- `rol` → Rol asignado
+
+#### `reset_token`
+**Descripción**: Almacena tokens temporales para recuperación de contraseñas.
+**Campos principales**: `id`, `usuario_id`, `token`, `expires_at`, `used`
+**Relaciones**:
+- `usuario` → Usuario que solicitó la recuperación
+
+### Gestión Clínica
+
+#### `cita`
+**Descripción**: Registra citas médicas programadas entre optometristas y clientes.
+**Campos principales**: `id`, `cliente_id`, `optometrista_id`, `sucursal_id`, `fecha_hora`, `estado`
+**Relaciones**:
+- `usuario` (cliente_id) → Cliente que asiste a la cita
+- `usuario` (optometrista_id) → Optometrista que atiende la cita
+- `sucursal` → Sucursal donde se realiza la cita
+- `historial_clinico[]` → Registros clínicos asociados a la cita
+- `receta[]` → Recetas generadas en la cita
+
+#### `historial_clinico`
+**Descripción**: Almacena el historial médico de los clientes.
+**Campos principales**: `id`, `cliente_id`, `optometrista_id`, `cita_id`, `fecha`, `descripcion`, `version`
+**Relaciones**:
+- `cita` → Cita asociada al registro
+- `usuario` (cliente_id) → Cliente al que pertenece el historial
+- `usuario` (optometrista_id) → Optometrista que realizó el registro
+
+#### `receta`
+**Descripción**: Almacena recetas oftalmológicas con datos de corrección visual.
+**Campos principales**: `id`, `citaId`, `tipo`, `esfera_od`, `esfera_oi`, `cilindro_od`, `cilindro_oi`, `eje_od`, `eje_oi`, `adicion`, `dp`
+**Relaciones**:
+- `cita` → Cita donde se generó la receta
+
+### Inventario y Productos
+
+#### `producto`
+**Descripción**: Registra productos disponibles para venta.
+**Campos principales**: `id`, `nombre`, `descripcion`, `precio`, `categoria`, `imagen_url`, `modelo_3d_url`, `activo`, `marca_id`, `color_id`
+**Relaciones**:
+- `marca` → Marca del producto
+- `color` → Color del producto
+- `detalle_pedido[]` → Líneas de pedido que incluyen este producto
+- `inventario[]` → Existencias del producto por sucursal
+- `transferencia_stock[]` → Transferencias que involucran este producto
+- `productos_cupones[]` → Cupones aplicables a este producto
+
+#### `marca`
+**Descripción**: Almacena las marcas de productos.
+**Campos principales**: `id`, `nombre`, `descripcion`, `activo`
+**Relaciones**:
+- `productos[]` → Productos de esta marca
+
+#### `color`
+**Descripción**: Almacena los colores disponibles para productos.
+**Campos principales**: `id`, `nombre`, `descripcion`, `activo`
+**Relaciones**:
+- `productos[]` → Productos de este color
+
+#### `inventario`
+**Descripción**: Registra el stock de productos por sucursal.
+**Campos principales**: `id`, `sucursal_id`, `producto_id`, `stock`, `stock_minimo`
+**Relaciones**:
+- `producto` → Producto inventariado
+- `sucursal` → Sucursal donde se almacena
+- `movimiento_inventario[]` → Movimientos de inventario asociados
+
+#### `movimiento_inventario`
+**Descripción**: Registra entradas, salidas y ajustes de inventario.
+**Campos principales**: `id`, `inventario_id`, `usuario_id`, `tipo`, `cantidad`, `motivo`, `fecha`, `reversa_de`, `anulado`
+**Relaciones**:
+- `inventario` → Inventario afectado
+- `usuario` → Usuario que realizó el movimiento
+- `movimiento_inventario` (reversa_de) → Movimiento original que se reversa
+
+#### `transferencia_stock`
+**Descripción**: Gestiona transferencias de productos entre sucursales.
+**Campos principales**: `id`, `producto_id`, `sucursal_origen`, `sucursal_destino`, `solicitado_por`, `revisado_por`, `cantidad`, `motivo`, `estado`
+**Relaciones**:
+- `producto` → Producto transferido
+- `sucursal` (origen) → Sucursal de origen
+- `sucursal` (destino) → Sucursal de destino
+- `usuario` (solicitado_por) → Usuario que solicitó la transferencia
+- `usuario` (revisado_por) → Usuario que aprobó/rechazó la transferencia
+
+### Ventas y Facturación
+
+#### `pedido`
+**Descripción**: Registra pedidos de compra de productos.
+**Campos principales**: `id`, `cliente_id`, `sucursal_id`, `estado`, `total`, `metodo_pago`, `estado_pago`, `moneda`, `cupon_id`, `descuento_aplicado`
+**Relaciones**:
+- `usuario` → Cliente que realiza el pedido
+- `sucursal` → Sucursal donde se procesa
+- `detalle_pedido[]` → Líneas de detalle del pedido
+- `factura[]` → Facturas generadas por este pedido
+- `pago[]` → Pagos asociados al pedido
+- `asiento_contable` → Asiento contable relacionado
+- `cupon` → Cupón aplicado al pedido
+
+#### `detalle_pedido`
+**Descripción**: Almacena las líneas de detalle de los pedidos.
+**Campos principales**: `id`, `pedido_id`, `producto_id`, `cantidad`, `precio_unitario`
+**Relaciones**:
+- `pedido` → Pedido al que pertenece el detalle
+- `producto` → Producto solicitado
+
+#### `factura`
+**Descripción**: Registra facturas emitidas por ventas.
+**Campos principales**: `id`, `pedido_id`, `cliente_id`, `fecha_emision`, `estado`, `archivo_xml_id`, `archivo_pdf_id`, `moneda`, `erp_id`, `asiento_contable_id`
+**Relaciones**:
+- `pedido` → Pedido facturado
+- `usuario` → Cliente facturado
+- `archivo_adjunto` (XML) → Archivo XML de la factura electrónica
+- `archivo_adjunto` (PDF) → Archivo PDF de la factura
+- `asiento_contable` → Asiento contable relacionado
+
+#### `pago`
+**Descripción**: Registra pagos recibidos por pedidos.
+**Campos principales**: `id`, `pedido_id`, `monto`, `fecha_pago`, `metodo`, `referencia_externa`, `usuario_id`, `moneda`, `asiento_contable_id`
+**Relaciones**:
+- `pedido` → Pedido pagado
+- `usuario` → Usuario que registra el pago
+- `asiento_contable` → Asiento contable relacionado
+
+#### `cupon`
+**Descripción**: Gestiona cupones de descuento para pedidos.
+**Campos principales**: `id`, `codigo`, `descripcion`, `monto_descuento`, `vigencia_inicio`, `vigencia_fin`, `limite_uso`, `usos_realizados`, `activo`, `tipo`, `usuario_id`
+**Relaciones**:
+- `pedidos[]` → Pedidos donde se ha usado este cupón
+- `usuario` → Usuario para el que se creó el cupón (opcional)
+- `productos_cupones[]` → Productos a los que aplica este cupón
+
+#### `producto_cupon`
+**Descripción**: Tabla asociativa para la relación muchos a muchos entre productos y cupones.
+**Campos principales**: `id`, `producto_id`, `cupon_id`
+**Relaciones**:
+- `producto` → Producto al que aplica el cupón
+- `cupon` → Cupón aplicable al producto
+
+### Contabilidad y Finanzas
+
+#### `cuenta_contable`
+**Descripción**: Define el plan de cuentas contables con estructura jerárquica.
+**Campos principales**: `id`, `codigo`, `nombre`, `tipo`, `descripcion`, `cuenta_padre_id`, `activo`
+**Relaciones**:
+- `cuenta_contable` (cuenta_padre_id) → Cuenta padre (estructura jerárquica)
+- `movimiento_contable[]` → Movimientos en esta cuenta
+
+#### `asiento_contable`
+**Descripción**: Registra asientos contables para operaciones financieras.
+**Campos principales**: `id`, `fecha`, `descripcion`, `referencia_externa`, `tipo`, `entidad_tipo`, `entidad_id`, `sucursal_id`, `usuario_id`, `estado`, `exportado`
+**Relaciones**:
+- `movimientos[]` → Movimientos contables del asiento
+- `sucursal` → Sucursal relacionada
+- `usuario` → Usuario que creó el asiento
+- `facturas[]` → Facturas relacionadas
+- `gastos[]` → Gastos relacionados
+- `pagos[]` → Pagos relacionados
+- `pedidos[]` → Pedidos relacionados
+
+#### `movimiento_contable`
+**Descripción**: Registra movimientos debe/haber en cuentas contables.
+**Campos principales**: `id`, `asiento_id`, `tipo`, `monto`, `cuenta_id`, `sucursal_id`, `usuario_id`, `entidad_tipo`, `entidad_id`, `exportado`, `reversa_de`
+**Relaciones**:
+- `asiento_contable` → Asiento al que pertenece
+- `cuenta_contable` → Cuenta afectada
+- `sucursal` → Sucursal relacionada
+- `usuario` → Usuario que registró el movimiento
+- `movimiento_contable_entidad[]` → Entidades relacionadas
+- `movimiento_contable` (reversa_de) → Movimiento original que se reversa
+
+#### `gasto`
+**Descripción**: Registra gastos operativos.
+**Campos principales**: `id`, `descripcion`, `monto`, `fecha_gasto`, `categoria`, `usuario_id`, `sucursal_id`, `moneda`, `asiento_contable_id`
+**Relaciones**:
+- `sucursal` → Sucursal donde se registra
+- `usuario` → Usuario que registra el gasto
+- `asiento_contable` → Asiento contable relacionado
+
+### Sucursales
+
+#### `sucursal`
+**Descripción**: Almacena las sucursales de la óptica.
+**Campos principales**: `id`, `nombre`, `direccion`, `latitud`, `longitud`, `telefono`, `email`, `estado`
+**Relaciones**:
+- `cita[]` → Citas programadas en esta sucursal
+- `descanso_empleado[]` → Descansos de empleados en esta sucursal
+- `inventario[]` → Inventario de productos en esta sucursal
+- `pedido[]` → Pedidos procesados en esta sucursal
+- `transferencia_stock[]` → Transferencias hacia/desde esta sucursal
+- `asiento_contable[]` → Asientos contables relacionados
+
+### Gestión de Archivos
+
+#### `archivo_adjunto`
+**Descripción**: Almacena archivos adjuntos para cualquier entidad del sistema.
+**Campos principales**: `id`, `nombre_archivo`, `url`, `tipo`, `tamanio`, `extension`, `subido_por`
+**Relaciones**:
+- `usuario` → Usuario que subió el archivo
+- `archivo_entidad[]` → Entidades a las que está vinculado
+- `descanso_empleado[]` → Descansos con este adjunto
+- `factura[]` → Facturas con este archivo (PDF/XML)
+
+#### `archivo_entidad`
+**Descripción**: Vincula archivos adjuntos con entidades del sistema (polimórfico).
+**Campos principales**: `id`, `archivo_id`, `entidad_tipo`, `entidad_id`, `fecha_vinculo`
+**Relaciones**:
+- `archivo_adjunto` → Archivo adjunto vinculado
+
+### Logs y Auditoría
+
+#### `log_auditoria`
+**Descripción**: Registra todas las acciones importantes en el sistema para auditoría.
+**Campos principales**: `id`, `usuarioId`, `accion`, `descripcion`, `fecha`, `ip`, `entidad_tipo`, `entidad_id`, `modulo`
+**Relaciones**:
+- `usuario` → Usuario que realizó la acción
+- `movimiento_contable` → Movimiento contable relacionado (opcional)
+
+### Gestión de Personal
+
+#### `descanso_empleado`
+**Descripción**: Registra períodos de descanso o ausencia de empleados.
+**Campos principales**: `id`, `empleado_id`, `sucursal_id`, `fecha_inicio`, `fecha_fin`, `motivo`, `estado`, `adjunto_id`, `revisado_por`
+**Relaciones**:
+- `archivo_adjunto` → Archivo que justifica el descanso
+- `usuario` (empleado_id) → Empleado que solicita el descanso
+- `usuario` (revisado_por) → Administrador que revisa la solicitud
+- `sucursal` → Sucursal del empleado
+
+### Integración con Sistemas Externos
+
+#### `integracion_erp`
+**Descripción**: Registra intentos de sincronización con sistemas ERP externos.
+**Campos principales**: `id`, `entidad_tipo`, `entidad_id`, `erp_id`, `fecha_sync`, `estado`, `request_payload`, `response_payload`, `error`
+**Enums**:
+- `EntidadTipoERP`: PRODUCTO, PEDIDO, FACTURA, CLIENTE, USUARIO, PAGO, GASTO, MOVIMIENTO, ASIENTO
+- `EstadoIntegracionERP`: PENDIENTE, PROCESANDO, COMPLETADO, ERROR, CANCELADO
+
+## Campos de Control Comunes
+
+La mayoría de los modelos incluyen los siguientes campos de control estandarizados:
+
+- `creado_en`: Fecha y hora de creación (DateTime con timestamptz)
+- `creado_por`: ID del usuario que creó el registro (UUID)
+- `modificado_en`: Fecha y hora de última modificación (DateTime con timestamptz)
+- `modificado_por`: ID del usuario que modificó el registro (UUID)
+- `anulado_en`: Fecha y hora de anulación, si aplica (DateTime con timestamptz)
+- `anulado_por`: ID del usuario que anuló el registro (UUID)
+
+Estos campos permiten mantener una auditoría completa de cambios en cada entidad del sistema.

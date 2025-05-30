@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { crearProducto, listarProductos, obtenerProductoPorId, actualizarProducto, eliminarProducto } from '@/controllers/productoController';
+import { crearMarca, listarMarcas, obtenerMarcaPorId, actualizarMarca, eliminarMarca } from '@/controllers/marcaController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 
@@ -8,51 +8,90 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: Productos
- *   description: Gestión de productos
+ *   name: Marcas
+ *   description: Gestión de marcas de productos
  * components:
  *   schemas:
- *     ProductoInput:
+ *     MarcaInput:
  *       type: object
  *       required:
  *         - nombre
- *         - precio
- *         - categoria
  *       properties:
  *         nombre:
  *           type: string
- *           example: "Lentes de Sol"
+ *           example: "Ray-Ban"
  *         descripcion:
  *           type: string
- *           example: "Lentes polarizados con filtro UV"
- *         precio:
- *           type: number
- *           example: 49.99
- *         categoria:
- *           type: string
- *           example: "Accesorios"
- *         imagen_url:
- *           type: string
- *           example: "https://example.com/lentes.jpg"
- *         modelo_3d_url:
- *           type: string
- *           example: "https://example.com/lentes-3d.glb"
+ *           example: "Marca líder en gafas de sol y lentes oftálmicos"
  *         activo:
  *           type: boolean
  *           example: true
+ *     Marca:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+ *         nombre:
+ *           type: string
+ *           example: "Ray-Ban"
+ *         descripcion:
+ *           type: string
+ *           example: "Marca líder en gafas de sol y lentes oftálmicos"
+ *         activo:
+ *           type: boolean
+ *           example: true
+ *         creado_en:
+ *           type: string
+ *           format: date-time
+ *           example: "2023-01-01T00:00:00Z"
+ *         creado_por:
+ *           type: string
+ *           format: uuid
+ *           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+ *         modificado_en:
+ *           type: string
+ *           format: date-time
+ *           example: "2023-01-02T00:00:00Z"
+ *         modificado_por:
+ *           type: string
+ *           format: uuid
+ *           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+ *         anulado_en:
+ *           type: string
+ *           format: date-time
+ *           example: null
+ *         anulado_por:
+ *           type: string
+ *           format: uuid
+ *           example: null
  */
 
 /**
  * @swagger
- * /api/productos:
+ * /api/marcas:
  *   get:
- *     summary: Lista todos los productos
- *     tags: [Productos]
+ *     summary: Lista todas las marcas
+ *     tags: [Marcas]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: nombre
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filtrar por nombre de marca
+ *       - in: query
+ *         name: activo
+ *         schema:
+ *           type: boolean
+ *         required: false
+ *         description: Filtrar por estado (activo/inactivo)
  *     responses:
  *       200:
- *         description: Lista de productos
+ *         description: Lista de marcas
  *         content:
  *           application/json:
  *             schema:
@@ -64,7 +103,7 @@ const router = Router();
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Producto'
+ *                     $ref: '#/components/schemas/Marca'
  *                 error:
  *                   type: string
  *                   example: null
@@ -75,47 +114,26 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/', listarProductos);
+router.get('/', authenticateJWT, listarMarcas);
 
 /**
  * @swagger
- * /api/productos:
- *   post:
- *     summary: Crea un nuevo producto
- *     tags: [Productos]
+ * /api/marcas/{id}:
+ *   get:
+ *     summary: Obtiene una marca por ID
+ *     tags: [Marcas]
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               nombre:
- *                 type: string
- *                 example: Lentes de Sol
- *               descripcion:
- *                 type: string
- *                 example: Lentes de sol polarizados
- *               precio:
- *                 type: number
- *                 example: 49.99
- *               categoria:
- *                 type: string
- *                 example: Accesorios
- *               imagen_url:
- *                 type: string
- *                 example: https://example.com/lentes.jpg
- *               modelo_3d_url:
- *                 type: string
- *                 example: https://example.com/lentes-3d.glb
- *               activo:
- *                 type: boolean
- *                 example: true
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la marca
  *     responses:
- *       201:
- *         description: Producto creado exitosamente
+ *       200:
+ *         description: Marca encontrada
  *         content:
  *           application/json:
  *             schema:
@@ -125,7 +143,52 @@ router.get('/', listarProductos);
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/Producto'
+ *                   $ref: '#/components/schemas/Marca'
+ *                 error:
+ *                   type: string
+ *                   example: null
+ *       404:
+ *         description: Marca no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:id', authenticateJWT, obtenerMarcaPorId);
+
+/**
+ * @swagger
+ * /api/marcas:
+ *   post:
+ *     summary: Crea una nueva marca
+ *     tags: [Marcas]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/MarcaInput'
+ *     responses:
+ *       201:
+ *         description: Marca creada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Marca'
  *                 error:
  *                   type: string
  *                   example: null
@@ -135,48 +198,8 @@ router.get('/', listarProductos);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Error interno del servidor
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post('/', authenticateJWT, requireRole('admin','vendedor','optometrista'), crearProducto);
-
-/**
- * @swagger
- * /api/productos/{id}:
- *   get:
- *     summary: Obtiene un producto por ID
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID del producto
- *     responses:
- *       200:
- *         description: Producto encontrado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Producto'
- *                 error:
- *                   type: string
- *                   example: null
- *       404:
- *         description: Producto no encontrado
+ *       409:
+ *         description: Conflicto - Marca ya existe
  *         content:
  *           application/json:
  *             schema:
@@ -188,14 +211,14 @@ router.post('/', authenticateJWT, requireRole('admin','vendedor','optometrista')
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', authenticateJWT, obtenerProductoPorId);
+router.post('/', authenticateJWT, requireRole('admin'), crearMarca);
 
 /**
  * @swagger
- * /api/productos/{id}:
+ * /api/marcas/{id}:
  *   put:
- *     summary: Actualiza un producto existente
- *     tags: [Productos]
+ *     summary: Actualiza una marca existente
+ *     tags: [Marcas]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -204,16 +227,16 @@ router.get('/:id', authenticateJWT, obtenerProductoPorId);
  *         schema:
  *           type: string
  *         required: true
- *         description: ID del producto
+ *         description: ID de la marca
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ProductoInput'
+ *             $ref: '#/components/schemas/MarcaInput'
  *     responses:
  *       200:
- *         description: Producto actualizado
+ *         description: Marca actualizada
  *         content:
  *           application/json:
  *             schema:
@@ -223,7 +246,7 @@ router.get('/:id', authenticateJWT, obtenerProductoPorId);
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/Producto'
+ *                   $ref: '#/components/schemas/Marca'
  *                 error:
  *                   type: string
  *                   example: null
@@ -234,7 +257,13 @@ router.get('/:id', authenticateJWT, obtenerProductoPorId);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       404:
- *         description: Producto no encontrado
+ *         description: Marca no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Conflicto - Nombre ya existe
  *         content:
  *           application/json:
  *             schema:
@@ -246,14 +275,14 @@ router.get('/:id', authenticateJWT, obtenerProductoPorId);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista'), actualizarProducto);
+router.put('/:id', authenticateJWT, requireRole('admin'), actualizarMarca);
 
 /**
  * @swagger
- * /api/productos/{id}:
+ * /api/marcas/{id}:
  *   delete:
- *     summary: Elimina (borrado lógico) un producto
- *     tags: [Productos]
+ *     summary: Elimina (borrado lógico) una marca
+ *     tags: [Marcas]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -262,10 +291,10 @@ router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista
  *         schema:
  *           type: string
  *         required: true
- *         description: ID del producto
+ *         description: ID de la marca
  *     responses:
  *       200:
- *         description: Producto eliminado correctamente
+ *         description: Marca eliminada correctamente
  *         content:
  *           application/json:
  *             schema:
@@ -276,12 +305,18 @@ router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista
  *                   example: true
  *                 data:
  *                   type: string
- *                   example: 'Producto eliminado'
+ *                   example: 'Marca eliminada correctamente'
  *                 error:
  *                   type: string
  *                   example: null
+ *       400:
+ *         description: No se puede eliminar - tiene productos asociados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
- *         description: Producto no encontrado
+ *         description: Marca no encontrada
  *         content:
  *           application/json:
  *             schema:
@@ -293,6 +328,6 @@ router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarProducto);
+router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarMarca);
 
 export default router;

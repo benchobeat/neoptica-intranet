@@ -4,12 +4,16 @@ import 'module-alias/register';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import passport from '@/config/passport';
 
 import authRoutes from '@/routes/auth';
 import usuariosRoutes from '@/routes/usuarios';
 import rolesRoutes from '@/routes/roles';
 import sucursalesRoutes from '@/routes/sucursales';
-import productoRoutes from '@/routes/producto'; // Importamos la nueva ruta
+import productoRoutes from '@/routes/producto';
+import marcaRoutes from '@/routes/marca'; // Importamos la ruta de marcas
+import colorRoutes from '@/routes/color'; // Importamos la ruta de colores
+import auditoriaRoutes from '@/routes/auditoria'; // Importamos la ruta de auditoría
 import { authenticateJWT } from '@/middlewares/auth';
 import { success } from '@/utils/response';
 import { sendMail } from '@/utils/mailer';
@@ -22,16 +26,24 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:3000', // o usa '*' solo para pruebas locales
+  origin: process.env.FRONTEND_URL, // Usar variable de entorno para el frontend
   credentials: true
 }));
 
 app.use(express.json());
+app.use(passport.initialize());
+// Si usas sesiones:
+// import session from 'express-session';
+// app.use(session({ secret: process.env.SESSION_SECRET || 'secret', resave: false, saveUninitialized: false }));
+// app.use(passport.session());
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/sucursales', sucursalesRoutes);
-app.use('/api/productos', productoRoutes); // Registramos la nueva ruta
+app.use('/api/productos', productoRoutes);
+app.use('/api/marcas', marcaRoutes); // Registramos la ruta de marcas
+app.use('/api/colores', colorRoutes); // Registramos la ruta de colores
+app.use('/api/auditoria', auditoriaRoutes); // Registramos la ruta de auditoría
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get('/', (req, res) => {
