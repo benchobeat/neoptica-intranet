@@ -18,6 +18,10 @@ describe("Usuarios API", () => {
     const email = uniqueEmail("comun");
     const password = "Test1234!";
     // Crea usuario común
+    // Buscar el rol 'cliente' y su ID
+    const clienteRole = await prisma.rol.findFirst({ where: { nombre: 'cliente' } });
+    if (!clienteRole) throw new Error('No existe el rol cliente en la base de datos');
+    
     await request(app)
       .post("/api/usuarios")
       .set("Authorization", `Bearer ${token}`) // Usa el token de admin para crearlo
@@ -26,7 +30,7 @@ describe("Usuarios API", () => {
         email,
         password,
         telefono: "0999999000",
-        rol: "cliente"
+        rol: clienteRole.nombre // Usar el nombre del rol, el controller buscará su ID
       });
     // Login y devuelve token
     const res = await request(app).post("/api/auth/login").send({

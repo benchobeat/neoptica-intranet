@@ -745,6 +745,8 @@ model usuario {
   modificado_por  String?   @db.Uuid
   anulado_en      DateTime? @db.Timestamptz(6)
   anulado_por     String?   @db.Uuid
+
+  @@unique([proveedor_oauth, oauth_id])
 }
 
 model usuario_rol {
