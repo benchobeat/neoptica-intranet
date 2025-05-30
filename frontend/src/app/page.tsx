@@ -12,6 +12,8 @@ message.config({
   maxCount: 1, // Máximo de mensajes mostrados a la vez
 });
 
+import { SocialLoginButtons } from '../components/SocialLoginButtons';
+
 export default function LoginPage() {
   const [loading, setLoading] = React.useState(false);
   const userInputRef = useRef<InputRef>(null);
@@ -174,6 +176,11 @@ export default function LoginPage() {
             </Button>
           </Form.Item>
         </Form>
+        {/* Descomentar para mostrar los botones de login social */}
+        {/* <div style={{ margin: '16px 0', textAlign: 'center' }}>
+  <span style={{ color: '#aaa' }}>— o inicia sesión con —</span>
+</div>
+<SocialLoginButtons /> */} 
       </Card>
 
       {/* Estilos CSS personalizados para inputs y botón */}
