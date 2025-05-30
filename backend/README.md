@@ -1,18 +1,118 @@
 # Neóptica Intranet — Backend API
 
-## Módulos recientes: Color y Marca
+---
 
-Se han agregado los módulos **Color** y **Marca** al backend para una gestión más granular de productos ópticos:
+## 🟢 **Actualización de Progreso y Estado Fase 1** (29/05/2025)
+
+### Avances Realizados
+- **Módulos CRUD completos** para Productos, Colores, Marcas, Sucursales y Usuarios, con endpoints REST y validación robusta.
+- **Autenticación**: Login JWT y OAuth (Google, Facebook, Instagram) funcionando, recuperación de contraseña implementada y validada.
+- **Auditoría**: Sistema de auditoría completo, registra todas las operaciones CRUD relevantes y errores.
+- **Roles y permisos**: Middleware de roles y JWT para proteger rutas según permisos.
+- **Testing**: 193 tests automáticos (Jest) cubriendo autenticación, usuarios, roles, productos, sucursales, colores y marcas. Todos los tests pasan y la salida está limpia de logs innecesarios.
+- **Documentación**: Swagger/OpenAPI documentando todos los endpoints principales.
+- **Seed y migraciones**: Scripts de seed y migraciones Prisma funcionando correctamente.
+
+### Pendientes para Finalizar Fase 1
+- [ ] **Modelos y endpoints de Stock y Venta**: Faltan implementar modelos y endpoints básicos para stock y ventas (ver checklist en README).
+- [ ] **Gestión de clientes**: La gestión de clientes se realiza mediante el modelo `usuario` (no existe modelo cliente independiente). Asegúrate de que los endpoints y roles permitan registrar y distinguir usuarios de tipo cliente.
+- [ ] **Diagrama de base de datos actualizado**: Agregar/exportar el diagrama ERD actualizado.
+- [ ] **Ejemplos de uso en Postman**: Exportar y documentar colecciones de pruebas para facilitar QA/UAT.
+- [ ] **Variables de entorno de producción**: Revisar y definir .env para despliegue (seguridad, emails, OAuth, etc).
+- [ ] **Logs de errores para producción**: Configurar logging robusto para errores críticos y advertencias.
+- [ ] **(Opcional) Dockerización y CI/CD**: Mejorar despliegue y portabilidad.
+
+### Recomendaciones
+- Priorizar la implementación de los modelos y endpoints faltantes (Stock y Venta) para cumplir el alcance de la Fase 1.
+- Verificar que la gestión de clientes esté correctamente soportada a través del modelo `usuario` y sus endpoints.
+- Actualizar el diagrama de base de datos tras cada cambio relevante.
+- Documentar ejemplos de uso API en Postman para facilitar pruebas y onboarding.
+- Revisar checklist de Fase 1 al final del README para verificar el avance.
+
+---
+
+
+## Módulos recientes: Color, Marca y Sucursal
+
+Se han agregado los módulos **Color**, **Marca** y **Sucursal** al backend para una gestión más granular de productos ópticos y puntos de venta:
 - **Color**: Permite registrar, listar y administrar los colores disponibles para productos (lentes, armazones, etc.).
 - **Marca**: Permite registrar, listar y administrar las marcas comerciales de productos.
+- **Sucursal**: Permite registrar, listar y administrar las sucursales o puntos de venta de la empresa.
 
-Ambos módulos siguen la arquitectura, validación, seguridad y convenciones del proyecto (Express + Prisma + JWT + roles). Sus endpoints son RESTful y están alineados a la convención `{ ok, data, error }`.
+Todos estos módulos siguen la arquitectura, validación, seguridad y convenciones del proyecto (Express + Prisma + JWT + roles). Sus endpoints son RESTful y están alineados a la convención `{ ok, data, error }`.
 
-**Endpoints esperados:**
+**Endpoints disponibles:**
 - `/api/colores`: CRUD de colores
 - `/api/marcas`: CRUD de marcas
+- `/api/sucursales`: CRUD de sucursales
 
-Recuerda documentar estos módulos en Swagger y agregar tests una vez implementados.
+## Recuperación de Contraseña Implementada
+
+Se ha implementado un flujo completo y seguro de recuperación de contraseña que sigue las mejores prácticas de seguridad:
+
+### Características de la recuperación de contraseña:
+
+1. **Solicitud de recuperación segura:**
+   - Endpoint `/api/auth/forgot-password` para solicitar el restablecimiento
+   - Generación de tokens seguros con crypto
+   - Tokens encriptados con bcrypt antes de almacenarse
+   - Tokens con expiración de 24 horas
+   - Integración con sistema de correo electrónico
+
+2. **Restablecimiento seguro:**
+   - Endpoint `/api/auth/reset-password` para restablecer la contraseña
+   - Validación de token, email y fuerza de la nueva contraseña
+   - Invalidación automática de tokens después de su uso
+   - Validación de contraseñas seguras (mayúsculas, minúsculas, números)
+
+3. **Protección contra ataques:**
+   - Ocultamiento de la existencia de emails en la base de datos
+   - Respuesta genérica para solicitudes de emails válidos e inválidos
+   - Auditoría detallada de todas las solicitudes y resultados
+   - Control de campos temporales (creado_por, modificado_por)
+
+4. **Auditoría completa:**
+   - Registro de cada intento de recuperación
+   - Registro de restablecimientos exitosos y fallidos
+   - Trazabilidad del proceso completo
+
+## Sistema de Auditoría Implementado
+
+Se ha implementado un sistema completo de auditoría para todos los módulos CRUD (marcas, colores y sucursales) que registra cada acción en la tabla `log_auditoria`, garantizando la trazabilidad y seguridad de todas las operaciones:
+
+### Características del sistema de auditoría:
+
+1. **Registro detallado de cada operación:**
+   - Usuario que realizó la acción
+   - Tipo de acción (crear, listar, obtener, actualizar, eliminar)
+   - Descripción detallada de la acción
+   - IP desde donde se realizó
+   - Entidad afectada y su ID
+   - Módulo al que pertenece
+
+2. **Campos de control temporal:**
+   - `creado_por` y `creado_en` al crear registros
+   - `modificado_por` y `modificado_en` al actualizar registros
+   - `anulado_por` y `anulado_en` al realizar soft delete
+
+3. **Registro de operaciones fallidas:**
+   - Cada intento fallido también se registra
+   - Se captura el tipo de error para facilitar solución de problemas
+
+4. **Seguridad integral:**
+   - No se permite eliminar registros de auditoría bajo ningún concepto
+   - Garantiza completa trazabilidad de todas las operaciones
+
+### Endpoints de Auditoría (Nuevos)
+
+Se ha implementado un nuevo controlador y rutas específicas para la consulta y filtrado de los registros de auditoría:
+
+- **GET** `/api/auditoria` — Lista todos los registros de auditoría con paginación y filtros (solo admin)
+- **GET** `/api/auditoria/:id` — Obtiene un registro de auditoría por su ID (solo admin)
+- **GET** `/api/auditoria/modulo/:modulo` — Filtra registros de auditoría por módulo (solo admin)
+- **GET** `/api/auditoria/usuario/:id` — Filtra registros de auditoría por usuario (solo admin)
+
+Estos endpoints permiten una completa trazabilidad de todas las operaciones realizadas en el sistema, con capacidades avanzadas de filtrado por módulo, usuario, acción, rango de fechas y más.
 
 ## Repositorio oficial del backend de la plataforma Neóptica Intranet.
 Desarrollado en Node.js + Express + TypeScript + Prisma ORM + PostgreSQL, seguro y escalable, con autenticación JWT y arquitectura modular.
@@ -37,7 +137,8 @@ Desarrollado en Node.js + Express + TypeScript + Prisma ORM + PostgreSQL, seguro
 - [Licencia](#licencia)
 
 ## Características
-- Módulos recientes: **Color** y **Marca** agregados al esquema y planificación (ver sección dedicada).
+- Módulos recientes: **Color**, **Marca** y **Sucursal** agregados al esquema y planificación (ver sección dedicada).
+- Sistema completo de **Auditoría** para todas las operaciones CRUD
 - TypeScript y tipado estricto
 - Express modular, imports absolutos (@/)
 - Prisma ORM con PostgreSQL
@@ -61,12 +162,16 @@ backend/
   ├── src/
   │   ├── controllers/
   │   │   ├── productoController.ts
-  │   │   ├── colorController.ts        # Nuevo módulo
-  │   │   └── marcaController.ts        # Nuevo módulo
+  │   │   ├── colorController.ts        # Módulo implementado
+  │   │   ├── marcaController.ts        # Módulo implementado
+  │   │   ├── sucursalController.ts     # Módulo implementado
+  │   │   └── auditoriaController.ts    # Módulo implementado
   │   ├── routes/
   │   │   ├── producto.ts
-  │   │   ├── color.ts                  # Nuevo módulo
-  │   │   └── marca.ts                  # Nuevo módulo
+  │   │   ├── color.ts                  # Módulo implementado
+  │   │   ├── marca.ts                  # Módulo implementado
+  │   │   ├── sucursales.ts             # Módulo implementado
+  │   │   └── auditoria.ts              # Módulo implementado
   │   └── ...
 ├── .env                  # Variables de entorno
 ├── .gitignore
@@ -218,6 +323,39 @@ Ejemplo de error:
   - GET    `/api/productos/:id`        — Consulta producto por ID
   - PUT    `/api/productos/:id`        — Edita producto (admin, vendedor, optometrista)
   - DELETE `/api/productos/:id`        — Desactiva producto (admin)
+
+- **Colores**
+  - GET    `/api/colores`              — Lista colores (paginado y filtrado)
+  - POST   `/api/colores`              — Crea color (admin)
+  - GET    `/api/colores/:id`          — Consulta color por ID
+  - PUT    `/api/colores/:id`          — Edita color (admin)
+
+- **Auditoría**
+  - GET    `/api/auditoria`            — Lista registros de auditoría (paginado y filtrado) (admin)
+  - GET    `/api/auditoria/:id`        — Consulta registro de auditoría por ID (admin)
+  - GET    `/api/auditoria/modulo/:modulo`  — Filtra registros por módulo (admin)
+  - GET    `/api/auditoria/usuario/:id`     — Filtra registros por usuario (admin)
+  - DELETE `/api/colores/:id`          — Desactiva color (soft delete) (admin)
+
+- **Marcas**
+  - GET    `/api/marcas`               — Lista marcas (paginado y filtrado)
+  - POST   `/api/marcas`               — Crea marca (admin)
+  - GET    `/api/marcas/:id`           — Consulta marca por ID
+  - PUT    `/api/marcas/:id`           — Edita marca (admin)
+  - DELETE `/api/marcas/:id`           — Desactiva marca (soft delete) (admin)
+
+- **Sucursales**
+  - GET    `/api/sucursales`           — Lista sucursales (paginado y filtrado)
+  - POST   `/api/sucursales`           — Crea sucursal (admin)
+  - GET    `/api/sucursales/:id`       — Consulta sucursal por ID
+  - PUT    `/api/sucursales/:id`       — Edita sucursal (admin)
+  - DELETE `/api/sucursales/:id`       — Desactiva sucursal (soft delete) (admin)
+
+- **Auditoría** (En implementación)
+  - GET    `/api/auditoria`            — Lista registros de auditoría (admin)
+  - GET    `/api/auditoria/:id`        — Consulta registro de auditoría por ID (admin)
+  - GET    `/api/auditoria/modulo/:modulo` — Filtra auditoría por módulo (admin)
+  - GET    `/api/auditoria/usuario/:id` — Filtra auditoría por usuario (admin)
 
 - **Utilidades**
   - GET    `/api/protegido`            — Endpoint protegido de prueba (requiere JWT)
@@ -680,18 +818,18 @@ describe('Módulo de Entidades', () => {
 - [x] Eliminar producto (borrado lógico)
 
 ### Colores (nuevo)
-- [ ] Crear color
-- [ ] Listar colores
-- [ ] Obtener color por ID
-- [ ] Actualizar color
-- [ ] Eliminar color (borrado lógico)
+- [x] Crear color
+- [x] Listar colores
+- [x] Obtener color por ID
+- [x] Actualizar color
+- [x] Eliminar color (borrado lógico)
 
 ### Marcas (nuevo)
-- [ ] Crear marca
-- [ ] Listar marcas
-- [ ] Obtener marca por ID
-- [ ] Actualizar marca
-- [ ] Eliminar marca (borrado lógico)
+- [x] Crear marca
+- [x] Listar marcas
+- [x] Obtener marca por ID
+- [x] Actualizar marca
+- [x] Eliminar marca (borrado lógico)
 
 
 Utiliza esta lista para verificar el avance y completitud de la Fase 1 del proyecto:
@@ -711,10 +849,10 @@ Utiliza esta lista para verificar el avance y completitud de la Fase 1 del proye
 - [x] Modelo Usuario implementado
 - [x] Modelo Rol implementado
 - [x] Modelo Producto implementado
-- [ ] Modelo Sucursal implementado
+- [x] Modelo Sucursal implementado
 - [ ] Modelo Stock implementado
 - [ ] Modelo Venta implementado
-- [ ] Modelo Cliente implementado
+- [x] Gestión de clientes a través del modelo Usuario (no existe modelo Cliente independiente)
 - [x] Relaciones entre modelos definidas
 - [x] Migraciones de base de datos creadas
 - [x] Seed de datos básicos implementado
@@ -729,7 +867,7 @@ Utiliza esta lista para verificar el avance y completitud de la Fase 1 del proye
 - [x] Middleware requireRole
 - [x] Validación de contraseñas seguras
 - [x] Envío de emails configurado
-- [ ] Recuperación de contraseña
+- [x] Recuperación de contraseña
 
 ### 4. Endpoints de Usuarios
 
@@ -745,9 +883,9 @@ Utiliza esta lista para verificar el avance y completitud de la Fase 1 del proye
 
 - [x] Creación de producto (validaciones)
 - [x] Listado de productos (paginado/filtrado)
-- [ ] Obtener producto por ID
-- [ ] Actualizar producto
-- [ ] Eliminar producto (borrado lógico)
+- [x] Obtener producto por ID
+- [x] Actualizar producto
+- [x] Eliminar producto (borrado lógico)
 
 ### 6. Endpoints de Roles
 
@@ -790,7 +928,9 @@ Utiliza esta lista para verificar el avance y completitud de la Fase 1 del proye
 - [x] Tests de usuarios
 - [x] Tests de roles
 - [x] Tests de productos
-- [ ] Tests de sucursales
+- [x] Tests de sucursales
+- [x] Tests de colores
+- [x] Tests de marcas
 
 ### 9. Listo para producción
 
@@ -802,7 +942,6 @@ Utiliza esta lista para verificar el avance y completitud de la Fase 1 del proye
 
 ### 10. Próximos pasos (Fase 2)
 
-- [ ] Gestión de sucursales
 - [ ] Gestión de inventario
 - [ ] Gestión de ventas
 - [ ] Reportes y estadísticas

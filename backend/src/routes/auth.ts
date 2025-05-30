@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import passport from '@/config/passport';
 import jwt from 'jsonwebtoken';
-import { login } from '@/controllers/authController';
+import { login, forgotPassword, resetPassword } from '@/controllers/authController';
 
 const router = Router();
 
@@ -76,5 +76,67 @@ router.get('/instagram/callback',
  *         description: Usuario no encontrado
  */
 router.post('/login', login);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Solicita un restablecimiento de contraseña generando un token y enviando un correo
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: usuario@example.com
+ *     responses:
+ *       200:
+ *         description: Solicitud procesada. Si el email existe, recibirá instrucciones.
+ *       400:
+ *         description: Datos incompletos
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Restablece la contraseña con un token válido
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - email
+ *               - password
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Token recibido vía email
+ *               email:
+ *                 type: string
+ *                 example: usuario@example.com
+ *               password:
+ *                 type: string
+ *                 description: Nueva contraseña
+ *     responses:
+ *       200:
+ *         description: Contraseña restablecida correctamente
+ *       400:
+ *         description: Token inválido, expirado o datos incorrectos
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.post('/reset-password', resetPassword);
 
 export default router;

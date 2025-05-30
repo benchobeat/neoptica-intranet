@@ -13,6 +13,7 @@ import sucursalesRoutes from '@/routes/sucursales';
 import productoRoutes from '@/routes/producto';
 import marcaRoutes from '@/routes/marca'; // Importamos la ruta de marcas
 import colorRoutes from '@/routes/color'; // Importamos la ruta de colores
+import auditoriaRoutes from '@/routes/auditoria'; // Importamos la ruta de auditoría
 import { authenticateJWT } from '@/middlewares/auth';
 import { success } from '@/utils/response';
 import { sendMail } from '@/utils/mailer';
@@ -42,6 +43,7 @@ app.use('/api/sucursales', sucursalesRoutes);
 app.use('/api/productos', productoRoutes);
 app.use('/api/marcas', marcaRoutes); // Registramos la ruta de marcas
 app.use('/api/colores', colorRoutes); // Registramos la ruta de colores
+app.use('/api/auditoria', auditoriaRoutes); // Registramos la ruta de auditoría
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get('/', (req, res) => {

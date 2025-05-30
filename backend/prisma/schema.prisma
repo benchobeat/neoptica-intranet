@@ -734,6 +734,7 @@ model usuario {
   movimiento_inventario                                           movimiento_inventario[]
   pago                                                            pago[]
   pedido                                                          pedido[]
+  reset_token                                                     reset_token[]           // Nueva relación para tokens de restablecimiento
   transferencia_stock_transferencia_stock_revisado_porTousuario   transferencia_stock[]   @relation("transferencia_stock_revisado_porTousuario")
   transferencia_stock_transferencia_stock_solicitado_porTousuario transferencia_stock[]   @relation("transferencia_stock_solicitado_porTousuario")
   usuario_rol usuario_rol[] @relation("UsuarioRoles")
@@ -754,12 +755,12 @@ model usuario_rol {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  usuario_id String?   @db.Uuid
-  rol_id     String?   @db.Uuid
+  usuario_id String    @db.Uuid
+  rol_id     String    @db.Uuid
 
   // Relaciones
-  rol        rol?      @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario    usuario?  @relation("UsuarioRoles", fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rol        rol       @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario    usuario   @relation("UsuarioRoles", fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
   creado_en       DateTime? @default(now()) @db.Timestamptz(6)
@@ -768,8 +769,27 @@ model usuario_rol {
   modificado_por  String?   @db.Uuid
   anulado_en      DateTime? @db.Timestamptz(6)
   anulado_por     String?   @db.Uuid
+}
 
-  @@unique([usuario_id, rol_id])
+model reset_token {
+  // ID
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  
+  // Campos normales
+  usuario_id   String   @db.Uuid
+  token        String   @db.Text     // Token hash (bcrypt)
+  expires_at   DateTime @db.Timestamptz(6)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  used         Boolean  @default(false)
+  
+  // Relaciones
+  usuario      usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  
+  // Campos de control
+  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
+  creado_por     String?   @db.Uuid
+  modificado_en  DateTime? @db.Timestamptz(6)
+  modificado_por String?   @db.Uuid
 }
 
 model receta {

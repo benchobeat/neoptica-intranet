@@ -1172,7 +1172,7 @@ describe("Usuarios API", () => {
           },
         },
       });
-      console.log("Usuarios de test eliminados:", result.count);
+      // console.log("Usuarios de test eliminados:", result.count);
       await prisma.$disconnect();
     });
   });

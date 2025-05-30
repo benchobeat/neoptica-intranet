@@ -6,15 +6,43 @@ describe("Autoregistro de cliente", () => {
   jest.setTimeout(20000); // 20 segundos para todos los tests de este archivo
 
 afterAll(async () => {
-    // Limpieza de usuarios de test
-    await prisma.usuario.deleteMany({
+    // Obtener usuarios de prueba
+    const usuariosTest = await prisma.usuario.findMany({
       where: {
         OR: [
           { email: { contains: "autotest" } },
-          { oauth_id: "oauth_test_id" }
+          { oauth_id: { contains: "oauth_test_id" } }
         ]
       }
     });
+    
+    // Obtener IDs de usuarios de prueba
+    const usuarioIds = usuariosTest.map(u => u.id);
+    
+    // Primero eliminar relaciones en usuario_rol
+    if (usuarioIds.length > 0) {
+      await prisma.usuario_rol.deleteMany({
+        where: {
+          usuario_id: { in: usuarioIds }
+        }
+      });
+      
+      // Luego eliminar registros de log_auditoria relacionados
+      await prisma.log_auditoria.deleteMany({
+        where: {
+          entidad_id: { in: usuarioIds }
+        }
+      });
+      
+      // Finalmente eliminar usuarios
+      await prisma.usuario.deleteMany({
+        where: {
+          id: { in: usuarioIds }
+        }
+      });
+      
+      // console.log(`Usuarios de prueba eliminados: ${usuarioIds.length}`);
+    }
     // await prisma.$disconnect(); // Comentado para evitar cierre anticipado
   });
 
@@ -29,7 +57,7 @@ afterAll(async () => {
         password: "Test1234!",
         telefono: "0999999999"
       });
-    console.log("RESPUESTA TEST:", res.status, res.body);
+    // console.log("RESPUESTA TEST:", res.status, res.body);
     expect(res.status).toBe(201);
     expect(res.body.ok).toBe(true);
     expect(res.body.data.rol).toBe("cliente");

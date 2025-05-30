@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { registrarAuditoria } from '../utils/auditoria';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -17,7 +18,7 @@ const prisma = new PrismaClient();
 export const crearMarca = async (req: Request, res: Response) => {
   try {
     const { nombre, descripcion, activo } = req.body;
-    const userId = (req as any).usuario?.id;
+    const userId = (req as any).usuario?.id || (req as any).user?.id;
 
     // Validación estricta y avanzada de datos de entrada
     if (!nombre || typeof nombre !== 'string') {
@@ -73,7 +74,20 @@ export const crearMarca = async (req: Request, res: Response) => {
         nombre: nombreLimpio,
         descripcion: descripcion?.trim() || null,
         activo: activo !== undefined ? activo : true,
+        creado_por: userId || null,
+        creado_en: new Date(),
       },
+    });
+    
+    // Registrar auditoría de creación exitosa
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'crear_marca_exitoso',
+      descripcion: `Marca creada: ${nuevaMarca.nombre}`,
+      ip: req.ip,
+      entidadTipo: 'marca',
+      entidadId: nuevaMarca.id,
+      modulo: 'marcas',
     });
 
     return res.status(201).json({ 
@@ -83,6 +97,18 @@ export const crearMarca = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error al crear marca:', error);
+    
+    // Registrar auditoría de error
+    const mensajeError = error.message || 'Error desconocido';
+    await registrarAuditoria({
+      usuarioId: (req as any).usuario?.id || (req as any).user?.id,
+      accion: 'crear_marca_fallido',
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: 'marca',
+      modulo: 'marcas',
+    });
+    
     return res.status(500).json({ 
       ok: false, 
       data: null, 
@@ -99,6 +125,7 @@ export const crearMarca = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Lista de marcas o mensaje de error
  */
 export const listarMarcas = async (req: Request, res: Response) => {
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
   try {
     // Preparar filtros
     const filtro: any = {
@@ -118,13 +145,34 @@ export const listarMarcas = async (req: Request, res: Response) => {
       },
     });
     
+    // Registrar auditoría de listado exitoso
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_marcas',
+      descripcion: `Se listaron ${marcas.length} marcas`,
+      ip: req.ip,
+      entidadTipo: 'marca',
+      modulo: 'marcas',
+    });
+    
     return res.status(200).json({ 
       ok: true, 
       data: marcas, 
       error: null 
     });
   } catch (error: any) {
-    // console.error('Error al listar marcas:', error);
+    console.error('Error al listar marcas:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_marcas_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'marca',
+      modulo: 'marcas',
+    });
+    
     return res.status(500).json({ 
       ok: false, 
       data: null, 
@@ -141,6 +189,7 @@ export const listarMarcas = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Datos de la marca o mensaje de error
  */
 export const obtenerMarcaPorId = async (req: Request, res: Response) => {
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
   try {
     const { id } = req.params;
     
@@ -171,6 +220,17 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
       });
     }
     
+    // Registrar auditoría de consulta exitosa
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'obtener_marca',
+      descripcion: `Se consultó la marca: ${marca.nombre}`,
+      ip: req.ip,
+      entidadTipo: 'marca',
+      entidadId: id,
+      modulo: 'marcas',
+    });
+    
     return res.status(200).json({ 
       ok: true, 
       data: marca, 
@@ -178,6 +238,17 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error al obtener marca por ID:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'obtener_marca_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'marca',
+      entidadId: req.params.id,
+      modulo: 'marcas',
+    });
     
     // Manejo detallado de errores
     if (error.code === 'P2023') {
@@ -207,7 +278,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { nombre, descripcion, activo } = req.body;
-    const userId = (req as any).usuario?.id;
+    const userId = (req as any).usuario?.id || (req as any).user?.id;
     
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -313,10 +384,25 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       });
     }
     
+    // Agregar información de auditoría
+    datosActualizados.modificado_en = new Date();
+    datosActualizados.modificado_por = userId || null;
+    
     // Actualizar la marca en la base de datos
     const marcaActualizada = await prisma.marca.update({
       where: { id },
       data: datosActualizados,
+    });
+    
+    // Registrar auditoría de actualización exitosa
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'actualizar_marca',
+      descripcion: `Se actualizó la marca: ${marcaActualizada.nombre}`,
+      ip: req.ip,
+      entidadTipo: 'marca',
+      entidadId: id,
+      modulo: 'marcas',
     });
     
     return res.status(200).json({ 
@@ -326,6 +412,17 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error al actualizar marca:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: (req as any).usuario?.id || (req as any).user?.id,
+      accion: 'actualizar_marca_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'marca',
+      entidadId: req.params.id,
+      modulo: 'marcas',
+    });
     
     // Manejo detallado de errores de Prisma
     if (error.code === 'P2023') {
@@ -355,7 +452,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
 export const eliminarMarca = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).usuario?.id;
+    const userId = (req as any).usuario?.id || (req as any).user?.id;
     
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -405,8 +502,20 @@ export const eliminarMarca = async (req: Request, res: Response) => {
       where: { id },
       data: {
         anulado_en: fechaActual,
+        anulado_por: userId || null,
         activo: false, // También marcar como inactivo
       },
+    });
+    
+    // Registrar auditoría de eliminación exitosa
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'eliminar_marca',
+      descripcion: `Se eliminó (soft delete) la marca con ID: ${id}`,
+      ip: req.ip,
+      entidadTipo: 'marca',
+      entidadId: id,
+      modulo: 'marcas',
     });
     
     return res.status(200).json({ 
@@ -416,6 +525,17 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error al eliminar marca:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: (req as any).usuario?.id || (req as any).user?.id,
+      accion: 'eliminar_marca_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'marca',
+      entidadId: req.params.id,
+      modulo: 'marcas',
+    });
     
     // Manejo detallado de errores de Prisma
     if (error.code === 'P2023') {

@@ -14,12 +14,12 @@ const prisma = new PrismaClient();
 export async function autoregistroCliente(req: Request, res: Response): Promise<void> {
   const { nombre_completo, email, password, telefono, proveedor_oauth, oauth_id } = req.body;
   let mensajeError = "";
-  console.log("[autoregistroCliente] INICIO", { nombre_completo, email, proveedor_oauth, oauth_id });
+  // console.log("[autoregistroCliente] INICIO", { nombre_completo, email, proveedor_oauth, oauth_id });
 
   // Validación mínima para registro tradicional
   if (!proveedor_oauth && (!nombre_completo || !email || !password)) {
     mensajeError = "Faltan datos obligatorios";
-    console.log("[autoregistroCliente] ERROR: ", mensajeError);
+    // console.log("[autoregistroCliente] ERROR: ", mensajeError);
     res.status(400).json(fail(mensajeError));
     return;
   }
@@ -27,7 +27,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
   // Validación mínima para registro social
   if (proveedor_oauth && (!email || !oauth_id)) {
     mensajeError = "Faltan datos obligatorios para registro social";
-    console.log("[autoregistroCliente] ERROR: ", mensajeError);
+    // console.log("[autoregistroCliente] ERROR: ", mensajeError);
     res.status(400).json(fail(mensajeError));
     return;
   }
@@ -40,7 +40,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
     const existe = await prisma.usuario.findUnique({ where: { email } });
     if (existe) {
       mensajeError = "Ya existe un usuario con ese email";
-      console.log("[autoregistroCliente] ERROR: ", mensajeError);
+      // console.log("[autoregistroCliente] ERROR: ", mensajeError);
       res.status(409).json(fail(mensajeError));
       return;
     }
@@ -67,7 +67,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
       },
       include: { usuario_rol: { include: { rol: true } } },
     });
-    console.log("[autoregistroCliente] USUARIO CREADO", usuario.id);
+    // console.log("[autoregistroCliente] USUARIO CREADO", usuario.id);
 
     // Registrar auditoría
     await registrarAuditoria({
@@ -79,7 +79,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
       entidadId: usuario.id,
       modulo: "usuarios",
     });
-    console.log("[autoregistroCliente] AUDITORIA REGISTRADA", usuario.id);
+    // console.log("[autoregistroCliente] AUDITORIA REGISTRADA", usuario.id);
 
     res.status(201).json(success({
       id: usuario.id,
@@ -90,10 +90,10 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
       rol: 'cliente',
       proveedor_oauth: usuario.proveedor_oauth,
     }));
-    console.log("[autoregistroCliente] FIN OK", usuario.id);
+    // console.log("[autoregistroCliente] FIN OK", usuario.id);
   } catch (err) {
     mensajeError = err instanceof Error ? err.message : "Error desconocido";
-    console.log("[autoregistroCliente] ERROR CATCH: ", mensajeError, err);
+    // console.log("[autoregistroCliente] ERROR CATCH: ", mensajeError, err);
     res.status(500).json(fail(mensajeError));
   }
 }

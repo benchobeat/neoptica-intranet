@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { registrarAuditoria } from '../utils/auditoria';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -17,7 +18,7 @@ const prisma = new PrismaClient();
 export const crearSucursal = async (req: Request, res: Response) => {
   try {
     const { nombre, direccion, latitud, longitud, telefono, email, estado } = req.body;
-    const userId = (req as any).usuario?.id;
+    const userId = (req as any).usuario?.id || (req as any).user?.id;
 
     // Validación estricta del nombre
     if (!nombre || typeof nombre !== 'string') {
@@ -59,10 +60,10 @@ export const crearSucursal = async (req: Request, res: Response) => {
     }
     
     // Validar coordenadas geográficas si se proporcionan
-    const latitudNum = latitud ? parseFloat(latitud) : undefined;
-    const longitudNum = longitud ? parseFloat(longitud) : undefined;
+    const latitudParsed = latitud ? parseFloat(latitud) : null;
+    const longitudParsed = longitud ? parseFloat(longitud) : null;
     
-    if (latitud && (isNaN(latitudNum) || latitudNum < -90 || latitudNum > 90)) {
+    if (latitud && (isNaN(latitudParsed) || latitudParsed < -90 || latitudParsed > 90)) {
       return res.status(400).json({ 
         ok: false, 
         data: null, 
@@ -70,7 +71,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
       });
     }
     
-    if (longitud && (isNaN(longitudNum) || longitudNum < -180 || longitudNum > 180)) {
+    if (longitud && (isNaN(longitudParsed) || longitudParsed < -180 || longitudParsed > 180)) {
       return res.status(400).json({ 
         ok: false, 
         data: null, 
@@ -118,18 +119,30 @@ export const crearSucursal = async (req: Request, res: Response) => {
       }
     }
 
-    // Crear la nueva sucursal en la base de datos
+    // Crear la nueva sucursal
     const nuevaSucursal = await prisma.sucursal.create({
       data: {
         nombre: nombreLimpio,
         direccion: direccion?.trim() || null,
-        latitud: latitudNum || null,
-        longitud: longitudNum || null,
+        latitud: latitudParsed,
+        longitud: longitudParsed,
         telefono: telefono?.trim() || null,
-        email: email?.trim() || null,
+        email: email?.trim().toLowerCase() || null,
         estado: estado !== undefined ? estado : true,
         creado_por: userId || null,
+        creado_en: new Date(),
       },
+    });
+    
+    // Registrar auditoría de creación exitosa
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'crear_sucursal_exitoso',
+      descripcion: `Sucursal creada: ${nuevaSucursal.nombre}`,
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      entidadId: nuevaSucursal.id,
+      modulo: 'sucursales',
     });
 
     return res.status(201).json({ 
@@ -139,6 +152,17 @@ export const crearSucursal = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error al crear sucursal:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: (req as any).usuario?.id || (req as any).user?.id,
+      accion: 'crear_sucursal_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      modulo: 'sucursales',
+    });
+    
     return res.status(500).json({ 
       ok: false, 
       data: null, 
@@ -155,6 +179,8 @@ export const crearSucursal = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Lista de sucursales o mensaje de error
  */
 export const listarSucursales = async (req: Request, res: Response) => {
+  // Capturar ID de usuario para auditoría
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
   try {
     // Preparar filtros
     const filtro: any = {
@@ -174,6 +200,16 @@ export const listarSucursales = async (req: Request, res: Response) => {
       },
     });
     
+    // Registrar auditoría de listado exitoso
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_sucursales',
+      descripcion: `Se listaron ${sucursales.length} sucursales`,
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      modulo: 'sucursales',
+    });
+    
     return res.status(200).json({ 
       ok: true, 
       data: sucursales, 
@@ -181,6 +217,17 @@ export const listarSucursales = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error al listar sucursales:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_sucursales_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      modulo: 'sucursales',
+    });
+    
     return res.status(500).json({ 
       ok: false, 
       data: null, 
@@ -197,6 +244,9 @@ export const listarSucursales = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Datos de la sucursal o mensaje de error
  */
 export const obtenerSucursalPorId = async (req: Request, res: Response) => {
+  // Capturar ID de usuario para auditoría
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const { id } = req.params;
   try {
     const { id } = req.params;
     
@@ -227,6 +277,17 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
       });
     }
     
+    // Registrar auditoría de consulta exitosa
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'obtener_sucursal',
+      descripcion: `Se consultó la sucursal: ${sucursal.nombre}`,
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      entidadId: id,
+      modulo: 'sucursales',
+    });
+    
     return res.status(200).json({ 
       ok: true, 
       data: sucursal, 
@@ -235,8 +296,19 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al obtener sucursal por ID:', error);
     
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'obtener_sucursal_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      entidadId: id,
+      modulo: 'sucursales',
+    });
+    
     // Manejo detallado de errores
-    if (error.code === 'P2023') {
+    if (error instanceof Error && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2023') {
       return res.status(400).json({
         ok: false,
         data: null,
@@ -260,10 +332,11 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Datos de la sucursal actualizada o mensaje de error
  */
 export const actualizarSucursal = async (req: Request, res: Response) => {
+  // Capturar ID de usuario para auditoría
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const { nombre, direccion, latitud, longitud, telefono, email, estado } = req.body;
-    const userId = (req as any).usuario?.id;
     
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -292,7 +365,11 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     }
     
     // Preparar objeto de datos a actualizar
-    const datosActualizados: any = {};
+    const datosActualizados: any = {
+      // Agregar campos de auditoría
+      modificado_por: userId || null,
+      modificado_en: new Date(),
+    };
     
     // Validar y procesar nombre si se proporcionó
     if (nombre !== undefined) {
@@ -403,15 +480,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     // Validar y procesar coordenadas si se proporcionaron
     if (latitud !== undefined) {
       if (latitud !== null) {
-        const latitudNum = parseFloat(latitud);
-        if (isNaN(latitudNum) || latitudNum < -90 || latitudNum > 90) {
+        const latitudParsed = parseFloat(latitud);
+        if (isNaN(latitudParsed) || latitudParsed < -90 || latitudParsed > 90) {
           return res.status(400).json({ 
             ok: false, 
             data: null, 
             error: 'La latitud debe ser un número entre -90 y 90.' 
           });
         }
-        datosActualizados.latitud = latitudNum;
+        datosActualizados.latitud = latitudParsed;
       } else {
         datosActualizados.latitud = null;
       }
@@ -419,15 +496,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     
     if (longitud !== undefined) {
       if (longitud !== null) {
-        const longitudNum = parseFloat(longitud);
-        if (isNaN(longitudNum) || longitudNum < -180 || longitudNum > 180) {
+        const longitudParsed = parseFloat(longitud);
+        if (isNaN(longitudParsed) || longitudParsed < -180 || longitudParsed > 180) {
           return res.status(400).json({ 
             ok: false, 
             data: null, 
             error: 'La longitud debe ser un número entre -180 y 180.' 
           });
         }
-        datosActualizados.longitud = longitudNum;
+        datosActualizados.longitud = longitudParsed;
       } else {
         datosActualizados.longitud = null;
       }
@@ -447,14 +524,21 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
       });
     }
     
-    // Agregar información de auditoría
-    datosActualizados.modificado_en = new Date();
-    datosActualizados.modificado_por = userId || null;
-    
     // Actualizar la sucursal en la base de datos
     const sucursalActualizada = await prisma.sucursal.update({
       where: { id },
       data: datosActualizados,
+    });
+    
+    // Registrar auditoría de actualización exitosa
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'actualizar_sucursal',
+      descripcion: `Se actualizó la sucursal: ${sucursalActualizada.nombre}`,
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      entidadId: id,
+      modulo: 'sucursales',
     });
     
     return res.status(200).json({ 
@@ -465,8 +549,19 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al actualizar sucursal:', error);
     
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'actualizar_sucursal_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      entidadId: id,
+      modulo: 'sucursales',
+    });
+    
     // Manejo detallado de errores de Prisma
-    if (error.code === 'P2023') {
+    if (error instanceof Error && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2023') {
       return res.status(400).json({
         ok: false,
         data: null,
@@ -491,9 +586,11 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Confirmación de eliminación o mensaje de error
  */
 export const eliminarSucursal = async (req: Request, res: Response) => {
+  // Capturar ID de usuario para auditoría
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-    const userId = (req as any).usuario?.id;
+    // Ya tenemos el id y userId del bloque superior
     
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -545,8 +642,19 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
       data: {
         anulado_en: fechaActual,
         anulado_por: userId || null,
-        estado: false, // También marcar como inactiva
+        estado: false, // También marcar como inactivo
       },
+    });
+    
+    // Registrar auditoría de eliminación exitosa
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'eliminar_sucursal',
+      descripcion: `Se eliminó (soft delete) la sucursal con ID: ${id}`,
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      entidadId: id,
+      modulo: 'sucursales',
     });
     
     return res.status(200).json({ 
@@ -557,8 +665,19 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al eliminar sucursal:', error);
     
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'eliminar_sucursal_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      entidadId: id,
+      modulo: 'sucursales',
+    });
+    
     // Manejo detallado de errores de Prisma
-    if (error.code === 'P2023') {
+    if (error instanceof Error && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2023') {
       return res.status(400).json({
         ok: false,
         data: null,
