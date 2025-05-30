@@ -26,7 +26,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:3000', // o usa '*' solo para pruebas locales
+  origin: process.env.FRONTEND_URL, // Usar variable de entorno para el frontend
   credentials: true
 }));
 

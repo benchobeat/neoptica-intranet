@@ -73,7 +73,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     });
 
     // Construir URL de restablecimiento (frontend)
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     // Contenido del correo
     const mailSubject = 'Restablecimiento de contraseña - Neóptica Intranet';

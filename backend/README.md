@@ -14,7 +14,7 @@
 - **Seed y migraciones**: Scripts de seed y migraciones Prisma funcionando correctamente.
 
 ### Pendientes para Finalizar Fase 1
-- [ ] **Modelos y endpoints de Stock y Venta**: Faltan implementar modelos y endpoints básicos para stock y ventas (ver checklist en README).
+- [ ] **Modelos y endpoints de Stock y Pedido**: Faltan implementar modelos y endpoints básicos para stock y pedidos (ver checklist en README).
 - [ ] **Gestión de clientes**: La gestión de clientes se realiza mediante el modelo `usuario` (no existe modelo cliente independiente). Asegúrate de que los endpoints y roles permitan registrar y distinguir usuarios de tipo cliente.
 - [ ] **Diagrama de base de datos actualizado**: Agregar/exportar el diagrama ERD actualizado.
 - [ ] **Ejemplos de uso en Postman**: Exportar y documentar colecciones de pruebas para facilitar QA/UAT.
@@ -23,7 +23,7 @@
 - [ ] **(Opcional) Dockerización y CI/CD**: Mejorar despliegue y portabilidad.
 
 ### Recomendaciones
-- Priorizar la implementación de los modelos y endpoints faltantes (Stock y Venta) para cumplir el alcance de la Fase 1.
+- Priorizar la implementación de los modelos y endpoints faltantes (Stock y Pedido) para cumplir el alcance de la Fase 1.
 - Verificar que la gestión de clientes esté correctamente soportada a través del modelo `usuario` y sus endpoints.
 - Actualizar el diagrama de base de datos tras cada cambio relevante.
 - Documentar ejemplos de uso API en Postman para facilitar pruebas y onboarding.
@@ -851,7 +851,7 @@ Utiliza esta lista para verificar el avance y completitud de la Fase 1 del proye
 - [x] Modelo Producto implementado
 - [x] Modelo Sucursal implementado
 - [ ] Modelo Stock implementado
-- [ ] Modelo Venta implementado
+- [ ] Modelo Pedido implementado
 - [x] Gestión de clientes a través del modelo Usuario (no existe modelo Cliente independiente)
 - [x] Relaciones entre modelos definidas
 - [x] Migraciones de base de datos creadas

@@ -16,11 +16,7 @@ const swaggerDefinition = {
     {
       url: process.env.SWAGGER_BASE_URL,
       description: "API base URL",
-    },
-    {
-      url: "http://localhost:4000",
-      description: "API base URL",
-    },
+    }
   ],
   components: {
     securitySchemes: {
