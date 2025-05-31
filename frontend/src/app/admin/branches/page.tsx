@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "../shared/dark-table.css";
 import { Table, Button, Input, Modal, Form, message, Popconfirm, Tag, Tooltip, InputNumber } from "antd";
 import type { TableColumnType } from "antd";
@@ -29,11 +29,8 @@ export default function BranchesPage() {
   const [searchText, setSearchText] = useState("");
 
   // Cargar sucursales al montar el componente o cambiar la paginación o búsqueda
-  useEffect(() => {
-    fetchBranches();
-  }, [page, pageSize, searchText]);
-
-  const fetchBranches = async () => {
+  // 1. Memoiza la función, usando useCallback y pasando como dependencias los estados que usa
+  const fetchBranches = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getSucursalesPaginadas(page, pageSize, searchText);
@@ -49,7 +46,13 @@ export default function BranchesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, searchText]);
+  // ^^^^ ¡Esta es la parte importante!
+
+  // 2. El useEffect solo depende de fetchBranches (la función memoizada)
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
 
   // La búsqueda ahora se maneja automáticamente a través del useEffect cuando cambia searchText
 
@@ -377,7 +380,7 @@ export default function BranchesPage() {
             <ol className="text-xs text-gray-500 list-decimal pl-4">
               <li>Busca la ubicación en Google Maps</li>
               <li>Haz clic derecho en el punto exacto</li>
-              <li>Selecciona "¿Qué hay aquí?"</li>
+              <li>Selecciona &quot;¿Qué hay aquí?&quot;</li>
               <li>En la tarjeta que aparece abajo encontrarás las coordenadas</li>
             </ol>
           </div>

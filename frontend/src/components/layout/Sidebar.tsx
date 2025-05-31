@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, LogOut } from 'lucide-react';
 import { MenuItem, getMenuItemsByRole } from '../../config/menuItems';
+import Image from 'next/image';
 
 interface SidebarProps {
   className?: string;
@@ -35,7 +36,7 @@ export default function Sidebar({ className = "", role }: SidebarProps) {
     });
     
     setExpandedItems(newExpandedItems);
-  }, [pathname]);
+  }, [pathname, role]);
 
   // Función para alternar la expansión de un elemento de menú
   const toggleExpand = (itemId: string) => {
@@ -204,9 +205,11 @@ export default function Sidebar({ className = "", role }: SidebarProps) {
       
       <div className="p-4 border-t border-gray-800">
         <div className="flex items-center gap-4">
-          <img 
+          <Image 
             src={`https://i.pravatar.cc/40?u=${userRole}`} 
             alt={getRoleLabel(userRole)} 
+            width={40}
+            height={40}
             className="w-10 h-10 rounded-full" 
           />
           <div className="flex-1">

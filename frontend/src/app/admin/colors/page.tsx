@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { HexColorPicker } from "react-colorful";
 import { Table, Button, Input, Modal, Form, message, Popconfirm, Tag, Tooltip } from "antd";
 import type { TableColumnType } from "antd";
@@ -45,11 +45,14 @@ export default function ColorsPage() {
   const [searchText, setSearchText] = useState("");
 
   // Cargar colores al montar el componente o cambiar la paginación
-  const fetchColors = async (currentPage = page, currentPageSize = pageSize, currentSearchText = searchText) => {
+  const fetchColors = useCallback(async () => {
     setLoading(true);
-    console.log("Iniciando carga de colores, página:", currentPage, "tamaño:", currentPageSize, "buscar:", currentSearchText);
     try {
-      const response = await getColoresPaginados(currentPage, currentPageSize, currentSearchText);
+      const response = await getColoresPaginados(page, pageSize, searchText);
+  
+    console.log("Iniciando carga de colores, página:", page, "tamaño:", pageSize, "buscar:", searchText);
+    try {
+      const response = await getColoresPaginados(page, pageSize, searchText);
       console.log("Respuesta de la API (completa):", response);
 
       let fetchedColors: Color[] = [];
@@ -97,13 +100,17 @@ export default function ColorsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Error al cargar colores:", error);
+    message.error("Error al cargar los colores. Revisa la consola del navegador para más detalles.");
+  } finally {
+    setLoading(false);
+  }
+}, [page, pageSize, searchText]);
 
-  // Efecto para cargar colores cuando cambia la página, tamaño o término de búsqueda
-  useEffect(() => {
-    // Usar los valores actuales del estado
-    fetchColors(page, pageSize, searchText);
-  }, [page, pageSize, searchText]);
+useEffect(() => {
+  fetchColors();
+}, [fetchColors]);
   
   // No necesitamos handleSearch ya que useEffect se encarga de esto
 

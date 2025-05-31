@@ -16,6 +16,7 @@ import {
   User,
   ShoppingBag,
 } from "lucide-react";
+import Image from "next/image";
 
 // --- COMPONENTES DE UI REUTILIZABLES (Tomados del Dashboard de Admin para consistencia) ---
 
@@ -72,7 +73,7 @@ const Sidebar = () => (
         <div className="p-4 border-t border-gray-800">
             {/* Se actualiza el perfil para el Vendedor */}
             <div className="flex items-center gap-4">
-                <img src="https://i.pravatar.cc/40?u=vendedor" alt="Vendedor" className="w-10 h-10 rounded-full" />
+                <Image src="https://i.pravatar.cc/40?u=vendedor" alt="Vendedor" width={40} height={40} className="w-10 h-10 rounded-full" />
                 <div className="flex-1">
                     <p className="text-sm font-semibold text-white">Ana López</p>
                     <p className="text-xs text-gray-500">vendedor@neoptica.com</p>
@@ -101,7 +102,7 @@ const Header = () => (
                 <Bell size={22} />
             </button>
             <div className="flex items-center space-x-3 cursor-pointer">
-                <img src="https://i.pravatar.cc/40?u=vendedor" alt="Usuario" className="w-10 h-10 rounded-full border-2 border-gray-700" />
+                <Image src="https://i.pravatar.cc/40?u=vendedor" alt="Usuario" width={40} height={40} className="w-10 h-10 rounded-full border-2 border-gray-700" />
                 <div className="text-sm text-right">
                     <span className="font-semibold text-white">Ana López</span>
                     <p className="text-xs text-gray-500">Vendedor</p>

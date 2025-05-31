@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "../shared/dark-table.css";
 import { Table, Button, Input, Modal, Form, message, Popconfirm, Tag, Tooltip } from "antd";
 import type { TableColumnType } from "antd";
@@ -27,11 +27,8 @@ export default function BrandsPage() {
   const [searchText, setSearchText] = useState("");
 
   // Cargar marcas al montar el componente o cambiar la paginación o búsqueda
-  useEffect(() => {
-    fetchBrands();
-  }, [page, pageSize, searchText]);
-
-  const fetchBrands = async () => {
+  // 1. Memoiza la función, usando useCallback y pasando como dependencias los estados que usa
+  const fetchBrands = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getMarcasPaginadas(page, pageSize, searchText);
@@ -47,8 +44,13 @@ export default function BrandsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, searchText]);
 
+  // 2. El useEffect solo depende de fetchBrands (la función memoizada)
+  useEffect(() => {
+    fetchBrands();
+  }, [fetchBrands]);
+  
   // La búsqueda ahora se maneja automáticamente a través del useEffect cuando cambia searchText
 
   const showModal = (brand?: Marca) => {

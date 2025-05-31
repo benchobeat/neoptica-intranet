@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Bell, Search, ChevronDown, LogOut, Settings, User } from 'lucide-react';
+import Image from 'next/image';
 
 interface HeaderProps {
   className?: string;
@@ -87,9 +88,11 @@ export function Header({ className = "" }: HeaderProps) {
             className="flex items-center space-x-3 cursor-pointer"
             onClick={() => setShowUserMenu(!showUserMenu)}
           >
-            <img 
+            <Image 
               src="https://i.pravatar.cc/40?u=admin" 
               alt="Usuario" 
+              width={40} 
+              height={40} 
               className="w-10 h-10 rounded-full border-2 border-gray-700" 
             />
             <div className="text-sm text-right">
