@@ -43,8 +43,10 @@ const router = Router();
  */
 router.get('/', authenticateJWT, requireRole('admin'), listarRoles);
 
-router.all('/', (req, res) => {
-  res.status(405).json({ ok: false, data: null, error: 'Método no permitido para roles' });
-});
+import { metodoNoPermitido } from '@/controllers/rolesController';
+
+// Solo permite GET, el resto responde 405
+router.all('/', metodoNoPermitido);
+router.all('/:id', metodoNoPermitido);
 
 export default router;

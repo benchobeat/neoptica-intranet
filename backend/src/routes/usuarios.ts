@@ -4,8 +4,115 @@ import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 import { cambiarPassword } from '@/controllers/usuarioController';
 import { resetPasswordAdmin } from '@/controllers/usuarioController';
+import { eliminarUsuario } from '../controllers/usuarioController';
 
 const router = Router();
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UsuarioInput:
+ *       type: object
+ *       required:
+ *         - nombre
+ *         - email
+ *         - password
+ *       properties:
+ *         nombre:
+ *           type: string
+ *           example: "Juan Pérez"
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: "juan@mail.com"
+ *         password:
+ *           type: string
+ *           example: "contraseñaSegura123"
+ *         rol:
+ *           type: string
+ *           enum: [admin, vendedor, optometrista, cliente]
+ *           example: "vendedor"
+ *     Usuario:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
+ *         nombre:
+ *           type: string
+ *           example: "Juan Pérez"
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: "juan@mail.com"
+ *         roles:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["vendedor"]
+ *     Error:
+ *       type: object
+ *       properties:
+ *         ok:
+ *           type: boolean
+ *           example: false
+ *         data:
+ *           type: null
+ *         error:
+ *           type: string
+ *           example: "Mensaje de error"
+ */
+
+/**
+ * @swagger
+ * /api/usuarios/autoregistro:
+ *   post:
+ *     summary: Autoregistro de cliente (formulario o redes sociales)
+ *     tags: [Usuarios]
+ *     description: Permite a cualquier usuario registrarse como cliente usando formulario tradicional o mediante Google, Facebook o Instagram.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre_completo:
+ *                 type: string
+ *                 example: "Juan Pérez"
+ *               email:
+ *                 type: string
+ *                 example: "juan@email.com"
+ *               password:
+ *                 type: string
+ *                 example: "Password123!"
+ *               telefono:
+ *                 type: string
+ *                 example: "0999999999"
+ *               proveedor_oauth:
+ *                 type: string
+ *                 enum: [google, facebook, instagram]
+ *                 example: "google"
+ *               oauth_id:
+ *                 type: string
+ *                 example: "1234567890"
+ *             required:
+ *               - email
+ *             description: |
+ *               Para registro tradicional se requiere nombre_completo, email y password.
+ *               Para registro social se requiere email, proveedor_oauth y oauth_id.
+ *     responses:
+ *       201:
+ *         description: Cliente registrado correctamente
+ *       400:
+ *         description: Faltan datos obligatorios
+ *       409:
+ *         description: Ya existe un usuario con ese email
+ */
+import { autoregistroCliente } from '@/controllers/autoregistroController';
+router.post('/autoregistro', autoregistroCliente);
 
 /**
  * @swagger
@@ -181,7 +288,7 @@ router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', authenticateJWT, requireRole('admin'), usuarioController.eliminarUsuario);
+router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarUsuario);
 
 /**
  * @swagger
@@ -238,6 +345,45 @@ router.delete('/:id', authenticateJWT, requireRole('admin'), usuarioController.e
  *               $ref: '#/components/schemas/Error'
  */
 router.put('/:id/password', authenticateJWT, cambiarPassword);
+
+/**
+ * @swagger
+ * /api/usuarios/cambiar-password:
+ *   post:
+ *     summary: Endpoint alternativo para cambiar contraseña (compatibilidad con tests)
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [actual, nueva]
+ *             properties:
+ *               actual:
+ *                 type: string
+ *                 example: "Admin1234!"
+ *               nueva:
+ *                 type: string
+ *                 example: "NuevoPass2024!"
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada correctamente
+ *       400:
+ *         description: Error en la petición (password débil, etc)
+ */
+// Middleware para inyectar el ID del usuario autenticado en los params
+function injectUserIdAsParam(req: any, _res: any, next: any) {
+  // Extrae el ID del usuario desde el token JWT y lo inyecta como param
+  if (req.user && req.user.id) {
+    req.params.id = req.user.id;
+  }
+  next();
+}
+// Ruta alternativa para compatibilidad con tests y clientes antiguos
+router.post('/cambiar-password', authenticateJWT, injectUserIdAsParam, cambiarPassword);
 
 /**
  * @swagger
