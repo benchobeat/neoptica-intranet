@@ -104,7 +104,7 @@
     - [X] Registro de operaciones sobre adjuntos (carga, descarga, eliminación)
     - [X] Optimización de middlewares para resolver conflictos entre autenticación y Multer
     - [X] Pruebas exhaustivas de todas las operaciones y permisos
-  - [ ] Integración con módulo de transferencias entre sucursales (ver siguiente fase para detalles)
+  - [ ] ~~Integración con módulo de transferencias entre sucursales (ver siguiente fase para detalles)~~
   - [X] Auditoría y logs:
     - [X] Registrar todas las operaciones en log_auditoria (incluye fallidas)
     - [X] Registrar el stock_resultante en cada movimiento para auditoría
@@ -114,21 +114,21 @@
   - [X] Pruebas unitarias y de integración (mínimo 40 tests, casos positivos/negativos, validaciones, concurrencia)
   - [ ] Verificación de cobertura de pruebas y entregables
 
-- [ ] Transferencias entre Sucursales
-  - [ ] Solicitud de transferencia (producto, cantidad, sucursal origen/destino, motivo)
-  - [ ] Flujo completo: solicitud, aprobación/rechazo, ejecución (solo usuarios admin)
-  - [ ] Validaciones de stock en origen/destino
-  - [ ] Registro de historial, logs y estados de transferencia
-  - [ ] Rutas REST documentadas con Swagger
-  - [ ] Pruebas unitarias (mínimo 25 tests)
-  - [ ] Logs de auditoría para cada etapa
+- [ ] ~~Transferencias entre Sucursales~~ *(Movido a Versión 2.0)*
+  - [ ] ~~Solicitud de transferencia (producto, cantidad, sucursal origen/destino, motivo)~~
+  - [ ] ~~Flujo completo: solicitud, aprobación/rechazo, ejecución (solo usuarios admin)~~
+  - [ ] ~~Validaciones de stock en origen/destino~~
+  - [ ] ~~Registro de historial, logs y estados de transferencia~~
+  - [ ] ~~Rutas REST documentadas con Swagger~~
+  - [ ] ~~Pruebas unitarias (mínimo 25 tests)~~
+  - [ ] ~~Logs de auditoría para cada etapa~~
 
 **Entregables:**  
 - [X] Módulo de Productos 100% funcional con CRUD y pruebas
 - [ ] Módulo de Inventario 100% funcional con gestión de stock
-- [ ] Módulo de Transferencias entre sucursales implementado
+- [ ] ~~Módulo de Transferencias entre sucursales implementado~~ *(Movido a Versión 2.0)*
 - [ ] Documentación técnica actualizada con diagramas de flujo
-- [ ] Mínimo 95 pruebas unitarias superadas para inventario y transferencias
+- [ ] Mínimo 70 pruebas unitarias superadas para inventario *(actualizado)*
 - [ ] Logs de auditoría validados para todas las operaciones
 
 ---

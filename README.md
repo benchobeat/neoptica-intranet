@@ -69,7 +69,7 @@ Proveer una plataforma integral, segura y escalable para la gestión total de la
 - Contempla integración y extensión modular hacia nuevas áreas funcionales.
 - No incluye funcionalidades de atención al cliente final directo (estos flujos serán parte de la página web pública o app móvil).
 
-# 3. ARQUITECTURA TECNOLÓGICA – INTRANET NEÓPTICA (v2)
+# 3. ARQUITECTURA TECNOLÓGICA – INTRANET NEÓPTICA
 
 ## **Frontend:**
 - **Framework principal:** React.js (con Next.js recomendado para SSR, rutas protegidas y fácil migración a mobile en futuro).
@@ -204,6 +204,39 @@ Al ser un sistema multirol debe tener la opción de seleccionar el rol con el qu
 # 5. FLUJOS Y EXPERIENCIA DE USUARIO (POR ROL)
 Al ser un sistema multirol debe tener la opción de seleccionar el rol con el que vamos a trabajar, esta opción deberá estár en el menú principal y disponible en todo momento para que un vendedor que es optometrista pueda realizar el cambio de rol inmediatamente en el sistema y se actualicen sus modulos automaticamente.
 
+# 6. DECISIONES DE DISEÑO Y VERSIONES FUTURAS
+
+## Cambios de Diseño para Versión 1.0
+
+### Enfoque en Sucursal Única
+
+En la versión 1.0 de la Intranet Neóptica, hemos tomado la decisión estratégica de enfocarnos en una implementación para **sucursal única**. Esto implica que:
+
+- **Transferencias entre sucursales:** Este módulo ha sido movido a la Versión 2.0, ya que inicialmente solo operaremos con una sucursal.
+- **Simplificación del inventario:** El inventario se gestiona únicamente para la sucursal principal, eliminando la complejidad de transferencias y conciliación entre múltiples ubicaciones.
+- **Optimización de flujos de trabajo:** Los procesos de abastecimiento y control de stock se han optimizado para un único punto de operación.
+
+Esta decisión permite acelerar el desarrollo y despliegue de la versión inicial, enfocando los recursos en perfeccionar los módulos críticos para la operación inmediata del negocio.
+
+### Funcionalidades Previstas para Versión 2.0
+
+Las siguientes funcionalidades están planificadas para la Versión 2.0:
+
+- **Módulo completo de transferencias entre sucursales**
+  - Solicitudes de transferencia
+  - Aprobación/rechazo de transferencias
+  - Historial y seguimiento de transferencias
+  - Validaciones de stock en origen/destino
+  - Reportes de transferencias
+
+- **Gestión multi-sucursal avanzada**
+  - Dashboard consolidado multi-sucursal
+  - Reportes comparativos entre sucursales
+  - KPIs por sucursal
+
+Este enfoque iterativo permite entregar valor de forma más rápida mientras se construye una base sólida para la escalabilidad futura.
+
+
 ## A. ADMINISTRADOR/GERENTE
 
 ### **Flujos principales:**
@@ -282,14 +315,14 @@ Menú lateral con acceso rápido a módulos por rol, interfaz contextual, leyend
 Todos los flujos privilegian la rapidez de operación, la claridad visual de estados (activo, anulado, histórico), la seguridad en cada acción, y la trazabilidad absoluta para auditoría y soporte.
 
 
-# 6. GESTIÓN DE CORREO ELECTRÓNICO TRANSACCIONAL Y AUDITORÍA DE ENVÍOS
+# 7. GESTIÓN DE CORREO ELECTRÓNICO TRANSACCIONAL Y AUDITORÍA DE ENVÍOS
 Para mayor información revisar docs/manuales/email.md
 
-# 7. MANEJO DE ESTADOS, ANULACIÓN Y CICLO DE VIDA
+# 8. MANEJO DE ESTADOS, ANULACIÓN Y CICLO DE VIDA
 Para mayor información revisar docs/manuales/estados.md
 
 
-# 8. ESTADO ACTUAL Y RECOMENDACIONES PARA AUTENTICACIÓN SOCIAL (OAUTH)
+# 9. ESTADO ACTUAL Y RECOMENDACIONES PARA AUTENTICACIÓN SOCIAL (OAUTH)
 
 ## Estado actual de la configuración OAuth (Google, Facebook, Instagram)
 
@@ -339,34 +372,34 @@ Esto permite desarrollar y probar la autenticación social sin exponer credencia
 
 > **Estado actual:** Solo se permite login social en entorno local (`localhost:4000`). Para habilitarlo en producción, sigue los pasos detallados arriba.
 
-# 8. GESTIÓN DE ARCHIVOS Y ADJUNTOS
+# 10. GESTIÓN DE ARCHIVOS Y ADJUNTOS
 Para mayor información revisar docs/manuales/archivos.md
 
-# 9. GESTIÓN DE LOGS Y AUDITORÍA
+# 11. GESTIÓN DE LOGS Y AUDITORÍA
 Para mayor información revisar docs/manuales/logs.md
 
-# 10. GESTION CLINICA MODULAR
+# 12. GESTION CLINICA MODULAR
 Para mayor información revisar docs/manuales/clinica.md
 
-# 11. GESTIÓN DE INVENTARIO
+# 13. GESTIÓN DE INVENTARIO
 Para mayor información revisar docs/manuales/inventario.md
 
-# 12. PEDIDOS, FACTURACIÓN Y CONTABILIDAD
+# 14. PEDIDOS, FACTURACIÓN Y CONTABILIDAD
 Para mayor información revisar docs/manuales/contabilidad.md
 
-# 13. ESTRATEGIA UX/UI Y BUENAS PRÁCTICAS
+# 15. ESTRATEGIA UX/UI Y BUENAS PRÁCTICAS
 Para mayor información revisar docs/manuales/UXUI.md
 
-# 14. UX/UI Y WIREFRAMES
+# 16. UX/UI Y WIREFRAMES
 Para mayor información revisar docs/manuales/wireframes.md
 
-# 15. BASE DE DATOS PRISMA
+# 17. BASE DE DATOS PRISMA
 Para ver el esquema prisma de la base de datos puedes usar el archivo backend/prisma/schema.prisma
 
-# 16. CRONOGRAMA
+# 18. CRONOGRAMA
 Para mayor información revisar docs/manuales/cronograma.md
 
-# 17. AUTENTICACIÓN CON REDES SOCIALES (GOOGLE, FACEBOOK, INSTAGRAM)
+# 19. AUTENTICACIÓN CON REDES SOCIALES (GOOGLE, FACEBOOK, INSTAGRAM)
 
 Este proyecto soporta autenticación de usuarios a través de Google, Facebook e Instagram usando Passport.js en el backend y JWT para la gestión de sesiones.
 
@@ -463,7 +496,7 @@ export default function OauthSuccess() {
 
 Para dudas o problemas, revisar la sección de autenticación en este README o contactar al equipo de desarrollo.
 
-# 18. AUTENTICACIÓN CON GOOGLE, FACEBOOK, INSTAGRAM
+# 20. AUTENTICACIÓN CON GOOGLE, FACEBOOK, INSTAGRAM
 Para esta autenticación se debe usar passport.js   
 ## Backend (Node/Express):
 Usa Passport.js. Es robusto, ampliamente documentado y soporta todos los proveedores populares.
@@ -476,7 +509,7 @@ El frontend envía el token al backend.
 El backend valida el token con Google y extrae el perfil.
 El backend crea el usuario (si no existe) y lo autentica.
 
-# 19. ESQUEMA RELACIONAL DE BASE DE DATOS
+# 21. ESQUEMA RELACIONAL DE BASE DE DATOS
 
 ## Diagrama Entidad-Relación
 
@@ -789,7 +822,7 @@ Revisar las reglas de eliminación (`onDelete`) en todas las relaciones para ase
 
 Las mejoras implementadas han fortalecido significativamente la estructura de la base de datos, eliminando tablas huérfanas, estandarizando campos y mejorando la integridad referencial, lo que facilitará el mantenimiento y escalabilidad del sistema.
 
-# 20. RESUMEN DE MODELOS Y RELACIONES DEL ESQUEMA DE BASE DE DATOS
+# 22. RESUMEN DE MODELOS Y RELACIONES DEL ESQUEMA DE BASE DE DATOS
 
 Esta sección proporciona una visión general de todos los modelos de la base de datos, sus propósitos principales y relaciones, facilitando la comprensión del esquema sin necesidad de revisar directamente el archivo schema.prisma.
 
