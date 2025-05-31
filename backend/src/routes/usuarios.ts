@@ -5,7 +5,7 @@ import { requireRole } from '@/middlewares/roles';
 import { cambiarPassword } from '@/controllers/usuarioController';
 import { resetPasswordAdmin } from '@/controllers/usuarioController';
 import { eliminarUsuario } from '../controllers/usuarioController';
-
+import { listarUsuariosPaginados } from '../controllers/usuarioController';
 const router = Router();
 
 /**
@@ -113,6 +113,8 @@ const router = Router();
  */
 import { autoregistroCliente } from '@/controllers/autoregistroController';
 router.post('/autoregistro', autoregistroCliente);
+
+router.get('/paginated', authenticateJWT, listarUsuariosPaginados);
 
 /**
  * @swagger

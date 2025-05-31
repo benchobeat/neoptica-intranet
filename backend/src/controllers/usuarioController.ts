@@ -50,6 +50,92 @@ export async function listarUsuarios(
   }
 }
 
+export const listarUsuariosPaginados = async (req: Request, res: Response) => {
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  try {
+    // Extraer parámetros de paginación y búsqueda
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const searchText = (req.query.searchText as string) || "";
+    
+    // Calcular offset para la paginación
+    const skip = (page - 1) * pageSize;
+    
+    // Preparar filtros
+    const filtro: any = {
+      anulado_en: null, // Solo marcas no anuladas (soft delete)
+    };
+    
+    // Filtro adicional por nombre_completo si se proporciona en la búsqueda
+    if (searchText) {
+      filtro.nombre_completo = {
+        contains: searchText,
+        mode: 'insensitive'
+      };
+    }
+    
+    // Filtro adicional por activo si se proporciona en la consulta
+    if (req.query.activo !== undefined) {
+      filtro.activo = req.query.activo === 'true';
+    }
+    
+    // Consulta para obtener el total de registros
+    const total = await prisma.usuario.count({
+      where: filtro
+    });
+    
+    // Buscar marcas según filtros, con paginación y ordenar alfabéticamente
+    const marcas = await prisma.usuario.findMany({
+      where: filtro,
+      orderBy: {
+        nombre_completo: 'asc', // Ordenar alfabéticamente
+      },
+      skip,
+      take: pageSize
+    });
+    
+    // Registrar auditoría de listado exitoso
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_usuarios_paginados',
+      descripcion: `Se listaron ${marcas.length} usuarios (página ${page})`,
+      ip: req.ip,
+      entidadTipo: 'usuario',
+      modulo: 'usuarios',
+    });
+    
+    return res.status(200).json({ 
+      ok: true, 
+      data: {
+        items: marcas,
+        total,
+        page,
+        pageSize
+      }, 
+      error: null 
+    });
+  } catch (error: any) {
+    console.error('Error al listar usuarios paginados:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_usuarios_paginados_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'usuario',
+      modulo: 'usuarios',
+    });
+    
+    return res.status(500).json({ 
+      ok: false, 
+      data: null, 
+      error: 'Ocurrió un error al obtener el listado paginado de usuarios.' 
+    });
+  }
+};
+
+
 /**
  * Obtiene un usuario por ID (sin exponer password)
  */
