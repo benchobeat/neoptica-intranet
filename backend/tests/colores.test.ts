@@ -329,7 +329,7 @@ describe('API de Colores', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.ok).toBe(false);
-      expect(response.body.error).toContain('al menos 2 caracteres');
+      expect(response.body.error).toContain('entre 2 y 100 caracteres');
     });
 
     it('Debería devolver 404 para ID inexistente', async () => {
