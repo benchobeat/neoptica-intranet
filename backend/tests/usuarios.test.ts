@@ -1165,7 +1165,7 @@ describe("Usuarios API", () => {
         },
       });
       // 2. Luego elimina los usuarios de test
-      const result = await prisma.usuario.deleteMany({
+      /*const result = await prisma.usuario.deleteMany({
         where: {
           email: {
             not: "admin@neoptica.com",
@@ -1173,7 +1173,7 @@ describe("Usuarios API", () => {
         },
       });
       // console.log("Usuarios de test eliminados:", result.count);
-      await prisma.$disconnect();
+      await prisma.$disconnect();*/
     });
   });
 

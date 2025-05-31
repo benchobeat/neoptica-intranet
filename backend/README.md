@@ -7,10 +7,11 @@
 ### Avances Realizados
 - **Módulos CRUD completos** para Productos, Colores, Marcas, Sucursales, Usuarios e Inventario, con endpoints REST y validación robusta.
 - **Gestión de Inventario**: CRUD completo implementado, incluyendo movimientos de stock, validaciones, transacciones atómicas y registro histórico para auditoría.
+- **Adjuntos de Inventario**: API para subir, listar, descargar y eliminar archivos adjuntos de inventario implementada y testeada. Resolución de problemas de middleware de autenticación y validación.
 - **Autenticación**: Login JWT y OAuth (Google, Facebook, Instagram) funcionando, recuperación de contraseña implementada y validada.
 - **Auditoría**: Sistema de auditoría completo, registra todas las operaciones CRUD relevantes y errores para todos los módulos, incluyendo inventario.
 - **Roles y permisos**: Middleware de roles y JWT para proteger rutas según permisos.
-- **Testing**: 193 tests automáticos (Jest) cubriendo autenticación, usuarios, roles, productos, sucursales, colores, marcas e inventario. Todos los tests pasan y la salida está limpia de logs innecesarios.
+- **Testing**: 238 tests automáticos (Jest) cubriendo autenticación, usuarios, roles, productos, sucursales, colores, marcas, inventario y adjuntos. Todos los tests pasan y la salida está limpia de logs innecesarios.
 - **Documentación**: Swagger/OpenAPI documentando todos los endpoints principales.
 - **Seed y migraciones**: Scripts de seed y migraciones Prisma funcionando correctamente.
 

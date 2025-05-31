@@ -2,7 +2,7 @@ import request from 'supertest';
 import app from '../src/app';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import { cleanDatabase, cleanTestData } from './utils/cleanDb';
+// import { cleanDatabase, cleanTestData } from './utils/cleanDb';
 
 // Declaraciones globales para resolver problemas de tipado con Jest
 // @ts-ignore
@@ -21,7 +21,7 @@ declare const expect: any;
 jest.setTimeout(30000); // Aumenta el timeout global de los tests a 30 segundos
 
 // Agregamos un log para verificar que las pruebas están iniciando
-console.log('Iniciando pruebas del módulo de inventario...');
+// console.log('Iniciando pruebas del módulo de inventario...');
 
 // Cliente Prisma para operaciones directas en la BD durante pruebas
 const prisma = new PrismaClient();
@@ -53,7 +53,7 @@ beforeAll(async () => {
   // Asegurarse de que existan los roles necesarios
   let adminRole = await prisma.rol.findFirst({ where: { nombre: 'admin' } });
   if (!adminRole) {
-    console.log('Creando rol admin...');
+    // console.log('Creando rol admin...');
     adminRole = await prisma.rol.create({
       data: {
         nombre: 'admin',
@@ -65,7 +65,7 @@ beforeAll(async () => {
   // Usar el rol 'cliente' que ya existe en lugar de 'usuario'
   let userRole = await prisma.rol.findFirst({ where: { nombre: 'cliente' } });
   if (!userRole) {
-    console.log('Creando rol cliente...');
+    // console.log('Creando rol cliente...');
     userRole = await prisma.rol.create({
       data: {
         nombre: 'cliente',
@@ -235,7 +235,7 @@ beforeAll(async () => {
 // Limpieza después de todas las pruebas
 afterAll(async () => {
   try {
-    console.log('Limpiando la base de datos después de las pruebas...');
+    // console.log('Limpiando la base de datos después de las pruebas...');
     
     // Primero, eliminamos específicamente los datos creados en nuestras pruebas
     await prisma.movimiento_inventario.deleteMany({
@@ -258,11 +258,11 @@ afterAll(async () => {
     
     // Ahora limpiamos toda la base de datos para dejarla vacía
     // Esto eliminará todos los registros excepto usuarios y roles
-    await cleanDatabase();
+    // await cleanDatabase();
     
-    console.log('Base de datos limpiada exitosamente después de las pruebas.');
+    // console.log('Base de datos limpiada exitosamente después de las pruebas.');
   } catch (error) {
-    console.error('Error al limpiar la base de datos después de las pruebas:', error);
+    // console.error('Error al limpiar la base de datos después de las pruebas:', error);
   } finally {
     // Cerrar conexión con la base de datos
     await prisma.$disconnect();

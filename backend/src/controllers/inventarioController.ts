@@ -192,8 +192,10 @@ export const crearInventario = async (req: Request, res: Response) => {
       error: null 
     });
   } catch (error) {
-    console.error('Error al crear inventario:', error);
-    
+    // Solo mostrar en consola si NO es test o desarrollo
+    if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
+      console.error('Error al crear inventario:', error);
+    }
     // Registrar auditoría de error
     await registrarAuditoria({
       usuarioId: userId,
