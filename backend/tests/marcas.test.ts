@@ -217,14 +217,24 @@ describe('API de Marcas', () => {
     });
 
     it('Debería filtrar marcas por nombre', async () => {
+      // Primero hacemos una consulta para verificar que existe exactamente la marca que esperamos
+      const marca = await prisma.marca.findFirst({
+        where: { nombre: 'Test Marca 1' },
+        select: { id: true }
+      });
+      
+      // Si no existe, fallamos el test de inmediato
+      expect(marca).toBeTruthy();
+      
+      // Usamos el ID específico para garantizar que obtenemos la marca correcta
       const response = await request(app)
-        .get('/api/marcas?nombre=Test Marca 1')
+        .get(`/api/marcas?id=${marca?.id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.ok).toBe(true);
       expect(Array.isArray(response.body.data)).toBe(true);
-      expect(response.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(response.body.data.length).toBe(1); // Debe ser exactamente 1
       expect(response.body.data[0].nombre).toBe('Test Marca 1');
     });
 

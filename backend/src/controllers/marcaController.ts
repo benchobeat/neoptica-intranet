@@ -124,6 +124,105 @@ export const crearMarca = async (req: Request, res: Response) => {
  * @param {Response} res - Objeto de respuesta Express
  * @returns {Promise<Response>} Lista de marcas o mensaje de error
  */
+/**
+ * Controlador para listar marcas con paginación y filtros opcionales.
+ * 
+ * @param {Request} req - Objeto de solicitud Express
+ * @param {Response} res - Objeto de respuesta Express
+ * @returns {Promise<Response>} Lista paginada de marcas o mensaje de error
+ */
+export const listarMarcasPaginadas = async (req: Request, res: Response) => {
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  try {
+    // Extraer parámetros de paginación y búsqueda
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const searchText = (req.query.searchText as string) || "";
+    
+    // Calcular offset para la paginación
+    const skip = (page - 1) * pageSize;
+    
+    // Preparar filtros
+    const filtro: any = {
+      anulado_en: null, // Solo marcas no anuladas (soft delete)
+    };
+    
+    // Filtro adicional por nombre si se proporciona en la búsqueda
+    if (searchText) {
+      filtro.nombre = {
+        contains: searchText,
+        mode: 'insensitive'
+      };
+    }
+    
+    // Filtro adicional por activo si se proporciona en la consulta
+    if (req.query.activo !== undefined) {
+      filtro.activo = req.query.activo === 'true';
+    }
+    
+    // Consulta para obtener el total de registros
+    const total = await prisma.marca.count({
+      where: filtro
+    });
+    
+    // Buscar marcas según filtros, con paginación y ordenar alfabéticamente
+    const marcas = await prisma.marca.findMany({
+      where: filtro,
+      orderBy: {
+        nombre: 'asc', // Ordenar alfabéticamente
+      },
+      skip,
+      take: pageSize
+    });
+    
+    // Registrar auditoría de listado exitoso
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_marcas_paginadas',
+      descripcion: `Se listaron ${marcas.length} marcas (página ${page})`,
+      ip: req.ip,
+      entidadTipo: 'marca',
+      modulo: 'marcas',
+    });
+    
+    return res.status(200).json({ 
+      ok: true, 
+      data: {
+        items: marcas,
+        total,
+        page,
+        pageSize
+      }, 
+      error: null 
+    });
+  } catch (error: any) {
+    console.error('Error al listar marcas paginadas:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_marcas_paginadas_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'marca',
+      modulo: 'marcas',
+    });
+    
+    return res.status(500).json({ 
+      ok: false, 
+      data: null, 
+      error: 'Ocurrió un error al obtener el listado paginado de marcas.' 
+    });
+  }
+};
+
+/**
+ * Controlador para listar todas las marcas con filtros opcionales.
+ * 
+ * @param {Request} req - Objeto de solicitud Express
+ * @param {Response} res - Objeto de respuesta Express
+ * @returns {Promise<Response>} Lista de marcas o mensaje de error
+ */
 export const listarMarcas = async (req: Request, res: Response) => {
   const userId = (req as any).usuario?.id || (req as any).user?.id;
   try {
@@ -131,6 +230,19 @@ export const listarMarcas = async (req: Request, res: Response) => {
     const filtro: any = {
       anulado_en: null, // Solo marcas no anuladas (soft delete)
     };
+    
+    // Filtro adicional por ID si se proporciona en la consulta
+    if (req.query.id) {
+      filtro.id = req.query.id as string;
+    }
+    
+    // Filtro adicional por nombre si se proporciona en la consulta
+    if (req.query.nombre) {
+      filtro.nombre = {
+        contains: req.query.nombre as string,
+        mode: 'insensitive'
+      };
+    }
     
     // Filtro adicional por activo si se proporciona en la consulta
     if (req.query.activo !== undefined) {

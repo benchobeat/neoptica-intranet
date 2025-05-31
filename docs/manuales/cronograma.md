@@ -1,141 +1,407 @@
 # CRONOGRAMA DETALLADO Y ENTREGABLES – INTRANET NEÓPTICA
 
-## FASE 0. Preparación y Setup (2 días)
-- Configuración de repositorios, git, CI/CD y entorno de trabajo.
-- Definición y documentación de la arquitectura base (frontend, backend, base de datos).
-- Setup inicial de cloud/hosting, control de backups, correo SMTP de pruebas.
+> **Estado del Proyecto:** Mayo 2025 - Reestructuración Aprobada  
+> **Prioridad Actual:** Desarrollo de módulos base primero, luego los dependientes
+
+## FASE 0: Preparación y Setup
+**Duración:** 2 días  
+**Estado:** [X] Completado
+
+- [X] Configuración de repositorios, git, CI/CD y entorno de trabajo
+- [X] Definición y documentación de la arquitectura base (frontend, backend, base de datos)
+- [X] Setup inicial de cloud/hosting, control de backups, correo SMTP de pruebas
 
 **Entregables:**  
-- Repositorios inicializados y documentados.  
-- Base de datos y migraciones vacías corriendo en entorno dev.  
-- Manual técnico de setup actualizado.  
+- [X] Repositorios inicializados y documentados (`/docs/repos.md`)
+- [X] Base de datos y migraciones iniciales corriendo en entorno dev (`/backend/prisma/schema.prisma`)
+- [X] Manual técnico de setup actualizado (`/docs/setup.md`)
 
 ---
 
-## FASE 1. Modelo de Datos y Backend Base (4 días)
-- Implementación completa de modelo relacional (PostgreSQL) según backend/prisma/schema.prisma
-- Configuración de Prisma ORM y migraciones automáticas.
-- Implementación de endpoints API REST para autenticación, CRUD de usuarios, roles, sucursales y entidades principales (productos, clientes, movimientos).
-- Pruebas unitarias y de integración iniciales.
+## FASE 1: Modelo de Datos y Backend Base
+**Duración:** 4 días  
+**Estado:** [X] Completado
+
+- [X] Implementación completa de modelo relacional (PostgreSQL) según schema.prisma
+- [X] Configuración de Prisma ORM y migraciones automáticas
+- [X] Implementación de endpoints API REST para autenticación y CRUD básicos
+- [X] Pruebas unitarias y de integración iniciales
 
 **Entregables:**  
-- Base de datos implementada, scripts/migraciones versionadas.  
-- Documentación Swagger/OpenAPI de endpoints implementados.  
-- Suite básica de pruebas de API (usuarios, productos, autenticación).  
+- [X] Base de datos implementada con scripts/migraciones versionadas
+- [X] Documentación Swagger/OpenAPI de endpoints implementados
+- [X] 100% de pruebas de API básica pasando (usuarios, autenticación)
 
 ---
 
-## FASE 2. Frontend y Autenticación (4 días)
-- Estructura base del frontend (Next.js, Ant Design/Material UI), diseño global y layout responsivo.
-- Implementación de login, registro, recuperación y gestión de sesión JWT.
-- Gestión de usuarios, asignación de roles y cambio de estado.
-- Primeras pantallas de dashboard, menú lateral y navegación.
+## FASE 2: Módulos Base - Entidades Fundamentales
+**Duración:** 6 días  
+**Estado:** [X] Completado
+
+- [X] CRUD de Marcas 
+  - [X] Controller con validaciones
+  - [X] Rutas REST documentadas con Swagger
+  - [X] Pruebas unitarias (20+ tests)
+  - [X] Soft delete y logs de auditoría
+
+- [X] CRUD de Colores
+  - [X] Controller con validaciones
+  - [X] Rutas REST documentadas con Swagger
+  - [X] Pruebas unitarias (23 tests)
+  - [X] Soft delete y logs de auditoría
+
+- [X] CRUD de Sucursales
+  - [X] Controller con validaciones para todos los campos
+  - [X] Rutas REST documentadas con Swagger
+  - [X] Pruebas unitarias (30 tests)
+  - [X] Soft delete y logs de auditoría
 
 **Entregables:**  
-- Prototipo navegable de login, dashboard y administración de usuarios.  
-- Manual de uso inicial para admin.  
-- Pruebas de login/logout y control de roles.
+- [X] Módulos base de entidades fundamentales completados y verificados
+- [X] Logs de auditoría implementados para todas las operaciones CRUD
+- [X] Documentación de API actualizada
+- [X] 73+ pruebas unitarias superadas (193 tests en total según README)
 
 ---
 
-## FASE 3. Inventario y Gestión Multisucursal (6 días)
-- CRUD de productos, stock, ingresos/salidas, ajustes y movimientos con logs.
-- Implementación de transferencias entre sucursales, flujos de aprobación/rechazo y reversa.
-- Paneles de inventario por sucursal, alertas de stock bajo, reporting y exportación.
-- Carga/descarga de adjuntos en movimientos.
+## FASE 3: Módulos Base - Productos e Inventario
+**Duración:** 8 días  
+**Estado:** [X] Parcialmente Completado
+
+- [X] CRUD de Productos
+  - [X] Controller con validaciones para todos los campos
+  - [X] Integración con Marcas y Colores
+  - [X] Campo categoría (texto) implementado
+  - [X] Rutas REST documentadas con Swagger
+  - [X] Pruebas unitarias completadas
+  - [X] Soft delete y logs de auditoría
+
+- [X] CRUD de Inventario
+  - [X] Preparación del modelo y validaciones:
+    - [X] Agregar campo `stock_resultante` al modelo `movimiento_inventario` para auditoría
+    - [X] Definir modelo de inventario (producto_id, sucursal_id, color_id, marca_id, stock, stock_minimo)
+    - [X] Definir DTOs para inventario y movimientos
+    - [X] Validar existencia de producto, sucursal, color y marca
+    - [X] Prevenir duplicados (único por producto/sucursal/color/marca)
+    - [X] Validar stock y stock_minimo (no negativos)
+  - [X] Endpoints REST:
+    - [X] Listar inventario (filtros por sucursal, producto, estado, color, marca)
+    - [X] Crear inventario
+    - [X] Actualizar inventario
+    - [X] Eliminar inventario (soft delete)
+    - [X] Obtener inventario por ID
+    - [X] Listar alertas de stock bajo/agotado (solo para usuarios autenticados)
+  - [X] Movimientos de inventario:
+    - [X] Registrar ingresos, salidas, ajustes (motivo, usuario, adjuntos)
+    - [X] Implementar manejo de concurrencia con transacciones `Prisma.$transaction` y bloqueo de filas
+    - [X] Validar stock no negativo en salidas
+    - [X] Registrar histórico con stock_resultante para auditoría
+    - [X] Permitir reversa/anulación con motivo obligatorio (solo para rol admin)
+    - [X] Transacciones atómicas para actualizar stock y registrar movimiento
+  - [X] Manejo de adjuntos (imágenes/PDF, máx. 2MB):
+    - [X] Implementar carga de adjuntos en servidor local (preparar para futura integración con Google Drive)
+    - [X] Validar tamaño y formato de archivos
+    - [X] Registro de operaciones sobre adjuntos (carga, descarga, eliminación)
+    - [X] Optimización de middlewares para resolver conflictos entre autenticación y Multer
+    - [X] Pruebas exhaustivas de todas las operaciones y permisos
+  - [ ] Integración con módulo de transferencias entre sucursales (ver siguiente fase para detalles)
+  - [X] Auditoría y logs:
+    - [X] Registrar todas las operaciones en log_auditoria (incluye fallidas)
+    - [X] Registrar el stock_resultante en cada movimiento para auditoría
+    - [X] Registrar descargas/cargas de adjuntos
+    - [X] Optimizar logs en entornos de desarrollo y pruebas
+  - [X] Documentación Swagger/OpenAPI completa
+  - [X] Pruebas unitarias y de integración (mínimo 40 tests, casos positivos/negativos, validaciones, concurrencia)
+  - [ ] Verificación de cobertura de pruebas y entregables
+
+- [ ] Transferencias entre Sucursales
+  - [ ] Solicitud de transferencia (producto, cantidad, sucursal origen/destino, motivo)
+  - [ ] Flujo completo: solicitud, aprobación/rechazo, ejecución (solo usuarios admin)
+  - [ ] Validaciones de stock en origen/destino
+  - [ ] Registro de historial, logs y estados de transferencia
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 25 tests)
+  - [ ] Logs de auditoría para cada etapa
 
 **Entregables:**  
-- Módulo completo de inventario funcionando con pruebas.  
-- Reporte de inventario y movimientos exportable.  
-- Manual visual de uso del inventario.  
-- Bitácora de logs generados y revisados.
+- [X] Módulo de Productos 100% funcional con CRUD y pruebas
+- [ ] Módulo de Inventario 100% funcional con gestión de stock
+- [ ] Módulo de Transferencias entre sucursales implementado
+- [ ] Documentación técnica actualizada con diagramas de flujo
+- [ ] Mínimo 95 pruebas unitarias superadas para inventario y transferencias
+- [ ] Logs de auditoría validados para todas las operaciones
 
 ---
 
-## FASE 4. Agenda, Citas y Gestión Clínica (6 días)
-- Módulo de agenda (optometrista y administración): citas, turnos, descansos, aprobaciones y bloqueos.
-- Panel de historial clínico modular: registro, versión, modificación y anulación de diagnósticos/recetas.
-- Carga y gestión de adjuntos clínicos (PDF, imágenes, justificativos).
-- Logs de edición, descarga y consulta.
+## FASE 3.5: Frontend Admin - Formularios Base
+**Duración:** 4 días  
+**Estado:** [X] Completado
 
+- [X] Formularios Admin para Entidades Fundamentales
+  - [X] Formulario de Marcas
+    - [X] Tabla con paginación y búsqueda
+    - [X] CRUD completo con validaciones frontend
+    - [X] Estilos dark mode consistentes
+  - [X] Formulario de Colores
+    - [X] Tabla con paginación y búsqueda
+    - [X] CRUD completo con validaciones frontend
+    - [X] Visualización de muestras de color
+  - [X] Formulario de Sucursales
+    - [X] Tabla con paginación y búsqueda
+    - [X] CRUD completo con validaciones frontend
+    - [X] Estilos dark mode consistentes
+  - [X] Componentes compartidos
+    - [X] Estilos dark-table.css para tablas en modo oscuro
+    - [X] Guía de lineamientos para estandarizar formularios
+    - [X] Servicios API centralizados con paginación
+  
 **Entregables:**  
-- Módulo de agenda, turnos y clínica con historial versionado.  
-- Reporte de citas, descansos y diagnósticos exportable.  
-- Bitácora de logs clínicos revisada.  
-- Manual visual de uso clínico.
+- [X] Interfaces de usuario para administración de entidades base
+- [X] Servicios API frontend actualizados para soportar paginación y búsqueda
+- [X] Componentes reutilizables para tablas en modo oscuro
+- [X] Documentación de lineamientos para formularios admin
 
 ---
 
-## FASE 5. Ventas, Pedidos y Facturación Electrónica (8 días)
-- Módulo de ventas y punto de venta (POS): registro de venta, cliente, selección de productos y descuentos.
-- Validación y actualización automática de inventario.
-- Integración completa de facturación electrónica SRI (generación, estado, descarga, envío).
-- Panel de pedidos y facturas: exportación, anulación, reversa y logs asociados.
-- Envío de factura por correo, registro y visualización de logs de envío.
-- Reporting y KPI de ventas/facturación.
+## FASE 4: Módulos Base - Clientes y Usuarios
+**Duración:** 5 días  
+**Estado:** [ ] Pendiente
+
+- [ ] CRUD de Clientes
+  - [ ] Controller con validaciones completas
+  - [ ] Historial de compras y preferencias
+  - [ ] Gestión de documentos fiscales/identidad
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 25 tests)
+  - [ ] Soft delete y logs de auditoría
+
+- [ ] CRUD de Usuarios y Roles
+  - [ ] Controller con validaciones de seguridad
+  - [ ] Asignación de permisos granulares
+  - [ ] Historial de acciones con IP y timestamps
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 25 tests) 
+  - [ ] Logs de auditoría detallados
 
 **Entregables:**  
-- Módulo de ventas y facturación 100% operativo, probado en escenarios reales.  
-- Reporte de facturación y ventas por periodo exportable.  
-- Logs de ventas, errores SRI y correos validados.  
-- Manual visual de uso de ventas/facturación.
+- [ ] Módulo de Clientes 100% funcional con CRUD y pruebas
+- [ ] Módulo de Usuarios y Roles 100% funcional
+- [ ] Matriz de permisos documentada
+- [ ] Documentación de API actualizada
+- [ ] Mínimo 50 pruebas unitarias superadas
+- [ ] Logs de auditoría validados para todas las operaciones
 
 ---
 
-## FASE 6. Contabilidad y Finanzas Integradas (6 días)
-- Implementación de plan de cuentas, registro de movimientos contables y vinculación polimórfica.
-- Flujos de reversa/anulación, exportación y conciliación contable.
-- Integración (mock) de exportación ERP.
-- Paneles de reporte y exportación contable.
+## FASE 5: Módulos Dependientes - Pedidos
+**Duración:** 7 días  
+**Estado:** [ ] Pendiente - Requiere Fase 3 y 4 completadas
+
+- [ ] CRUD de Pedidos
+  - [ ] Controller con validaciones completas
+  - [ ] Integración con Productos, Inventario y Clientes
+  - [ ] Validación de stock en tiempo real
+  - [ ] Estados de pedido y flujo de aprobación
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 35 tests)
+  - [ ] Soft delete y logs de auditoría
+
+- [ ] Gestión de Pagos
+  - [ ] Controller con validaciones fiscales
+  - [ ] Soporte para múltiples métodos de pago
+  - [ ] Historial de transacciones y reconciliación
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 20 tests)
+  - [ ] Logs de auditoría detallados
 
 **Entregables:**  
-- Módulo de contabilidad funcionando con casos de prueba.  
-- Reporte contable/financiero exportable.  
-- Logs contables y de conciliación revisados.  
-- Manual visual de uso contable.
+- [ ] Módulo de Pedidos 100% funcional con CRUD y pruebas
+- [ ] Módulo de Pagos 100% funcional
+- [ ] Documentación de API actualizada
+- [ ] Diagramas de flujo de estados de pedido
+- [ ] Mínimo 55 pruebas unitarias superadas
+- [ ] Logs de auditoría validados para todas las operaciones
 
 ---
 
-## FASE 7. Correo Transaccional, Logs y Auditoría (4 días)
-- Configuración y panel de administración de correo SMTP/API.
-- Registro de todos los envíos, errores, reintentos y logs asociados.
-- Panel global de logs, filtros avanzados, exportación y visualización de alertas/errores.
-- Seguridad, protección de datos y revisión de logs de acceso/ciclo de vida.
+## FASE 6: Módulos Dependientes - Facturación Electrónica
+**Duración:** 6 días  
+**Estado:** [ ] Pendiente - Requiere Fase 5 completada
+
+- [ ] Generación de Facturas
+  - [ ] Controller con validaciones fiscales
+  - [ ] Integración con sistema SRI
+  - [ ] Generación de XML y PDF conformes
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 30 tests)
+  - [ ] Logs de auditoría detallados
+
+- [ ] Gestión de Notas de Crédito/Débito
+  - [ ] Controller con validaciones fiscales
+  - [ ] Procesos de anulación y reversa
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 20 tests)
+  - [ ] Logs de auditoría detallados
 
 **Entregables:**  
-- Panel de administración de correo operativo y validado.  
-- Reporte de envíos, errores y reintentos exportable.  
-- Logs de acceso, auditoría y actividad revisados.  
-- Manual visual de administración de correo y logs.
+- [ ] Módulo de Facturación 100% funcional con pruebas
+- [ ] Documentación de API actualizada
+- [ ] Guía de integración con SRI
+- [ ] Mínimo 50 pruebas unitarias superadas
+- [ ] Logs de auditoría validados para todas las operaciones
 
 ---
 
-## FASE 8. Seguridad, Backups y Pruebas Finales (3 días)
-- Validación de roles y permisos en todos los módulos.
-- Pruebas de logs, bloqueos de ciclo de vida, backups automáticos y restauración.
-- Auditoría de seguridad (intentos de acceso, errores forzados, simulación de fallos).
-- Documentación de procedimientos de recuperación.
+## FASE 7: Agenda, Citas y Gestión Clínica
+**Duración:** 6 días  
+**Estado:** [ ] Pendiente - Requiere Fase 4 completada
+
+- [ ] CRUD de Citas y Agenda
+  - [ ] Controller con validaciones temporales
+  - [ ] Gestión de disponibilidad por profesional
+  - [ ] Notificaciones y recordatorios
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 25 tests)
+  - [ ] Logs de auditoría detallados
+
+- [ ] Historial Clínico
+  - [ ] Controller con versionado de datos sensibles
+  - [ ] Gestión de diagnósticos y recetas
+  - [ ] Carga/descarga de adjuntos clínicos
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 25 tests)
+  - [ ] Logs de auditoría con énfasis en privacidad
 
 **Entregables:**  
-- Validación de backups y restauración.  
-- Informe de pruebas de seguridad y logs.  
-- Manual de seguridad y recuperación.
+- [ ] Módulo de Agenda 100% funcional con CRUD y pruebas
+- [ ] Módulo de Historial Clínico 100% funcional
+- [ ] Documentación de API actualizada
+- [ ] Mínimo 50 pruebas unitarias superadas
+- [ ] Logs de auditoría validados para todas las operaciones
 
 ---
 
-## FASE 9. UX/UI, Capacitación y Cierre (3 días)
-- Revisión de interfaz en todos los dispositivos, accesibilidad, textos y flujos.
-- Ajustes finales por feedback.
-- Generación de manuales visuales para cada módulo y capacitaciones (grabadas o en vivo).
-- Preparación de checklist de despliegue y corte.
+## FASE 8: Contabilidad y Finanzas Integradas
+**Duración:** 6 días  
+**Estado:** [ ] Pendiente - Requiere Fase 5 y 6 completadas
+
+- [ ] Plan de Cuentas y Asientos Contables
+  - [ ] Controller con validaciones contables
+  - [ ] Vinculación automática con ventas/compras
+  - [ ] Reportes y balances
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 25 tests)
+  - [ ] Logs de auditoría detallados
+
+- [ ] Gestión Financiera
+  - [ ] Controller para flujo de caja
+  - [ ] Conciliación bancaria
+  - [ ] Exportación de datos contables
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 20 tests)
+  - [ ] Logs de auditoría detallados
 
 **Entregables:**  
-- Manuales de usuario y video-capacitación (si aplica).  
-- Checklist de despliegue y go-live.  
-- Informe de cierre y lecciones aprendidas.
+- [ ] Módulo Contable 100% funcional con CRUD y pruebas
+- [ ] Reportes financieros operativos
+- [ ] Documentación de API actualizada
+- [ ] Mínimo 45 pruebas unitarias superadas
+- [ ] Logs de auditoría validados para todas las operaciones
+
+---
+
+## FASE 9: Logs, Auditoría y Correo Transaccional
+**Duración:** 4 días  
+**Estado:** [X] Parcialmente Completado
+
+- [X] Sistema de Auditoría
+  - [X] Registro detallado de cada operación con usuario, acción, descripción, IP
+  - [X] Uso correcto de campos de control temporal en todas las entidades
+  - [X] Registro de operaciones fallidas
+  - [X] Implementado en todos los controladores CRUD existentes
+
+- [ ] Panel de Administración de Logs
+  - [ ] Filtros avanzados y búsqueda
+  - [ ] Exportación y visualización de alertas
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 15 tests)
+
+- [ ] Correo Transaccional
+  - [ ] Configuración de plantillas
+  - [ ] Registro de envíos y errores
+  - [ ] Sistema de reintentos
+  - [ ] Rutas REST documentadas con Swagger
+  - [ ] Pruebas unitarias (mínimo 15 tests)
+
+**Entregables:**  
+- [X] Sistema de Auditoría implementado y verificado
+- [ ] Panel de Administración de Logs operativo
+- [ ] Sistema de Correo Transaccional funcional
+- [ ] Documentación de API actualizada
+- [ ] Mínimo 30 pruebas unitarias superadas
+
+---
+
+## FASE 10: Seguridad, Backups y Pruebas Finales
+**Duración:** 3 días  
+**Estado:** [ ] Pendiente - Requiere todas las fases previas
+
+- [ ] Validación de Seguridad
+  - [ ] Revisión de roles y permisos en todos los módulos
+  - [ ] Pruebas de penetración básicas
+  - [ ] Validación de sanitización de inputs
+  - [ ] Revisión de logs de seguridad
+
+- [ ] Sistema de Backups
+  - [ ] Configuración de backups automáticos
+  - [ ] Pruebas de restauración
+  - [ ] Documentación de procedimientos
+
+- [ ] Pruebas de Integración Finales
+  - [ ] Validación end-to-end de todos los flujos
+  - [ ] Pruebas de carga básicas
+  - [ ] Validación de todos los reportes
+
+**Entregables:**  
+- [ ] Informe de seguridad con vulnerabilidades mitigadas
+- [ ] Sistema de backups verificado con restauración exitosa
+- [ ] Documentación de procedimientos de recuperación
+- [ ] Reporte final de pruebas de integración
+
+---
+
+## FASE 11: UX/UI, Capacitación y Cierre
+**Duración:** 3 días  
+**Estado:** [ ] Pendiente - Requiere todas las fases previas
+
+- [ ] Revisión Final de Interfaz
+  - [ ] Validación en todos los dispositivos
+  - [ ] Accesibilidad y experiencia de usuario
+  - [ ] Ajustes finales por feedback
+
+- [ ] Documentación y Capacitación
+  - [ ] Manuales de usuario por módulo
+  - [ ] Videos tutorial de procesos críticos
+  - [ ] Sesiones de capacitación
+
+- [ ] Preparación para Producción
+  - [ ] Checklist de despliegue
+  - [ ] Plan de migración de datos
+  - [ ] Estrategia de corte y puesta en marcha
+
+**Entregables:**  
+- [ ] Manuales de usuario completos y actualizados
+- [ ] Videos de capacitación (si aplica)
+- [ ] Checklist de despliegue verificado
+- [ ] Informe de cierre de proyecto y lecciones aprendidas
 
 ---
 
 **Duración estimada total:**  
-**~42 días hábiles** (flexible según disponibilidad y pruebas).  
-**Todas las fases entregan módulos funcionales, probados y documentados antes de iniciar la siguiente.**
+**~54 días hábiles** (considerando la reestructuración y nuevas prioridades)
+
+**Notas importantes:**
+1. Cada fase debe completarse antes de iniciar la siguiente fase dependiente
+2. Los módulos base (Fases 2-4) son prioritarios y deben estar 100% funcionales
+3. Las pruebas unitarias son un entregable crítico para cada módulo
+4. El sistema de auditoría debe aplicarse consistentemente en todas las operaciones

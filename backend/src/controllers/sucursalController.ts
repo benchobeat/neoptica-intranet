@@ -178,6 +178,105 @@ export const crearSucursal = async (req: Request, res: Response) => {
  * @param {Response} res - Objeto de respuesta Express
  * @returns {Promise<Response>} Lista de sucursales o mensaje de error
  */
+/**
+ * Controlador para listar sucursales con paginación y filtros opcionales.
+ * 
+ * @param {Request} req - Objeto de solicitud Express
+ * @param {Response} res - Objeto de respuesta Express
+ * @returns {Promise<Response>} Lista paginada de sucursales o mensaje de error
+ */
+export const listarSucursalesPaginadas = async (req: Request, res: Response) => {
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  try {
+    // Extraer parámetros de paginación y búsqueda
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const searchText = (req.query.searchText as string) || "";
+    
+    // Calcular offset para la paginación
+    const skip = (page - 1) * pageSize;
+    
+    // Preparar filtros
+    const filtro: any = {
+      anulado_en: null, // Solo sucursales no anuladas (soft delete)
+    };
+    
+    // Filtro adicional por nombre si se proporciona en la búsqueda
+    if (searchText) {
+      filtro.nombre = {
+        contains: searchText,
+        mode: 'insensitive'
+      };
+    }
+    
+    // Filtro adicional por estado si se proporciona en la consulta
+    if (req.query.estado !== undefined) {
+      filtro.estado = req.query.estado === 'true';
+    }
+    
+    // Consulta para obtener el total de registros
+    const total = await prisma.sucursal.count({
+      where: filtro
+    });
+    
+    // Buscar sucursales según filtros, con paginación y ordenar alfabéticamente
+    const sucursales = await prisma.sucursal.findMany({
+      where: filtro,
+      orderBy: {
+        nombre: 'asc', // Ordenar alfabéticamente
+      },
+      skip,
+      take: pageSize
+    });
+    
+    // Registrar auditoría de listado exitoso
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_sucursales_paginadas',
+      descripcion: `Se listaron ${sucursales.length} sucursales (página ${page})`,
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      modulo: 'sucursales',
+    });
+    
+    return res.status(200).json({ 
+      ok: true, 
+      data: {
+        items: sucursales,
+        total,
+        page,
+        pageSize
+      }, 
+      error: null 
+    });
+  } catch (error: any) {
+    console.error('Error al listar sucursales paginadas:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_sucursales_paginadas_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'sucursal',
+      modulo: 'sucursales',
+    });
+    
+    return res.status(500).json({ 
+      ok: false, 
+      data: null, 
+      error: 'Ocurrió un error al obtener el listado paginado de sucursales.' 
+    });
+  }
+};
+
+/**
+ * Controlador para listar todas las sucursales con filtros opcionales.
+ * 
+ * @param {Request} req - Objeto de solicitud Express
+ * @param {Response} res - Objeto de respuesta Express
+ * @returns {Promise<Response>} Lista de sucursales o mensaje de error
+ */
 export const listarSucursales = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría
   const userId = (req as any).usuario?.id || (req as any).user?.id;

@@ -1,0 +1,19 @@
+// Este es un archivo temporal para la migración
+// Añadir campos color_id y marca_id a inventario
+// Añadir campo stock_resultante a movimiento_inventario
+// Añadir relaciones entre color/marca e inventario
+// Añadir restricción única para inventario
+
+// Actualización para el modelo inventario
+ALTER TABLE inventario ADD COLUMN color_id UUID;
+ALTER TABLE inventario ADD COLUMN marca_id UUID;
+
+// Restricción única para prevenir duplicados
+ALTER TABLE inventario ADD CONSTRAINT inventario_producto_id_sucursal_id_color_id_marca_id_key UNIQUE (producto_id, sucursal_id, color_id, marca_id);
+
+// Actualización para el modelo movimiento_inventario
+ALTER TABLE movimiento_inventario ADD COLUMN stock_resultante INTEGER;
+
+// Agregar las relaciones con Foreign Keys
+ALTER TABLE inventario ADD CONSTRAINT inventario_color_id_fkey FOREIGN KEY (color_id) REFERENCES color(id) ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE inventario ADD CONSTRAINT inventario_marca_id_fkey FOREIGN KEY (marca_id) REFERENCES marca(id) ON DELETE NO ACTION ON UPDATE NO ACTION;

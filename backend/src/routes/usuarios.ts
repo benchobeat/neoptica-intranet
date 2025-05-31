@@ -10,6 +10,63 @@ const router = Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     UsuarioInput:
+ *       type: object
+ *       required:
+ *         - nombre
+ *         - email
+ *         - password
+ *       properties:
+ *         nombre:
+ *           type: string
+ *           example: "Juan Pérez"
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: "juan@mail.com"
+ *         password:
+ *           type: string
+ *           example: "contraseñaSegura123"
+ *         rol:
+ *           type: string
+ *           enum: [admin, vendedor, optometrista, cliente]
+ *           example: "vendedor"
+ *     Usuario:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
+ *         nombre:
+ *           type: string
+ *           example: "Juan Pérez"
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: "juan@mail.com"
+ *         roles:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["vendedor"]
+ *     Error:
+ *       type: object
+ *       properties:
+ *         ok:
+ *           type: boolean
+ *           example: false
+ *         data:
+ *           type: null
+ *         error:
+ *           type: string
+ *           example: "Mensaje de error"
+ */
+
+/**
+ * @swagger
  * /api/usuarios/autoregistro:
  *   post:
  *     summary: Autoregistro de cliente (formulario o redes sociales)

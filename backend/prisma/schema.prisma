@@ -384,12 +384,16 @@ model inventario {
   // Campos normales
   sucursal_id  String? @db.Uuid
   producto_id  String? @db.Uuid
+  color_id     String? @db.Uuid
+  marca_id     String? @db.Uuid
   stock        Int?    @default(0)
   stock_minimo Int?    @default(3)
 
   // Relaciones
   producto              producto?               @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sucursal              sucursal?               @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  color                 color?                  @relation(fields: [color_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  marca                 marca?                  @relation(fields: [marca_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   movimiento_inventario movimiento_inventario[]
 
   // Campos de control
@@ -400,6 +404,8 @@ model inventario {
   anulado_en     DateTime? @db.Timestamptz(6)
   anulado_por    String?   @db.Uuid
 
+  // Restricción única para prevenir duplicados
+  @@unique([producto_id, sucursal_id, color_id, marca_id])
   @@unique([producto_id, sucursal_id])
   @@index([producto_id, sucursal_id], map: "idx_inventario_producto_sucursal")
 }
@@ -552,14 +558,15 @@ model movimiento_inventario {
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  inventario_id String?   @db.Uuid
-  usuario_id    String?   @db.Uuid
-  tipo          String?   @db.VarChar(20)
-  cantidad      Int
-  motivo        String?
-  fecha         DateTime? @default(now()) @db.Timestamptz(6)
-  reversa_de    String?   @db.Uuid
-  anulado       Boolean?  @default(false)
+  inventario_id    String?   @db.Uuid
+  usuario_id       String?   @db.Uuid
+  tipo             String?   @db.VarChar(20)
+  cantidad         Int
+  stock_resultante Int?
+  motivo           String?
+  fecha            DateTime? @default(now()) @db.Timestamptz(6)
+  reversa_de       String?   @db.Uuid
+  anulado          Boolean?  @default(false)
 
   // Relaciones
   inventario                  inventario?             @relation(fields: [inventario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -687,12 +694,13 @@ model marca {
   productos producto[]
 
   // Campos de control
-  creado_por     String?   @db.Uuid
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
+  creado_por     String?      @db.Uuid
+  creado_en      DateTime?    @default(now()) @db.Timestamptz(6)
+  modificado_por String?      @db.Uuid
+  modificado_en  DateTime?    @db.Timestamptz(6)
+  anulado_por    String?      @db.Uuid
+  anulado_en     DateTime?    @db.Timestamptz(6)
+  inventario     inventario[]
 }
 
 model color {
@@ -701,6 +709,7 @@ model color {
 
   // Campos normales
   nombre      String   @db.VarChar(100)
+  codigo_hex  String?  @db.VarChar(10)  // Valor hexadecimal del color (ej: #FFFFFF)
   descripcion String?
   activo      Boolean? @default(true)
 
@@ -708,12 +717,13 @@ model color {
   productos producto[]
 
   // Campos de control
-  creado_por     String?   @db.Uuid
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
+  creado_por     String?      @db.Uuid
+  creado_en      DateTime?    @default(now()) @db.Timestamptz(6)
+  modificado_por String?      @db.Uuid
+  modificado_en  DateTime?    @db.Timestamptz(6)
+  anulado_por    String?      @db.Uuid
+  anulado_en     DateTime?    @db.Timestamptz(6)
+  inventario     inventario[]
 }
 
 model rol {

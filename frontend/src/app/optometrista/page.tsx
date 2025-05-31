@@ -11,12 +11,12 @@ import {
   Search,
   ChevronDown,
   LogOut,
-  User,
   FilePlus2,
   Eye,
   Save,
   X,
 } from "lucide-react";
+import Image from "next/image";
 
 // --- COMPONENTES DE UI REUTILIZABLES (Estilo Admin) ---
 
@@ -97,7 +97,7 @@ const Sidebar = () => (
     </nav>
     <div className="p-4 border-t border-gray-800">
       <div className="flex items-center gap-4">
-        <img src="https://i.pravatar.cc/40?u=optometrista" alt="Optometrista" className="w-10 h-10 rounded-full" />
+        <Image src="https://i.pravatar.cc/40?u=optometrista" alt="Optometrista" width={40} height={40} className="w-10 h-10 rounded-full" />
         <div className="flex-1">
           <p className="text-sm font-semibold text-white">Dr. Kathia Mena</p>
           <p className="text-xs text-gray-500">optometrista@neoptica.com</p>
@@ -125,7 +125,7 @@ const Header = () => (
         <Bell size={22} />
       </button>
       <div className="flex items-center space-x-3 cursor-pointer">
-        <img src="https://i.pravatar.cc/40?u=optometrista" alt="Usuario" className="w-10 h-10 rounded-full border-2 border-gray-700" />
+        <Image src="https://i.pravatar.cc/40?u=optometrista" alt="Usuario" width={40} height={40} className="w-10 h-10 rounded-full border-2 border-gray-700" />
         <div className="text-sm text-right">
           <span className="font-semibold text-white">Dr. Kathia Mena</span>
           <p className="text-xs text-gray-500">Optometrista</p>
@@ -311,7 +311,7 @@ export default function OptometristaDashboardPage() {
                                     {citas.map((cita) => (
                                         <tr key={cita.id} className="border-b border-gray-800 hover:bg-gray-800/40 transition-colors">
                                             <td className="px-6 py-4 font-medium text-white flex items-center gap-3">
-                                                <img src={`https://i.pravatar.cc/32?u=${cita.paciente}`} className="w-8 h-8 rounded-full"/>
+                                                <Image src={`https://i.pravatar.cc/32?u=${cita.paciente}`} alt="Paciente" width={32} height={32} className="w-8 h-8 rounded-full"/>
                                                 {cita.paciente}
                                             </td>
                                             <td className="px-6 py-4">{cita.fecha}</td>
