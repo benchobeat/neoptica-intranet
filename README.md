@@ -2,6 +2,25 @@
 
 Bienvenido al repositorio oficial de **Neóptica Intranet**, la plataforma de gestión administrativa, clínica y operativa para ópticas modernas.
 
+## Documentación Detallada
+
+### Documentación General
+- **Cronograma:** Ver [docs/manuales/cronograma.md](docs/manuales/cronograma.md) para el plan detallado de desarrollo y estado actual del proyecto.
+- **Setup del proyecto:** Ver [docs/setup.md](docs/setup.md) para instrucciones de configuración.
+
+### Documentación por Módulos
+- **Backend:** Ver [backend/README.md](backend/README.md) para detalles sobre la API, endpoints, arquitectura, y pruebas.
+  - Módulos CRUD implementados (Marcas, Colores, Sucursales)
+  - Sistema de auditoría y logs
+  - Autenticación y permisos
+  - Test unitarios (238+ tests)
+  
+- **Frontend:** Ver [frontend/README.md](frontend/README.md) para detalles sobre la estructura, componentes, y flujos de usuario.
+  - Formularios Admin (Marcas, Colores, Sucursales)
+  - Lineamientos para componentes ([frontend/docs/ADMIN_FORMS_GUIDELINES.md](frontend/docs/ADMIN_FORMS_GUIDELINES.md))
+  - Organización por roles
+  - Servicios API y autenticación
+
 # 1. INTRODUCCIÓN Y VISIÓN GENERAL – INTRANET NEÓPTICA
 
 La Intranet Neóptica es una plataforma digital interna, centralizada y robusta, diseñada para gestionar todos los procesos administrativos, clínicos, comerciales, logísticos y contables de la óptica. Su enfoque es la automatización, trazabilidad total, cumplimiento normativo y escalabilidad, permitiendo a la empresa crecer, optimizar recursos y mantener el control absoluto de la información y los flujos de trabajo.

@@ -104,11 +104,7 @@
     - [X] Registro de operaciones sobre adjuntos (carga, descarga, eliminación)
     - [X] Optimización de middlewares para resolver conflictos entre autenticación y Multer
     - [X] Pruebas exhaustivas de todas las operaciones y permisos
-  - [ ] Transferencias entre sucursales:
-    - [ ] Solicitud de transferencia (producto, cantidad, sucursal origen/destino, motivo)
-    - [ ] Flujo de aprobación/rechazo (solo usuarios admin)
-    - [ ] Validaciones de stock en origen/destino
-    - [ ] Registro de historial, logs y estados de transferencia
+  - [ ] Integración con módulo de transferencias entre sucursales (ver siguiente fase para detalles)
   - [X] Auditoría y logs:
     - [X] Registrar todas las operaciones en log_auditoria (incluye fallidas)
     - [X] Registrar el stock_resultante en cada movimiento para auditoría
@@ -119,9 +115,10 @@
   - [ ] Verificación de cobertura de pruebas y entregables
 
 - [ ] Transferencias entre Sucursales
-  - [ ] Flujo completo: solicitud, aprobación/rechazo, ejecución
-  - [ ] Validaciones de stock origen/destino
-  - [ ] Histórico y trazabilidad
+  - [ ] Solicitud de transferencia (producto, cantidad, sucursal origen/destino, motivo)
+  - [ ] Flujo completo: solicitud, aprobación/rechazo, ejecución (solo usuarios admin)
+  - [ ] Validaciones de stock en origen/destino
+  - [ ] Registro de historial, logs y estados de transferencia
   - [ ] Rutas REST documentadas con Swagger
   - [ ] Pruebas unitarias (mínimo 25 tests)
   - [ ] Logs de auditoría para cada etapa
@@ -133,6 +130,36 @@
 - [ ] Documentación técnica actualizada con diagramas de flujo
 - [ ] Mínimo 95 pruebas unitarias superadas para inventario y transferencias
 - [ ] Logs de auditoría validados para todas las operaciones
+
+---
+
+## FASE 3.5: Frontend Admin - Formularios Base
+**Duración:** 4 días  
+**Estado:** [X] Completado
+
+- [X] Formularios Admin para Entidades Fundamentales
+  - [X] Formulario de Marcas
+    - [X] Tabla con paginación y búsqueda
+    - [X] CRUD completo con validaciones frontend
+    - [X] Estilos dark mode consistentes
+  - [X] Formulario de Colores
+    - [X] Tabla con paginación y búsqueda
+    - [X] CRUD completo con validaciones frontend
+    - [X] Visualización de muestras de color
+  - [X] Formulario de Sucursales
+    - [X] Tabla con paginación y búsqueda
+    - [X] CRUD completo con validaciones frontend
+    - [X] Estilos dark mode consistentes
+  - [X] Componentes compartidos
+    - [X] Estilos dark-table.css para tablas en modo oscuro
+    - [X] Guía de lineamientos para estandarizar formularios
+    - [X] Servicios API centralizados con paginación
+  
+**Entregables:**  
+- [X] Interfaces de usuario para administración de entidades base
+- [X] Servicios API frontend actualizados para soportar paginación y búsqueda
+- [X] Componentes reutilizables para tablas en modo oscuro
+- [X] Documentación de lineamientos para formularios admin
 
 ---
 

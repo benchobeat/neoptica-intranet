@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listarSucursales, crearSucursal, obtenerSucursalPorId, actualizarSucursal, eliminarSucursal } from '@/controllers/sucursalController';
+import { listarSucursales, listarSucursalesPaginadas, crearSucursal, obtenerSucursalPorId, actualizarSucursal, eliminarSucursal } from '@/controllers/sucursalController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 
@@ -30,6 +30,76 @@ const router = Router();
  *       401:
  *         $ref: '#/components/schemas/Error'
  */
+/**
+ * @swagger
+ * /api/sucursales/paginated:
+ *   get:
+ *     summary: Lista sucursales con paginación y búsqueda
+ *     tags: [Sucursales]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Cantidad de elementos por página
+ *       - in: query
+ *         name: searchText
+ *         schema:
+ *           type: string
+ *         description: Texto para filtrar por nombre
+ *       - in: query
+ *         name: estado
+ *         schema:
+ *           type: boolean
+ *         description: Filtrar por estado (activo/inactivo)
+ *     responses:
+ *       200:
+ *         description: Lista paginada de sucursales
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Sucursal'
+ *                     total:
+ *                       type: integer
+ *                       example: 50
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     pageSize:
+ *                       type: integer
+ *                       example: 10
+ *                 error:
+ *                   type: string
+ *                   example: null
+ *       500:
+ *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/paginated', authenticateJWT, listarSucursalesPaginadas);
+
 router.get('/', authenticateJWT, listarSucursales);
 
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { crearColor, listarColores, obtenerColorPorId, actualizarColor, eliminarColor } from '@/controllers/colorController';
+import { crearColor, listarColores, obtenerColorPorId, actualizarColor, eliminarColor, listarColoresPaginados } from '@/controllers/colorController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 
@@ -141,6 +141,84 @@ router.post('/', authenticateJWT, requireRole('admin', 'supervisor'), crearColor
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/', authenticateJWT, listarColores);
+
+/**
+ * @swagger
+ * /api/colores/paginated:
+ *   get:
+ *     summary: Listar colores con paginación y búsqueda
+ *     tags: [Colores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         required: false
+ *         description: Página actual
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         required: false
+ *         description: Cantidad de elementos por página
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Término para buscar en el nombre del color
+ *       - in: query
+ *         name: activo
+ *         schema:
+ *           type: boolean
+ *         required: false
+ *         description: Filtrar por estado (activo/inactivo)
+ *     responses:
+ *       200:
+ *         description: Lista paginada de colores
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Color'
+ *                     total:
+ *                       type: integer
+ *                       example: 50
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     pageSize:
+ *                       type: integer
+ *                       example: 10
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *                 error:
+ *                   type: string
+ *                   example: null
+ *       400:
+ *         description: Parámetros inválidos
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/paginated', authenticateJWT, listarColoresPaginados);
 
 /**
  * @swagger

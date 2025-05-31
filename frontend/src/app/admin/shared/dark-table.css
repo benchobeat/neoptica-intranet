@@ -1,0 +1,109 @@
+/* Estilos comunes para tablas en modo oscuro */
+.custom-dark-table .ant-table {
+  background: #181c2a !important;
+  color: #fff !important;
+}
+.custom-dark-table .ant-table-thead > tr > th {
+  background: #23263a !important;
+  color: #fff !important;
+  border-bottom: 1px solid #333 !important;
+}
+.custom-dark-table .ant-table-tbody > tr > td {
+  background: #181c2a !important;
+  color: #fff !important;
+  border-bottom: 1px solid #23263a !important;
+}
+.custom-dark-table .ant-table-tbody > tr.ant-table-row-selected > td,
+.custom-dark-table .ant-table-tbody > tr:hover > td {
+  background: #2b324d !important;
+  color: #fff !important;
+}
+.custom-dark-table .ant-table-tbody > tr > td .ant-tag {
+  color: #fff !important;
+  background: #23263a !important;
+  border: 1px solid #444 !important;
+}
+.custom-dark-table .ant-table-tbody > tr > td .ant-btn {
+  background: #23263a !important;
+  color: #fff !important;
+  border: none;
+}
+.custom-dark-table .ant-table-tbody > tr > td .ant-btn:hover {
+  background: #394063 !important;
+  color: #fff !important;
+}
+.custom-dark-table .ant-table-filter-column {
+  background: #23263a !important;
+  color: #fff !important;
+}
+/* Mejorar contraste para columnas seleccionadas/ordenadas */
+.custom-dark-table .ant-table-thead > tr > th.ant-table-column-sort {
+  background: #394063 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+.custom-dark-table .ant-table-thead > tr > th.ant-table-column-has-sorters:hover {
+  background: #515d8c !important;
+  color: #fff !important;
+}
+.custom-dark-table .ant-table-thead > tr > th.ant-table-column-sort:hover {
+  background: #515d8c !important;
+  color: #fff !important;
+}
+.custom-dark-table .ant-table-column-sorter {
+  color: #fff !important;
+}
+.custom-dark-table .ant-table-placeholder {
+  background: #181c2a !important;
+  color: #aaa !important;
+}
+.custom-dark-table .ant-pagination {
+  background: #181c2a !important;
+  color: #fff !important;
+}
+.custom-dark-table .ant-pagination-item-active {
+  background: #394063 !important;
+  color: #fff !important;
+  border-color: #394063 !important;
+}
+.custom-dark-table .ant-input {
+  background: #23263a !important;
+  color: #fff !important;
+  border: 1px solid #444 !important;
+}
+.custom-dark-table .ant-input::placeholder {
+  color: #aaa !important;
+}
+/* Estilos para elementos de formulario en modales */
+.dark-modal .ant-input,
+.dark-modal .ant-select-selector,
+.dark-modal .ant-input-number {
+  background-color: #23263a !important;
+  color: #fff !important;
+  border-color: #444 !important;
+}
+.dark-modal .ant-input::placeholder,
+.dark-modal .ant-select-selection-placeholder {
+  color: #aaa !important;
+}
+.dark-modal .ant-select-arrow,
+.dark-modal .ant-input-number-handler {
+  color: #aaa !important;
+}
+.dark-modal .ant-modal-content {
+  background-color: #1a1e2e !important;
+  color: #fff !important;
+}
+.dark-modal .ant-modal-header {
+  background-color: #1a1e2e !important;
+  border-bottom: 1px solid #333 !important;
+}
+.dark-modal .ant-modal-title {
+  color: #fff !important;
+}
+.dark-modal .ant-modal-close-x {
+  color: #fff !important;
+}
+.dark-modal .ant-modal-footer {
+  border-top: 1px solid #333 !important;
+}

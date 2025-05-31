@@ -709,6 +709,7 @@ model color {
 
   // Campos normales
   nombre      String   @db.VarChar(100)
+  codigo_hex  String?  @db.VarChar(10)  // Valor hexadecimal del color (ej: #FFFFFF)
   descripcion String?
   activo      Boolean? @default(true)
 
