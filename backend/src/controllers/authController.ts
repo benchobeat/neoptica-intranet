@@ -366,7 +366,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     // Rol principal (puedes ajustar si soportas varios roles por usuario)
-    const rol = usuario.usuario_rol?.[0]?.rol?.nombre || 'usuario';
+    const rol = usuario.usuario_rol?.[0]?.rol?.nombre || 'cliente';
 
     // Genera JWT
     const token = jwt.sign(

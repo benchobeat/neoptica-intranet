@@ -395,6 +395,9 @@ model inventario {
   color                 color?                  @relation(fields: [color_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   marca                 marca?                  @relation(fields: [marca_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   movimiento_inventario movimiento_inventario[]
+  
+  // Restricción única para prevenir duplicados
+  @@unique([producto_id, sucursal_id, color_id, marca_id])
 
   // Campos de control
   creado_en      DateTime? @default(now()) @db.Timestamptz(6)
@@ -404,8 +407,6 @@ model inventario {
   anulado_en     DateTime? @db.Timestamptz(6)
   anulado_por    String?   @db.Uuid
 
-  // Restricción única para prevenir duplicados
-  @@unique([producto_id, sucursal_id, color_id, marca_id])
   @@unique([producto_id, sucursal_id])
   @@index([producto_id, sucursal_id], map: "idx_inventario_producto_sucursal")
 }
@@ -694,13 +695,12 @@ model marca {
   productos producto[]
 
   // Campos de control
-  creado_por     String?      @db.Uuid
-  creado_en      DateTime?    @default(now()) @db.Timestamptz(6)
-  modificado_por String?      @db.Uuid
-  modificado_en  DateTime?    @db.Timestamptz(6)
-  anulado_por    String?      @db.Uuid
-  anulado_en     DateTime?    @db.Timestamptz(6)
-  inventario     inventario[]
+  creado_por     String?   @db.Uuid
+  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
+  modificado_por String?   @db.Uuid
+  modificado_en  DateTime? @db.Timestamptz(6)
+  anulado_por    String?   @db.Uuid
+  anulado_en     DateTime? @db.Timestamptz(6)
 }
 
 model color {
@@ -716,13 +716,12 @@ model color {
   productos producto[]
 
   // Campos de control
-  creado_por     String?      @db.Uuid
-  creado_en      DateTime?    @default(now()) @db.Timestamptz(6)
-  modificado_por String?      @db.Uuid
-  modificado_en  DateTime?    @db.Timestamptz(6)
-  anulado_por    String?      @db.Uuid
-  anulado_en     DateTime?    @db.Timestamptz(6)
-  inventario     inventario[]
+  creado_por     String?   @db.Uuid
+  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
+  modificado_por String?   @db.Uuid
+  modificado_en  DateTime? @db.Timestamptz(6)
+  anulado_por    String?   @db.Uuid
+  anulado_en     DateTime? @db.Timestamptz(6)
 }
 
 model rol {

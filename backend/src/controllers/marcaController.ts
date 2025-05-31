@@ -132,6 +132,19 @@ export const listarMarcas = async (req: Request, res: Response) => {
       anulado_en: null, // Solo marcas no anuladas (soft delete)
     };
     
+    // Filtro adicional por ID si se proporciona en la consulta
+    if (req.query.id) {
+      filtro.id = req.query.id as string;
+    }
+    
+    // Filtro adicional por nombre si se proporciona en la consulta
+    if (req.query.nombre) {
+      filtro.nombre = {
+        contains: req.query.nombre as string,
+        mode: 'insensitive'
+      };
+    }
+    
     // Filtro adicional por activo si se proporciona en la consulta
     if (req.query.activo !== undefined) {
       filtro.activo = req.query.activo === 'true';
