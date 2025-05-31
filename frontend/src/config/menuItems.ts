@@ -117,14 +117,7 @@ export const adminMenuItems: MenuItem[] = [
     id: 'usuarios',
     label: 'Usuarios y Roles',
     icon: User,
-    path: '/dashboard/usuarios',
-    roles: ['admin'],
-  },
-  {
-    id: 'clientes',
-    label: 'Clientes',
-    icon: User,
-    path: '/dashboard/clientes',
+    path: '/admin/users',
     roles: ['admin'],
   },
   {
