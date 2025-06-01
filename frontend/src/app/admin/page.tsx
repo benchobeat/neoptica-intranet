@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   LayoutDashboard,
   BarChart3,
@@ -18,14 +18,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-// Componentes reutilizables para el dashboard
-const Card = ({ children, className = "", ...props }: { children: React.ReactNode; className?: string; [key: string]: any }) => (
+// Componentes reutilizables para el dashboard memoizados para mejorar rendimiento
+const Card = React.memo(({ children, className = "", ...props }: { children: React.ReactNode; className?: string; [key: string]: any }) => (
   <div className={`bg-gray-800/50 border border-gray-700/50 rounded-xl shadow-lg ${className}`} {...props}>
     {children}
   </div>
-);
+));
+Card.displayName = "Card";
 
-const StatCard = ({ title, value, icon: Icon, change, changeType }: { title: string; value: string; icon: React.ElementType; change: string, changeType: 'increase' | 'decrease' }) => (
+const StatCard = React.memo(({ title, value, icon: Icon, change, changeType }: { title: string; value: string; icon: React.ElementType; change: string, changeType: 'increase' | 'decrease' }) => (
   <Card className="p-5 hover:bg-gray-800 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
     <div className="flex justify-between items-center mb-2">
       <h3 className="text-sm font-medium text-gray-400">{title}</h3>
@@ -43,9 +44,10 @@ const StatCard = ({ title, value, icon: Icon, change, changeType }: { title: str
       <Icon size={32} className="text-gray-600" />
     </div>
   </Card>
-);
+));
+StatCard.displayName = "StatCard";
 
-const ActivityItem = ({ icon: Icon, title, description, time }: { icon: React.ElementType, title: string, description: string, time: string }) => (
+const ActivityItem = React.memo(({ icon: Icon, title, description, time }: { icon: React.ElementType, title: string, description: string, time: string }) => (
   <div className="flex items-start gap-4 py-3">
     <div className="bg-gray-800 border border-gray-700 p-2.5 rounded-full">
       <Icon size={18} className="text-gray-400"/>
@@ -56,9 +58,10 @@ const ActivityItem = ({ icon: Icon, title, description, time }: { icon: React.El
     </div>
     <p className="text-sm text-gray-500">{time}</p>
   </div>
-);
+));
+ActivityItem.displayName = "ActivityItem";
 
-const ModuleCard = ({ icon: Icon, title, description, path, count }: { icon: React.ElementType, title: string, description: string, path: string, count?: number }) => (
+const ModuleCard = React.memo(({ icon: Icon, title, description, path, count }: { icon: React.ElementType, title: string, description: string, path: string, count?: number }) => (
   <Link href={path}>
     <Card className="p-5 hover:bg-gray-800 transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full">
       <div className="flex items-center mb-3">
@@ -78,7 +81,8 @@ const ModuleCard = ({ icon: Icon, title, description, path, count }: { icon: Rea
       )}
     </Card>
   </Link>
-);
+));
+ModuleCard.displayName = "ModuleCard";
 
 export default function AdminDashboardPage() {
   const [recentActivity, setRecentActivity] = useState([
@@ -194,34 +198,39 @@ export default function AdminDashboardPage() {
         <div className="lg:col-span-2">
           <h2 className="text-xl font-semibold text-white mb-4">Módulos Principales</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ModuleCard 
-              icon={Store}
-              title="Sucursales"
-              description="Gestiona todas las sucursales de la óptica"
-              path="/admin/branches"
-              count={moduleStats.sucursales}
-            />
-            <ModuleCard 
-              icon={Bookmark}
-              title="Marcas"
-              description="Administra las marcas de productos disponibles"
-              path="/admin/brands"
-              count={moduleStats.marcas}
-            />
-            <ModuleCard 
-              icon={PaintBucket}
-              title="Colores"
-              description="Gestiona los colores de los productos"
-              path="/admin/colors"
-              count={moduleStats.colores}
-            />
-            <ModuleCard 
-              icon={ShoppingBag}
-              title="Inventario"
-              description="Control de stock y movimientos de productos"
-              path="/admin/inventory"
-            />
-          </div>
+            {/* Usamos useMemo para las cards del módulo para evitar re-renders innecesarios */}
+            {useMemo(() => (
+              <>
+                <ModuleCard 
+                  icon={Store}
+                  title="Sucursales"
+                  description="Gestiona todas las sucursales de la óptica"
+                  path="/admin/branches"
+                  count={moduleStats.sucursales}
+                />
+                <ModuleCard 
+                  icon={Bookmark}
+                  title="Marcas"
+                  description="Administra las marcas de productos disponibles"
+                  path="/admin/brands"
+                  count={moduleStats.marcas}
+                />
+                <ModuleCard 
+                  icon={PaintBucket}
+                  title="Colores"
+                  description="Gestiona los colores de los productos"
+                  path="/admin/colors"
+                  count={moduleStats.colores}
+                />
+                <ModuleCard 
+                  icon={ShoppingBag}
+                  title="Inventario"
+                  description="Control de stock y movimientos de productos"
+                  path="/admin/inventory"
+                />
+              </>
+            ), [moduleStats])
+          }</div>
         </div>
 
         {/* Actividad Reciente */}
@@ -234,15 +243,18 @@ export default function AdminDashboardPage() {
               </Link>
             </div>
             <div className="space-y-1 divide-y divide-gray-800">
-              {recentActivity.map(activity => (
-                <ActivityItem 
-                  key={activity.id}
-                  icon={activity.icon}
-                  title={activity.title}
-                  description={activity.description}
-                  time={activity.time}
-                />
-              ))}
+              {/* Memoizamos el listado de actividades para prevenir re-renders innecesarios */}
+              {useMemo(() => (
+                recentActivity.map(activity => (
+                  <ActivityItem 
+                    key={activity.id}
+                    icon={activity.icon}
+                    title={activity.title}
+                    description={activity.description}
+                    time={activity.time}
+                  />
+                ))
+              ), [recentActivity])}            
             </div>
           </Card>
         </div>

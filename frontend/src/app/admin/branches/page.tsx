@@ -1,21 +1,39 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import dynamic from "next/dynamic";
 import "../shared/dark-table.css";
-import { Table, Button, Input, Modal, Form, message, Popconfirm, Tag, Tooltip, InputNumber } from "antd";
-import type { TableColumnType } from "antd";
-import { 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  ExclamationCircleOutlined, 
-  SearchOutlined,
-  EnvironmentOutlined,
-  PhoneOutlined,
-  MailOutlined
-} from "@ant-design/icons";
+
+// Importaciones selectivas de Ant Design para reducir el tamaño del bundle
+import Table from "antd/lib/table";
+import Button from "antd/lib/button";
+import Input from "antd/lib/input";
+import Form from "antd/lib/form";
+import message from "antd/lib/message";
+import Popconfirm from "antd/lib/popconfirm";
+import Tag from "antd/lib/tag";
+import Tooltip from "antd/lib/tooltip";
+import InputNumber from "antd/lib/input-number";
+import type { ColumnType } from "antd/lib/table";
+
+// Modal importado dinámicamente para reducir el bundle inicial
+const Modal = dynamic(() => import("antd/lib/modal"), {
+  ssr: false,
+  loading: () => <div className="bg-gray-800 p-6 rounded-lg animate-pulse">Cargando...</div>
+});
+
+// Importación selectiva de iconos
+import PlusOutlined from "@ant-design/icons/PlusOutlined";
+import EditOutlined from "@ant-design/icons/EditOutlined";
+import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
+import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
+import SearchOutlined from "@ant-design/icons/SearchOutlined";
+import EnvironmentOutlined from "@ant-design/icons/EnvironmentOutlined";
+import PhoneOutlined from "@ant-design/icons/PhoneOutlined";
+import MailOutlined from "@ant-design/icons/MailOutlined";
 import { getSucursalesPaginadas, createSucursal, updateSucursal, deleteSucursal } from "@/lib/api/sucursalService";
 import { Sucursal } from "@/types";
+import { debounce } from "@/utils/debounce";
 
 export default function BranchesPage() {
   const [branches, setBranches] = useState<Sucursal[]>([]);
@@ -56,7 +74,8 @@ export default function BranchesPage() {
 
   // La búsqueda ahora se maneja automáticamente a través del useEffect cuando cambia searchText
 
-  const showModal = (branch?: Sucursal) => {
+  // Memoiza la función showModal para evitar recrearla en cada render
+  const showModal = useCallback((branch?: Sucursal) => {
     setEditingBranch(branch || null);
     form.resetFields();
     if (branch) {
@@ -70,13 +89,15 @@ export default function BranchesPage() {
       });
     }
     setModalVisible(true);
-  };
+  }, [form]);
 
-  const handleCancel = () => {
+  // Memoiza handleCancel para evitar recreaciones innecesarias
+  const handleCancel = useCallback(() => {
     setModalVisible(false);
-  };
+  }, []);
 
-  const handleSubmit = async () => {
+  // Memoiza handleSubmit para mejorar rendimiento
+  const handleSubmit = useCallback(async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
@@ -104,9 +125,10 @@ export default function BranchesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [editingBranch, fetchBranches, form]);
 
-  const handleDelete = async (id: string) => {
+  // Memoiza handleDelete para evitar recrearla en cada render
+  const handleDelete = useCallback(async (id: string) => {
     setLoading(true);
     try {
       const response = await deleteSucursal(id);
@@ -122,9 +144,83 @@ export default function BranchesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchBranches]);
 
-  const columns = [
+  // Componentes memoizados para mejorar el rendimiento
+  
+  // Celda memoizada para dirección
+  const AddressCell = React.memo(({ direccion }: { direccion: string }) => {
+    return (
+      <Tooltip title={direccion}>
+        <div className="flex items-center gap-1">
+          <EnvironmentOutlined className="text-red-400" />
+          <span>{direccion}</span>
+        </div>
+      </Tooltip>
+    );
+  });
+  AddressCell.displayName = "AddressCell";
+  
+  // Celda memoizada para contacto
+  const ContactCell = React.memo(({ telefono, email }: { telefono: string; email: string }) => {
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-1">
+          <PhoneOutlined className="text-green-400" />
+          <span>{telefono}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <MailOutlined className="text-blue-400" />
+          <span>{email}</span>
+        </div>
+      </div>
+    );
+  });
+  ContactCell.displayName = "ContactCell";
+  
+  // Celda memoizada para estado
+  const StatusCell = React.memo(({ activo }: { activo: boolean }) => {
+    return activo ? (
+      <Tag color="green">Activo</Tag>
+    ) : (
+      <Tag color="red">Inactivo</Tag>
+    );
+  });
+  StatusCell.displayName = "StatusCell";
+  
+  // Celda memoizada para acciones
+  const ActionsCell = React.memo(({ record }: { record: Sucursal }) => {
+    // En lugar de useCallback anidado, usamos funciones simples ya que el componente está memoizado
+    const handleEdit = () => showModal(record);
+    const handleDeleteConfirm = () => handleDelete(record.id);
+    
+    return (
+      <div className="flex gap-2">
+        <Tooltip title="Editar">
+          <Button
+            icon={<EditOutlined />}
+            type="primary"
+            size="small"
+            ghost
+            onClick={handleEdit}
+          />
+        </Tooltip>
+        <Popconfirm
+          title="¿Estás seguro de eliminar esta sucursal?"
+          onConfirm={handleDeleteConfirm}
+          okText="Sí"
+          cancelText="No"
+          icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
+        >
+          <Button icon={<DeleteOutlined />} type="primary" size="small" danger />
+        </Popconfirm>
+      </div>
+    );
+  });
+  ActionsCell.displayName = "ActionsCell";
+  
+  // Usamos useMemo para las columnas para evitar recalcularlas en cada render
+  const columns = useMemo(() => [
     {
       title: "Nombre",
       dataIndex: "nombre",
@@ -136,42 +232,19 @@ export default function BranchesPage() {
       dataIndex: "direccion",
       key: "direccion",
       ellipsis: true,
-      render: (direccion: string) => (
-        <Tooltip title={direccion}>
-          <div className="flex items-center gap-1">
-            <EnvironmentOutlined className="text-red-400" />
-            <span>{direccion}</span>
-          </div>
-        </Tooltip>
-      ),
+      render: (direccion: string) => <AddressCell direccion={direccion} />,
     },
     {
       title: "Contacto",
       key: "contacto",
-      render: (_: any, record: Sucursal) => (
-        <div className="space-y-1">
-          <div className="flex items-center gap-1">
-            <PhoneOutlined className="text-green-400" />
-            <span>{record.telefono}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <MailOutlined className="text-blue-400" />
-            <span>{record.email}</span>
-          </div>
-        </div>
-      ),
+      render: (_: any, record: Sucursal) => <ContactCell telefono={record.telefono} email={record.email} />,
       responsive: ["md" as any],
     },
     {
       title: "Estado",
       dataIndex: "activo",
       key: "activo",
-      render: (activo: boolean) =>
-        activo ? (
-          <Tag color="green">Activo</Tag>
-        ) : (
-          <Tag color="red">Inactivo</Tag>
-        ),
+      render: (activo: boolean) => <StatusCell activo={activo} />,
       filters: [
         { text: "Activo", value: true },
         { text: "Inactivo", value: false },
@@ -181,30 +254,19 @@ export default function BranchesPage() {
     {
       title: "Acciones",
       key: "actions",
-      render: (_: any, record: Sucursal) => (
-        <div className="flex gap-2">
-          <Tooltip title="Editar">
-            <Button
-              icon={<EditOutlined />}
-              type="primary"
-              size="small"
-              ghost
-              onClick={() => showModal(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="¿Estás seguro de eliminar esta sucursal?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Sí"
-            cancelText="No"
-            icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
-          >
-            <Button icon={<DeleteOutlined />} type="primary" size="small" danger />
-          </Popconfirm>
-        </div>
-      ),
+      render: (_: any, record: Sucursal) => <ActionsCell record={record} />,
     },
-  ];
+  ], [AddressCell, ContactCell, StatusCell, ActionsCell]);
+
+  // Memoizamos los botones del footer del modal fuera del renderizado condicional
+  const modalFooter = useMemo(() => [
+    <Button key="cancel" onClick={handleCancel}>
+      Cancelar
+    </Button>,
+    <Button key="submit" type="primary" onClick={handleSubmit} loading={loading}>
+      {editingBranch ? "Actualizar" : "Crear"}
+    </Button>,
+  ], [handleCancel, handleSubmit, editingBranch, loading]);
 
   return (
     <div className="space-y-6">
@@ -222,13 +284,17 @@ export default function BranchesPage() {
 
       <div className="flex items-center justify-between mb-4">
         <Input
-          prefix={<SearchOutlined style={{ color: '#aaa' }} />}
+          prefix={<SearchOutlined />}
           placeholder="Buscar sucursal"
           value={searchText}
-          onChange={(e) => {
-            setSearchText(e.target.value);
-            setPage(1); // Reiniciar paginación al buscar
-          }}
+          onChange={useMemo(
+            () =>
+              debounce((e) => {
+                setSearchText(e.target.value);
+                setPage(1); // Reiniciar paginación al buscar
+              }, 300),
+            []
+          )}
           allowClear
           style={{ 
             width: 250, 
@@ -247,7 +313,7 @@ export default function BranchesPage() {
           dataSource={branches}
           rowKey="id"
           loading={loading}
-          pagination={{
+          pagination={useMemo(() => ({
             current: page,
             pageSize: pageSize,
             total: total,
@@ -257,24 +323,18 @@ export default function BranchesPage() {
             },
             showSizeChanger: true,
             showTotal: (total: number, range: number[]) => `${range[0]}-${range[1]} de ${total} sucursales`,
-          }}
+          }), [page, pageSize, total])}
         />
       </div>
 
-      <Modal
-        title={editingBranch ? "Editar Sucursal" : "Nueva Sucursal"}
-        open={modalVisible}
-        onCancel={handleCancel}
-        width={700}
-        footer={[
-          <Button key="cancel" onClick={handleCancel}>
-            Cancelar
-          </Button>,
-          <Button key="submit" type="primary" onClick={handleSubmit} loading={loading}>
-            {editingBranch ? "Actualizar" : "Crear"}
-          </Button>,
-        ]}
-      >
+      {modalVisible && (
+        <Modal
+          title={editingBranch ? "Editar Sucursal" : "Nueva Sucursal"}
+          open={modalVisible}
+          onCancel={handleCancel}
+          width={700}
+          footer={modalFooter}
+        >
         <Form form={form} layout="vertical">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item
@@ -386,6 +446,7 @@ export default function BranchesPage() {
           </div>
         </Form>
       </Modal>
+      )}
 
       {/* Estilos personalizados para tablas en modo oscuro */}
       <style jsx global>{`

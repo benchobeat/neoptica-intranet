@@ -184,6 +184,157 @@ Todos los servicios implementan operaciones CRUD y soporte para paginación y b�
 - **Funciones y variables**: camelCase
 - **Tipos e interfaces**: PascalCase
 
+## Buenas Prácticas de Optimización
+
+Las siguientes técnicas de optimización se han implementado para mejorar el rendimiento de la aplicación:
+
+### Optimización de Rendimiento en Páginas de Administración
+
+Se han aplicado sistemáticamente las siguientes optimizaciones en todas las páginas de administración (colores, marcas, sucursales) y en el dashboard principal:
+
+1. **Importaciones Selectivas**
+   - Reemplazo de importaciones globales por importaciones selectivas de componentes Ant Design.
+   - Importación individualizada de iconos para reducir el tamaño del bundle.
+
+2. **Memoización de Componentes y Funciones**
+   - Uso de `React.memo` para evitar re-renders innecesarios en componentes de tabla.
+   - Aplicación de `useCallback` en funciones de manejo de eventos (onClick, onChange).
+   - Implementación de `useMemo` para objetos complejos como configuraciones de paginación y columnas de tabla.
+
+3. **Carga Dinámica y Lazy Loading**
+   - Importación dinámica de componentes pesados como modales usando `dynamic` de Next.js.
+   - Implementación de suspense y fallbacks visuales durante la carga.
+
+4. **Optimización de Inputs**
+   - Aplicación de debounce en inputs de búsqueda para limitar llamadas a la API.
+   - Memoización de handlers de formularios para prevenir re-renders.
+
+5. **Estructura de Componentes**
+   - Creación de subcomponentes memoizados para celdas de tabla con renderización compleja.
+   - Renderizado condicional para evitar procesar componentes no visibles.
+
+6. **Estados Optimizados**
+   - Manejo eficiente de estados para controlar loading, paginación y búsqueda.
+   - Uso de efectos con dependencias correctamente definidas.
+
+7. **Mejoras UX Integradas**
+   - Implementación de skeletons para estados de carga.
+   - Retroalimentación visual inmediata para acciones del usuario.
+
+Estas optimizaciones han resultado en una mejora significativa del rendimiento y experiencia de usuario en las páginas administrativas.
+
+### Optimización de Importaciones
+
+- **Importaciones selectivas**: Importar componentes individuales en lugar de librerías completas.
+  ```typescript
+  // ❌ Evitar importar toda la librería
+  import { Button, Table, Form } from 'antd';
+  
+  // ✅ Importar componentes individuales
+  import Button from 'antd/lib/button';
+  import Table from 'antd/lib/table';
+  import Form from 'antd/lib/form';
+  ```
+
+- **Importación dinámica de iconos**: Importar solo los iconos necesarios.
+  ```typescript
+  // ❌ Evitar
+  import { UserOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+  
+  // ✅ Preferir
+  import UserOutlined from '@ant-design/icons/UserOutlined';
+  ```
+
+### Memoización de Componentes y Funciones
+
+- **React.memo**: Aplicar a componentes que no necesitan re-renderizarse con frecuencia.
+  ```typescript
+  const UserTableCell = React.memo(({ user }) => (
+    <div className="flex items-center">
+      <Avatar src={user.avatar} />
+      <span className="ml-2">{user.name}</span>
+    </div>
+  ));
+  ```
+
+- **useMemo**: Usar para cálculos costosos o para evitar recrear objetos complejos.
+  ```typescript
+  // Memoización de configuración de columnas
+  const columns = useMemo(() => [
+    {
+      title: 'Nombre',
+      dataIndex: 'name',
+      // ...
+    },
+    // más columnas...
+  ], [sortConfig, filterConfig]);
+  ```
+
+- **useCallback**: Para funciones que se pasan como props a componentes hijos.
+  ```typescript
+  const handleSearch = useCallback((value: string) => {
+    setSearchTerm(value);
+    fetchFilteredData(value);
+  }, [fetchFilteredData]);
+  ```
+
+### Optimización de Rendimiento en Componentes
+
+- **Debounce en búsquedas**: Limitar frecuencia de llamadas API en inputs de búsqueda.
+  ```typescript
+  // Implementar debounce en búsquedas
+  const debouncedSearch = useCallback(
+    debounce((value) => fetchData(value), 300),
+    [fetchData]
+  );
+  ```
+
+- **Suspense y carga progresiva**: Mostrar skeletons durante carga inicial.
+  ```tsx
+  <Suspense fallback={<TableSkeleton />}>
+    <UserTable data={users} />
+  </Suspense>
+  ```
+
+- **Code Splitting**: Cargar componentes solo cuando se necesitan.
+  ```typescript
+  // Utilidad para importaciones dinámicas
+  const UserModal = dynamicComponent(() => import('./UserModal'));
+  ```
+
+### Optimización de Next.js y Webpack
+
+- **Configuración mejorada de Next.js**: Técnicas aplicadas en `next.config.js`.
+  - Code splitting avanzado con `splitChunks`
+  - Optimización de chunks para Ant Design
+  - Compresión de archivos
+  - Minificación con SWC
+  - Eliminación de console.logs en producción
+
+- **Lazy Loading de módulos pesados**: Cargar solo cuando son necesarios.
+  ```typescript
+  // Importación dinámica para modales y componentes grandes
+  const ReportGenerator = dynamic(() => import('@/components/ReportGenerator'), {
+    loading: () => <Skeleton active />,
+    ssr: false
+  });
+  ```
+
+- **Optimización de imágenes**: Uso de `remotePatterns` en lugar de `domains`.
+
+### Mejores Prácticas para Tablas y Formularios
+
+- **Paginación del lado del servidor**: Evitar cargar grandes conjuntos de datos.
+- **Virtualización de listas largas**: Renderizar solo elementos visibles.
+- **Validación asíncrona**: Evitar bloquear la interfaz durante validaciones.
+- **Estrategias de carga de datos**: Utilizar técnicas como SWR o React Query.
+
+### Medición y Monitoreo
+
+- **Métricas Web Vitals**: Monitorear LCP, FID y CLS.
+- **Análisis de Bundle**: Uso de herramientas como `@next/bundle-analyzer`.
+- **Auditoría de performance**: Revisar periódicamente el rendimiento con Lighthouse.
+
 ## Iniciando el Proyecto
 
 ### Instalación
@@ -215,10 +366,6 @@ Abre [http://localhost:3000](http://localhost:3000) para ver la aplicación.
 npm run build
 npm start
 ```
-
-## Contacto y Soporte
-
-Para preguntas o reportar problemas, contacta con el equipo de desarrollo a través de [soporte@neoptica.com](mailto:soporte@neoptica.com).
 
 ## 🧹 Lineamientos de Linting y Buenas Prácticas
 
@@ -353,3 +500,7 @@ Esta sección contiene lineamientos cruciales para mantener la calidad del códi
   [Imágenes en Next.js](https://nextjs.org/docs/basic-features/image-optimization)
 - **Documentación de React Hooks:**
   [Reglas de Hooks](https://reactjs.org/docs/hooks-rules.html)
+
+## Contacto y Soporte
+
+Para preguntas o reportar problemas, contacta con el equipo de desarrollo a través de [soporte@neoptica.com](mailto:soporte@neoptica.com).

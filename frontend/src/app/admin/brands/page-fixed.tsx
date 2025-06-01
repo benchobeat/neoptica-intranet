@@ -29,8 +29,8 @@ import SearchOutlined from "@ant-design/icons/SearchOutlined";
 import LinkOutlined from "@ant-design/icons/LinkOutlined";
 
 // Servicios y tipos
-import { getMarcasPaginadas, createMarca, updateMarca, deleteMarca } from "@/lib/api/marcaService";
-import type { Marca } from "@/types";
+import { getMarcasPaginadas, crearMarca, actualizarMarca, eliminarMarca } from "@/services/marcasService";
+import type { Marca } from "@/interfaces/types";
 
 // Componente principal de la página de marcas optimizado para reducir renders
 export default function BrandsPage() {
@@ -100,9 +100,9 @@ export default function BrandsPage() {
 
       let response;
       if (editingBrand) {
-        response = await updateMarca(editingBrand.id, values);
+        response = await actualizarMarca(editingBrand.id, values);
       } else {
-        response = await createMarca(values);
+        response = await crearMarca(values);
       }
 
       if (response.ok) {
@@ -128,7 +128,7 @@ export default function BrandsPage() {
   const handleDelete = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const response = await deleteMarca(id);
+      const response = await eliminarMarca(id);
       if (response.ok) {
         message.success("Marca eliminada correctamente");
         fetchBrands();

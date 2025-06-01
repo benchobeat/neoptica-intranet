@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { HexColorPicker } from "react-colorful";
 import "../shared/dark-table.css";
@@ -18,6 +18,7 @@ import Form from "antd/lib/form";
 import message from "antd/lib/message";
 import Tooltip from "antd/lib/tooltip";
 import Popconfirm from "antd/lib/popconfirm";
+import Tag from "antd/lib/tag";
 
 // Importación selectiva de iconos
 import PlusOutlined from "@ant-design/icons/PlusOutlined";
@@ -25,9 +26,11 @@ import EditOutlined from "@ant-design/icons/EditOutlined";
 import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
 import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
 import SearchOutlined from "@ant-design/icons/SearchOutlined";
+import BgColorsOutlined from "@ant-design/icons/BgColorsOutlined";
+import CheckOutlined from "@ant-design/icons/CheckOutlined";
 
 // Servicios y tipos
-import { createColor, deleteColor, getColoresPaginados, updateColor } from "@/lib/api/colorService";
+import { getColoresPaginados, createColor, updateColor, deleteColor, updateColor } from "@/lib/api/colorService";
 import type { Color } from "@/types";
 
 // Función utilitaria para generar colores consistentes basados en texto

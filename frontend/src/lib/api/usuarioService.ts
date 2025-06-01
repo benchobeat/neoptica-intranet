@@ -10,7 +10,7 @@ export interface Usuario {
   direccion?: string;
   foto_perfil?: string;
   activo: boolean;
-  rol: string;
+  roles?: { id: string; nombre: string }[];
 }
 
 export interface PaginatedUsuarios {
