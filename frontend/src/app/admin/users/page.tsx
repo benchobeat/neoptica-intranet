@@ -162,7 +162,28 @@ const CustomersPage = () => {
     try {
       const response = await getClientesPaginados(page, pageSize, searchText);
       if (response.data) {
-        setCustomers((response.data?.items || []).map((user: any) => ({
+        // Determinar la estructura de la respuesta y procesarla adecuadamente
+        let usuarios = [];
+        let totalItems = 0;
+        
+        // Usar aserciones de tipo para evitar errores de TypeScript
+        if (Array.isArray(response.data)) {
+          // Si es un array directo de usuarios
+          usuarios = response.data;
+          totalItems = response.data.length;
+        } else if (typeof response.data === 'object' && response.data !== null) {
+          // Si es un objeto paginado con propiedades items y total
+          const responseObj = response.data as any; // Aserción de tipo para evitar errores
+          
+          if (Array.isArray(responseObj.items)) {
+            usuarios = responseObj.items;
+          }
+          
+          totalItems = typeof responseObj.total === 'number' ? responseObj.total : usuarios.length;
+        }
+        
+        // Transformar usuarios a formato Customer
+        setCustomers(usuarios.map((user: any) => ({
           id: user.id,
           nombre_completo: user.nombre_completo,
           email: user.email,
@@ -173,7 +194,9 @@ const CustomersPage = () => {
           activo: user.activo,
           roles: user.roles || []
         })));
-        setTotal(response.data?.total || 0);
+        
+        // Establecer el total de registros
+        setTotal(totalItems);
       }
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
@@ -258,8 +281,10 @@ const CustomersPage = () => {
       try {
         setLoading(true);
         const response = await getClienteById(customer.id);
-        if (response.ok && response.data) {
-          const userDetail = response.data;
+        // Asegurar que la respuesta tiene el formato esperado
+        const responseData = response as any; // Usar aserción de tipo para evitar errores
+        if (responseData && responseData.data) {
+          const userDetail = responseData.data;
           
           form.setFieldsValue({
             nombre_completo: userDetail.nombre_completo,
@@ -325,10 +350,12 @@ const CustomersPage = () => {
           password: values.dni || "12345678"
         });
         
-        if (createResponse && createResponse.ok) {
+        // Usar aserción de tipo para evitar errores
+        const responseData = createResponse as any;
+        if (responseData && responseData.ok) {
           message.success("Usuario creado correctamente");
         } else {
-          message.error(createResponse?.error || "No se pudo crear el usuario");
+          message.error(responseData?.error || "No se pudo crear el usuario");
           setLoading(false);
           return;
         }

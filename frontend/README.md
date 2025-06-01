@@ -184,6 +184,177 @@ Todos los servicios implementan operaciones CRUD y soporte para paginación y b�
 - **Funciones y variables**: camelCase
 - **Tipos e interfaces**: PascalCase
 
+## Lineamientos para prevenir errores comunes
+
+Esta guía está diseñada para evitar los problemas más frecuentes encontrados durante el desarrollo, especialmente relacionados con React Hooks, TypeScript y configuración del proyecto.
+
+### Reglas para uso correcto de React Hooks
+
+1. **Posicionamiento de Hooks**
+   - ❌ **NUNCA declarar hooks dentro de JSX/renderizado**
+     ```jsx
+     // ❌ MAL: Hook dentro del JSX
+     return (
+       <div>
+         {useMemo(() => <Footer />, [])}
+       </div>
+     );
+     
+     // ✅ CORRECTO: Hook declarado fuera del JSX
+     const memoizedFooter = useMemo(() => <Footer />, []);
+     return (
+       <div>
+         {memoizedFooter}
+       </div>
+     );
+     ```
+   - ❌ **NUNCA usar hooks dentro de condicionales o loops**
+     ```jsx
+     // ❌ MAL: Hook dentro de condicional
+     if (condition) {
+       useEffect(() => { /* ... */ }, []);
+     }
+     
+     // ✅ CORRECTO: Condicional dentro del hook
+     useEffect(() => {
+       if (condition) {
+         // Lógica condicional aquí
+       }
+     }, [condition]);
+     ```
+
+2. **Arrays de dependencias**
+   - ✅ **SIEMPRE incluir todas las dependencias usadas dentro del hook**
+     ```jsx
+     // ❌ MAL: Dependencia faltante (showModal)
+     const handleDelete = useCallback(() => {
+       showModal();
+       deleteItem(id);
+     }, [id]); // showModal falta en el array
+     
+     // ✅ CORRECTO: Todas las dependencias incluidas
+     const handleDelete = useCallback(() => {
+       showModal();
+       deleteItem(id);
+     }, [id, showModal, deleteItem]);
+     ```
+   - ✅ **Evitar re-crear funciones innecesariamente**
+     ```jsx
+     // ❌ MAL: Función recreada en cada render
+     <Button onClick={() => handleDelete(id)} />
+     
+     // ✅ CORRECTO: Función memoizada
+     const memoizedHandleDelete = useCallback(() => handleDelete(id), [id, handleDelete]);
+     <Button onClick={memoizedHandleDelete} />
+     ```
+
+3. **Uso de `useMemo` y `useCallback`**
+   - ✅ **Usar `useMemo` para valores computados costosos**
+     ```jsx
+     // Valor calculado costoso (array de objetos complejos)
+     const calculatedColumns = useMemo(() => [
+       { title: 'Nombre', key: 'name', render: (text) => <b>{text}</b> },
+       // más columnas...
+     ], [dependencias]);
+     ```
+   - ✅ **Establecer `displayName` para componentes memoizados**
+     ```jsx
+     const MemoizedComponent = memo(({ prop }) => <div>{prop}</div>);
+     // Añadir displayName para depuración y mejor soporte ESLint
+     MemoizedComponent.displayName = "MemoizedComponent";
+     ```
+
+### Manejo correcto de TypeScript
+
+1. **Tipado de respuestas API**
+   - ✅ **Implementar manejo robusto para diferentes estructuras de respuesta**
+     ```typescript
+     // Manejar distintas estructuras posibles
+     if (Array.isArray(response.data)) {
+       // Manejar array de datos
+     } else if (typeof response.data === 'object' && response.data !== null) {
+       // Usar aserción de tipo cuando sea necesario
+       const responseObj = response.data as any;
+       
+       if (Array.isArray(responseObj.items)) {
+         // Manejar estructura con .items
+       }
+     }
+     ```
+
+2. **Aserciones de tipo**
+   - ✅ **Usar aserciones de tipo cuando la inferencia no es suficiente**
+     ```typescript
+     // Cuando TypeScript no puede inferir correctamente
+     const responseData = response as any; // Usar con moderación
+     if (responseData && responseData.ok) {
+       // Procesar respuesta
+     }
+     ```
+   - ✅ **Tipado de iconos de librerías externas**
+     ```typescript
+     // Usar React.ComponentType para compatibilidad con cualquier componente React
+     interface MenuItem {
+       icon: React.ComponentType<any>; // Más genérico que LucideIcon
+     }
+     ```
+
+3. **Versiones de TypeScript**
+   - ✅ **Mantener consistencia entre TypeScript y sus dependencias**
+     - Usar versiones de TypeScript compatibles con las dependencias (ej: `@typescript-eslint`)
+     - Actualmente usar versión 5.4.5 de TypeScript (última compatible con las herramientas)
+     - Verificar compatibilidad en `package.json` y actualizaciones frecuentes
+
+### Configuración de Next.js y Webpack
+
+1. **Optimización de webpack**
+   - ✅ **Mantener configuraciones simples y compatibles**
+     ```javascript
+     // Configuración básica que evita problemas de compatibilidad
+     const nextConfig = {
+       swcMinify: true,
+       poweredByHeader: false,
+       compiler: {
+         removeConsole: process.env.NODE_ENV === 'production' ? {
+           exclude: ['error'],
+         } : false,
+       },
+       compress: true,
+     };
+     ```
+   - ❌ **Evitar plugins de webpack complejos o personalizados**
+     ```javascript
+     // ❌ EVITAR: Configuraciones complejas pueden causar incompatibilidades
+     webpack: (config, { webpack }) => {
+       config.plugins.push(
+         new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /es|en/)
+       );
+       return config;
+     },
+     ```
+
+2. **Importaciones optimizadas**
+   - ✅ **Utilizar importaciones selectivas para reducir tamaño de bundle**
+     ```typescript
+     // ❌ MAL: Importación completa
+     import { Button, Table, Form, Input } from 'antd';
+     
+     // ✅ CORRECTO: Importaciones específicas
+     import Button from 'antd/lib/button';
+     import Table from 'antd/lib/table';
+     import Form from 'antd/lib/form';
+     import Input from 'antd/lib/input';
+     ```
+     
+     ```typescript
+     // ❌ MAL: Importación de todos los iconos
+     import * as Icons from '@ant-design/icons';
+     
+     // ✅ CORRECTO: Importaciones específicas
+     import UserOutlined from '@ant-design/icons/UserOutlined';
+     import EditOutlined from '@ant-design/icons/EditOutlined';
+     ```
+
 ## Buenas Prácticas de Optimización
 
 Las siguientes técnicas de optimización se han implementado para mejorar el rendimiento de la aplicación:

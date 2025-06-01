@@ -1,4 +1,5 @@
 // Configuración de los elementos del menú para cada rol
+import React from 'react';
 import { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -27,7 +28,7 @@ import {
 export interface MenuItem {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<any>; // Cambio de LucideIcon a un tipo más genérico
   path: string;
   roles: string[];
   children?: MenuItem[];
