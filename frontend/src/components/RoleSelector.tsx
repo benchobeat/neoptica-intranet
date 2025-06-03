@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Select, Tooltip, message } from 'antd';
 import { UserCog, ShieldCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface RoleSelectorProps {
   className?: string;
@@ -12,6 +13,7 @@ export default function RoleSelector({ className = "" }: RoleSelectorProps) {
   const [roles, setRoles] = useState<string[]>([]);
   const [activeRole, setActiveRole] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const router = useRouter();
 
   // Cargar roles del usuario al montar el componente
   useEffect(() => {
@@ -54,19 +56,19 @@ export default function RoleSelector({ className = "" }: RoleSelectorProps) {
     setTimeout(() => {
       switch (newRole) {
         case 'admin':
-          window.location.href = '/admin';
+          router.push('/admin');
           break;
         case 'vendedor':
-          window.location.href = '/vendor';
+          router.push('/vendedor');
           break;
         case 'optometrista':
-          window.location.href = '/optometrist';
+          router.push('/optometrista');
           break;
         case 'cliente':
-          window.location.href = '/client';
+          router.push('/cliente');
           break;
         default:
-          window.location.href = '/';
+          router.push('/');
       }
     }, 1000); // Pequeño retraso para que se muestre el mensaje
   };

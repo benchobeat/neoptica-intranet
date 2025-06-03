@@ -87,19 +87,19 @@ export default function LoginPage() {
           
           case "vendedor":
             
-            window.location.href = "/vendor";
+            window.location.href = "/vendedor";
             
             break;
           
           case "optometrista":
             
-            window.location.href = "/optometrist";
+            window.location.href = "/optometrista";
             
             break;
           
           case "cliente":
             
-            window.location.href = "/client";
+            window.location.href = "/cliente";
             
             break;
           
@@ -144,7 +144,7 @@ export default function LoginPage() {
       >
         <div className="flex flex-col items-center mb-8">
           <Image
-            src="/logo-optica.svg" // Asegúrate que esta ruta sea correcta
+            src="/logo-optica.png" // Asegúrate que esta ruta sea correcta
             alt="Neóptica Logo"
             width={64} // Tamaño del logo ligeramente aumentado
             height={64}

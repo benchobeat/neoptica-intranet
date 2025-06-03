@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import dynamic from "next/dynamic";
-import "../shared/dark-table.css";
+import CustomTable from "@/components/ui/CustomTable"; // Importar CustomTable
 
 // Importaciones selectivas de Ant Design para reducir el tamaño del bundle
-import Table from "antd/lib/table";
+// Table ya no se importa directamente, CustomTable lo maneja
 import Button from "antd/lib/button";
 import Input from "antd/lib/input";
 import Form from "antd/lib/form";
@@ -27,7 +27,7 @@ import PlusOutlined from "@ant-design/icons/PlusOutlined";
 import EditOutlined from "@ant-design/icons/EditOutlined";
 import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
 import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
-import SearchOutlined from "@ant-design/icons/SearchOutlined";
+// SearchOutlined podría no ser necesario si CustomTable maneja su propio icono de búsqueda
 import EnvironmentOutlined from "@ant-design/icons/EnvironmentOutlined";
 import PhoneOutlined from "@ant-design/icons/PhoneOutlined";
 import MailOutlined from "@ant-design/icons/MailOutlined";
@@ -72,7 +72,11 @@ export default function BranchesPage() {
     fetchBranches();
   }, [fetchBranches]);
 
-  // La búsqueda ahora se maneja automáticamente a través del useEffect cuando cambia searchText
+  // La búsqueda se conectará a CustomTable y fetchBranches se activará cuando searchText cambie.
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    setPage(1); // Reset page to 1 when searching
+  };
 
   // Memoiza la función showModal para evitar recrearla en cada render
   const showModal = useCallback((branch?: Sucursal) => {
@@ -269,63 +273,32 @@ export default function BranchesPage() {
   ], [handleCancel, handleSubmit, editingBranch, loading]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white">Gestión de Sucursales</h1>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={() => showModal()}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          Nueva Sucursal
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between mb-4">
-        <Input
-          prefix={<SearchOutlined />}
-          placeholder="Buscar sucursal"
-          value={searchText}
-          onChange={useMemo(
-            () =>
-              debounce((e) => {
-                setSearchText(e.target.value);
-                setPage(1); // Reiniciar paginación al buscar
-              }, 300),
-            []
-          )}
-          allowClear
-          style={{ 
-            width: 250, 
-            background: '#23263a', 
-            color: '#fff', 
-            border: '1px solid #444',
-            fontWeight: 500
-          }}
-        />
-      </div>
-
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-        <Table
-          className="custom-dark-table"
-          columns={columns}
-          dataSource={branches}
-          rowKey="id"
-          loading={loading}
-          pagination={useMemo(() => ({
-            current: page,
-            pageSize: pageSize,
-            total: total,
-            onChange: (page: number, pageSize: number | undefined) => {
-              setPage(page);
-              if (pageSize) setPageSize(pageSize);
-            },
-            showSizeChanger: true,
-            showTotal: (total: number, range: number[]) => `${range[0]}-${range[1]} de ${total} sucursales`,
-          }), [page, pageSize, total])}
-        />
-      </div>
+    <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
+      <CustomTable<Sucursal>
+        columns={columns}
+        dataSource={branches}
+        loading={loading}
+        rowKey="id"
+        headerTitle="Gestión de Sucursales"
+        showAddButton={true}
+        onAddButtonClick={() => showModal()} 
+        addButtonLabel="Nueva Sucursal"
+        showSearch={true}
+        onSearch={handleSearch} 
+        searchPlaceholder="Buscar sucursal..."
+        paginationConfig={{
+          current: page,
+          pageSize: pageSize,
+          total: total,
+          onChange: (newPage, newPageSize) => {
+            setPage(newPage);
+            if (newPageSize) setPageSize(newPageSize);
+          },
+        }}
+        tableProps={{
+          scroll: { x: 'max-content' },
+        }}
+      />
 
       {modalVisible && (
         <Modal
@@ -335,157 +308,119 @@ export default function BranchesPage() {
           width={700}
           footer={modalFooter}
         >
-        <Form form={form} layout="vertical">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Form.Item
-              name="nombre"
-              label="Nombre"
-              rules={[
-                { required: true, message: "Por favor ingresa el nombre de la sucursal" },
-                { min: 3, message: "El nombre debe tener al menos 3 caracteres" },
-              ]}
-            >
-              <Input placeholder="Ej: Sucursal Central" />
-            </Form.Item>
+          <Form form={form} layout="vertical">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Form.Item
+                name="nombre"
+                label="Nombre"
+                rules={[
+                  { required: true, message: "Por favor ingresa el nombre de la sucursal" },
+                  { min: 3, message: "El nombre debe tener al menos 3 caracteres" },
+                ]}
+              >
+                <Input placeholder="Ej: Sucursal Central" />
+              </Form.Item>
+              
+              <Form.Item
+                name="telefono"
+                label="Teléfono"
+                rules={[
+                  { required: true, message: "Por favor ingresa el teléfono de la sucursal" },
+                  { 
+                    pattern: /^\d{10}$/, 
+                    message: "El teléfono debe tener 10 dígitos" 
+                  },
+                ]}
+              >
+                <Input placeholder="Ej: 1234567890" />
+              </Form.Item>
+            </div>
             
             <Form.Item
-              name="telefono"
-              label="Teléfono"
+              name="direccion"
+              label="Dirección"
               rules={[
-                { required: true, message: "Por favor ingresa el teléfono de la sucursal" },
-                { 
-                  pattern: /^\d{10}$/, 
-                  message: "El teléfono debe tener 10 dígitos" 
-                },
+                { required: true, message: "Por favor ingresa la dirección de la sucursal" },
+                { min: 5, message: "La dirección debe tener al menos 5 caracteres" },
               ]}
             >
-              <Input placeholder="Ej: 1234567890" />
-            </Form.Item>
-          </div>
-          
-          <Form.Item
-            name="direccion"
-            label="Dirección"
-            rules={[
-              { required: true, message: "Por favor ingresa la dirección de la sucursal" },
-              { min: 5, message: "La dirección debe tener al menos 5 caracteres" },
-            ]}
-          >
-            <Input.TextArea 
-              placeholder="Dirección completa de la sucursal" 
-              rows={2}
-            />
-          </Form.Item>
-          
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: "Por favor ingresa el email de la sucursal" },
-              { 
-                type: 'email', 
-                message: "Por favor ingresa un email válido" 
-              },
-            ]}
-          >
-            <Input placeholder="Ej: sucursal@ejemplo.com" />
-          </Form.Item>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Form.Item
-              name="latitud"
-              label="Latitud"
-              rules={[
-                { required: true, message: "Por favor ingresa la latitud" },
-                { 
-                  type: 'number', 
-                  min: -90, 
-                  max: 90, 
-                  message: "La latitud debe estar entre -90 y 90" 
-                },
-              ]}
-            >
-              <InputNumber 
-                placeholder="Ej: 19.4326" 
-                style={{ width: '100%' }}
-                step="0.0001"
+              <Input.TextArea 
+                placeholder="Dirección completa de la sucursal" 
+                rows={2}
               />
             </Form.Item>
             
             <Form.Item
-              name="longitud"
-              label="Longitud"
+              name="email"
+              label="Email"
               rules={[
-                { required: true, message: "Por favor ingresa la longitud" },
+                { required: true, message: "Por favor ingresa el email de la sucursal" },
                 { 
-                  type: 'number', 
-                  min: -180, 
-                  max: 180, 
-                  message: "La longitud debe estar entre -180 y 180" 
+                  type: 'email', 
+                  message: "Por favor ingresa un email válido" 
                 },
               ]}
             >
-              <InputNumber 
-                placeholder="Ej: -99.1332" 
-                style={{ width: '100%' }}
-                step="0.0001"
-              />
+              <Input placeholder="Ej: sucursal@ejemplo.com" />
             </Form.Item>
-          </div>
-          
-          <div className="mt-2 p-3 bg-gray-100 rounded-md">
-            <p className="text-sm text-gray-500 mb-1">
-              <strong>Nota:</strong> Puedes obtener las coordenadas exactas desde Google Maps:
-            </p>
-            <ol className="text-xs text-gray-500 list-decimal pl-4">
-              <li>Busca la ubicación en Google Maps</li>
-              <li>Haz clic derecho en el punto exacto</li>
-              <li>Selecciona &quot;¿Qué hay aquí?&quot;</li>
-              <li>En la tarjeta que aparece abajo encontrarás las coordenadas</li>
-            </ol>
-          </div>
-        </Form>
-      </Modal>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Form.Item
+                name="latitud"
+                label="Latitud"
+                rules={[
+                  { required: true, message: "Por favor ingresa la latitud" },
+                  { 
+                    type: 'number', 
+                    min: -90, 
+                    max: 90, 
+                    message: "La latitud debe estar entre -90 y 90" 
+                  },
+                ]}
+              >
+                <InputNumber 
+                  placeholder="Ej: 19.4326" 
+                  style={{ width: '100%' }}
+                  step={0.0001}
+                />
+              </Form.Item>
+              
+              <Form.Item
+                name="longitud"
+                label="Longitud"
+                rules={[
+                  { required: true, message: "Por favor ingresa la longitud" },
+                  { 
+                    type: 'number', 
+                    min: -180, 
+                    max: 180, 
+                    message: "La longitud debe estar entre -180 y 180" 
+                  },
+                ]}
+              >
+                <InputNumber 
+                  placeholder="Ej: -99.1332" 
+                  style={{ width: '100%' }}
+                  step={0.0001}
+                />
+              </Form.Item>
+            </div>
+            
+            <div className="mt-2 p-3 bg-gray-100 rounded-md">
+              <p className="text-sm text-gray-500 mb-1">
+                <strong>Nota:</strong> Puedes obtener las coordenadas exactas desde Google Maps:
+              </p>
+              <ol className="text-xs text-gray-500 list-decimal pl-4">
+                <li>Busca la ubicación en Google Maps</li>
+                <li>Haz clic derecho en el punto exacto</li>
+                <li>Selecciona &quot;¿Qué hay aquí?&quot;</li>
+                <li>En la tarjeta que aparece abajo encontrarás las coordenadas</li>
+              </ol>
+            </div>
+          </Form>
+        </Modal>
       )}
-
-      {/* Estilos personalizados para tablas en modo oscuro */}
-      <style jsx global>{`
-        .custom-table .ant-table {
-          background-color: transparent;
-          color: white;
-        }
-        .custom-table .ant-table-thead > tr > th {
-          background-color: rgba(31, 41, 55, 0.7);
-          color: white;
-          border-bottom: 1px solid rgba(75, 85, 99, 0.5);
-        }
-        .custom-table .ant-table-tbody > tr > td {
-          border-bottom: 1px solid rgba(75, 85, 99, 0.3);
-          color: rgba(229, 231, 235, 0.9);
-        }
-        .custom-table .ant-table-tbody > tr:hover > td {
-          background-color: rgba(55, 65, 81, 0.5);
-        }
-        .custom-table .ant-pagination {
-          color: rgba(229, 231, 235, 0.9);
-        }
-        .custom-table .ant-pagination-item a {
-          color: rgba(229, 231, 235, 0.9);
-        }
-        .custom-table .ant-pagination-item-active {
-          background-color: rgba(79, 70, 229, 0.8);
-          border-color: rgba(79, 70, 229, 0.8);
-        }
-        .custom-table .ant-pagination-item-active a {
-          color: white;
-        }
-        .custom-table .ant-pagination-item-link {
-          color: rgba(229, 231, 235, 0.9);
-        }
-        .custom-table .ant-empty-description {
-          color: rgba(229, 231, 235, 0.9);
-        }
-      `}</style>
     </div>
   );
 }
+

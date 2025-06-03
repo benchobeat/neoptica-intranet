@@ -187,10 +187,11 @@ export default function Sidebar({ className = "", role }: SidebarProps) {
           className="flex items-center gap-2 text-xl font-bold text-white">
           <div className="bg-indigo-600 p-2 rounded-lg">
             <Image 
-              src="/logo-optica.svg" 
+              src="/logo-optica.png" 
               alt="Neóptica Logo" 
-              width={22} 
-              height={22}
+              width={40} 
+              height={40}
+              className="w-6 h-6" /* Tamaño visual consistente en la UI */
             />
           </div>
           <span>Neóptica</span>
@@ -206,13 +207,6 @@ export default function Sidebar({ className = "", role }: SidebarProps) {
       
       <div className="p-4 border-t border-gray-800">
         <div className="flex items-center gap-4">
-          <Image 
-            src={`https://i.pravatar.cc/40?u=${userRole}`} 
-            alt={getRoleLabel(userRole)} 
-            width={40}
-            height={40}
-            className="w-10 h-10 rounded-full" 
-          />
           <div className="flex-1">
             <p className="text-sm font-semibold text-white">{getRoleLabel(userRole)}</p>
             <p className="text-xs text-gray-400">Sesión activa</p>

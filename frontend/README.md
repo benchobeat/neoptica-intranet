@@ -89,6 +89,66 @@ La aplicación implementa un sistema avanzado de gestión multi-rol que permite:
 - **Header**: Cabecera con búsqueda, notificaciones y perfil de usuario.
 - **DashboardSkeleton**: Estructura base para todas las páginas de dashboard.
 
+## Centralización del Diseño y Consistencia UI
+
+Mantener una interfaz de usuario (UI) coherente y unificada es crucial para la usabilidad y la experiencia del usuario en Neóptica Intranet. Esta sección describe el enfoque para centralizar el diseño y las recomendaciones a seguir.
+
+### Componente `CustomTable`
+
+Para estandarizar la apariencia y funcionalidad de las tablas de datos, que son un elemento central en las páginas administrativas, se ha creado el componente reutilizable `CustomTable`.
+
+-   **Ubicación**: `src/components/ui/CustomTable.tsx`
+-   **Propósito**:
+    -   Encapsula la `Table` de Ant Design, proporcionando una capa de abstracción.
+    -   Ofrece una cabecera configurable estándar que incluye: título de la tabla, campo de búsqueda integrado y botón para "Añadir Nuevo" registro.
+    -   Centraliza los estilos y comportamientos comunes de las tablas, incluyendo la paginación y la gestión del estado de carga.
+-   **Beneficios**:
+    -   Reduce significativamente la duplicación de código en las páginas CRUD (Create, Read, Update, Delete).
+    -   Asegura una apariencia y experiencia consistentes en todas las tablas del sistema.
+    -   Facilita futuras actualizaciones y mantenimiento del diseño de las tablas.
+-   **Uso**: Al implementar nuevas páginas con listados de datos o al refactorizar existentes, se **debe** utilizar `CustomTable` en lugar de la `Table` de Ant Design directamente. Consultar la definición del componente para conocer las `props` disponibles (ej. `columns`, `dataSource`, `loading`, `totalRecords`, `paginationConfig`, `headerTitle`, `showAddButton`, `onAddButtonClick`, `showSearch`, `onSearch`).
+
+### Recomendaciones Generales de Diseño
+
+Para asegurar la consistencia visual y funcional en toda la aplicación, se deben seguir las siguientes recomendaciones:
+
+1.  **Tema Global (Dark Mode)**:
+    -   Adherirse estrictamente al tema oscuro implementado. Utilizar los colores de fondo, texto y acentos definidos en Tailwind CSS y en los componentes de Ant Design configurados para el tema oscuro.
+    -   Evitar la introducción de nuevos esquemas de colores sin una justificación clara y aprobación.
+
+2.  **Layout de Página Estándar**:
+    -   Las páginas principales de contenido deben seguir una estructura de layout consistente. Por ejemplo, el contenedor principal de las páginas de administración utiliza clases como `p-4 md:p-6 bg-gray-900 min-h-screen`.
+    -   Utilizar los componentes de layout `Sidebar` y `Header` para la estructura general de las páginas de dashboard.
+
+3.  **Formularios y Modales**:
+    -   Para la creación y edición de datos, utilizar los modales de Ant Design (`Modal`) con el componente `Form` de Ant Design.
+    -   Configurar los formularios con `layout="vertical"` para una presentación clara.
+    -   Implementar validaciones robustas y mensajes de error descriptivos.
+    -   El pie de página de los modales (botones de "Guardar", "Cancelar") debe ser consistente.
+
+4.  **Botones e Inputs**:
+    -   Utilizar las variantes estándar de los botones de Ant Design (`primary`, `default`, `danger`, `ghost`) y los estilos personalizados definidos para inputs, asegurando una apariencia uniforme.
+    -   Aplicar `Tooltip` para botones de acción icónicos para mejorar la usabilidad.
+
+5.  **Iconografía**:
+    -   Utilizar preferentemente iconos de `Lucide React` y los iconos incorporados de `Ant Design` para mantener la consistencia visual.
+    -   Asegurar que los iconos sean semánticamente correctos y se usen de manera consistente para acciones similares (ej. `EditOutlined` para editar, `DeleteOutlined` para eliminar).
+
+6.  **Componentes Reutilizables**:
+    -   Priorizar la creación y uso de componentes UI reutilizables (ubicados en `src/components/ui/` o `src/components/common/`) en lugar de estilos en línea o soluciones específicas para una sola página.
+    -   Antes de crear un nuevo componente, verificar si ya existe uno similar que pueda ser adaptado o extendido.
+
+7.  **Responsividad y Accesibilidad**:
+    -   Asegurar que todos los nuevos diseños y componentes sean responsivos y se visualicen correctamente en diferentes tamaños de pantalla.
+    -   Considerar la accesibilidad (normas WCAG) al diseñar interfaces, incluyendo el contraste de color, la navegación por teclado y el uso de atributos ARIA cuando sea necesario.
+
+8.  **Documentación de Componentes**:
+    -   Documentar brevemente el propósito y las `props` de los nuevos componentes reutilizables.
+
+Al seguir estas directrices, contribuimos a una aplicación más mantenible, escalable y con una experiencia de usuario profesional y coherente.
+
+**Nota sobre `ADMIN_FORMS_GUIDELINES.md`**: La guía existente en `docs/ADMIN_FORMS_GUIDELINES.md` debe ser revisada y actualizada para reflejar el uso de `CustomTable` y las directrices de diseño centralizadas aquí descritas, especialmente en lo referente a estilos de tablas y componentes.
+
 ## Menú Principal de Administrador
 
 El dashboard de administrador está organizado en las siguientes secciones principales:

@@ -3,13 +3,13 @@
 import React from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
-interface AdminLayoutProps {
+interface OptometristaLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function OptometristaLayout({ children }: OptometristaLayoutProps) {
   return (
-    <DashboardLayout role="admin">
+    <DashboardLayout role="optometrista">
       {children}
     </DashboardLayout>
   );

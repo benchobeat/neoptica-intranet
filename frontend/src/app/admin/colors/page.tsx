@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { HexColorPicker } from "react-colorful";
-import "../shared/dark-table.css";
+import CustomTable from "@/components/ui/CustomTable";
 
 // Importaciones selectivas de Ant Design para reducir el tamaño del bundle
-import Table from "antd/lib/table";
 import Button from "antd/lib/button";
 import Input from "antd/lib/input";
 // Modal importado dinámicamente para reducir el bundle inicial
@@ -24,7 +23,6 @@ import PlusOutlined from "@ant-design/icons/PlusOutlined";
 import EditOutlined from "@ant-design/icons/EditOutlined";
 import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
 import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
-import SearchOutlined from "@ant-design/icons/SearchOutlined";
 
 // Servicios y tipos
 import { createColor, deleteColor, getColoresPaginados, updateColor } from "@/lib/api/colorService";
@@ -48,7 +46,6 @@ function generarColorDesdeTexto(texto: string): string {
   return color;
 }
 
-import "./colors-dark-table.css";
 
 export default function ColorsPage() {
   const [colors, setColors] = useState<Color[]>([]);
@@ -250,58 +247,41 @@ export default function ColorsPage() {
   ], [handleCancel, handleSubmit, editingColor, loading]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white">Gestión de Colores</h1>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={() => showModal()}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          Nuevo Color
-        </Button>
-      </div>
+    <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
+      <CustomTable<Color>
+        columns={columns}
+        dataSource={colors}
+        loading={loading}
+        rowKey="id"
+        headerTitle="Gestión de Colores"
+        showAddButton={true}
+        onAddButtonClick={() => showModal()}
+        addButtonLabel="Nuevo Color"
+        showSearch={true}
+        onSearch={setSearchText} // CustomTable should pass the string value directly
+        searchPlaceholder="Buscar color..."
+        paginationConfig={{
+          current: page,
+          pageSize: pageSize,
+          total: total,
+          onChange: (newPage, newPageSize) => {
+            setPage(newPage);
+            if (newPageSize) setPageSize(newPageSize);
+          },
+          showSizeChanger: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} colores`,
+        }}
+        tableProps={{
+        }}
+      />
 
-      <div className="flex items-center justify-between mb-4">
-        <Input
-          prefix={<SearchOutlined style={{ color: '#aaa' }} />}
-          placeholder="Buscar color"
-          value={searchText}
-          onChange={handleSearch}
-          style={{ maxWidth: 300 }}
-          allowClear
-        />
-      </div>
-
-      <div className="relative">
-        <Table
-          className="custom-table"
-          columns={columns}
-          dataSource={colors}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: page,
-            pageSize: pageSize,
-            total: total,
-            onChange: (page: number, pageSize: number | undefined) => {
-              setPage(page);
-              if (pageSize) setPageSize(pageSize);
-            },
-            showSizeChanger: true,
-            showTotal: (total: number, range: number[]) => `${range[0]}-${range[1]} de ${total} colores`,
-          }}
-        />
-      </div>
-
-      {/* Solo renderizamos el Modal cuando modalVisible es true */}
       {modalVisible && (
         <Modal
           title={editingColor ? "Editar Color" : "Nuevo Color"}
           open={modalVisible}
           onCancel={handleCancel}
           footer={modalFooter}
+          width={600} // Consistent modal width
         >
           <Form form={form} layout="vertical">
             <Form.Item
@@ -322,15 +302,15 @@ export default function ColorsPage() {
             >
               <Input 
                 prefix={<div className="w-4 h-4 mr-2 border border-gray-400 rounded" style={{ backgroundColor: pickerColor }}></div>}
-                value={pickerColor}
+                value={pickerColor} // This will be updated by handleColorChange via form.setFieldsValue
                 placeholder="#FFFFFF"
-                readOnly
+                readOnly // User interacts with HexColorPicker, not this input directly
               />
             </Form.Item>
             
             <div className="mb-4">
-              <div className="mb-2 text-gray-300">Selecciona un color:</div>
-              <div className="flex justify-center">
+              <div className="mb-2 text-sm font-medium text-gray-300">Selecciona un color:</div>
+              <div className="flex justify-center items-center p-2 bg-gray-700 rounded-md">
                 <HexColorPicker color={pickerColor} onChange={handleColorChange} />
               </div>
             </div>
@@ -340,7 +320,7 @@ export default function ColorsPage() {
               label="Descripción"
             >
               <Input.TextArea 
-                placeholder="Descripción del color" 
+                placeholder="Descripción del color (opcional)" 
                 rows={2}
                 maxLength={200}
                 showCount

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 // Importaciones optimizadas de Ant Design para reducir el tamaño del bundle
-import Table from "antd/lib/table";
+
 import Button from "antd/lib/button";
 import Input from "antd/lib/input";
 import Modal from "antd/lib/modal";
@@ -19,7 +19,7 @@ import PlusOutlined from "@ant-design/icons/PlusOutlined";
 import EditOutlined from "@ant-design/icons/EditOutlined";
 import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
 import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
-import SearchOutlined from "@ant-design/icons/SearchOutlined";
+import CustomTable from '@/components/ui/CustomTable';
 import UploadOutlined from "@ant-design/icons/UploadOutlined";
 import UserOutlined from "@ant-design/icons/UserOutlined";
 import PhoneOutlined from "@ant-design/icons/PhoneOutlined";
@@ -176,19 +176,6 @@ const ActionCell = memo(({ record, onEdit, onDelete }: {
   </div>
 ));
 ActionCell.displayName = "ActionCell";
-
-// Componente de tabla memoizado para evitar re-renders innecesarios
-const UserTable = memo(({ customers, loading, columns, pagination }: any) => (
-  <Table
-    className="custom-table"
-    dataSource={customers}
-    columns={columns}
-    rowKey="id"
-    loading={loading}
-    pagination={pagination}
-  />
-));
-UserTable.displayName = "UserTable";
 
 const CustomersPage = () => {
   // Estados
@@ -666,44 +653,23 @@ const CustomersPage = () => {
   }), [page, pageSize, total]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white">Gestión de Usuarios</h1>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
-          onClick={() => openModal()} 
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          Nuevo Usuario
-        </Button>
-      </div>
-      
-      <div className="flex items-center justify-between mb-4">
-        <Input
-          prefix={<SearchOutlined style={{ color: '#aaa' }} />}
-          placeholder="Buscar usuario"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          allowClear
-          style={{ 
-            width: 250, 
-            background: '#1f2937', 
-            color: '#fff',
-            border: '1px solid #374151',
-            fontWeight: 500
-          }}
-        />
-      </div>
-      
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-        <UserTable 
-          customers={customers}
-          columns={columns}
-          loading={loading}
-          pagination={paginationConfig}
-        />
-      </div>
+    <div className="p-4 md:p-6 bg-gray-900 min-h-screen">
+      <CustomTable<Customer>
+        headerTitle="Gestión de Usuarios"
+        columns={columns}
+        dataSource={customers}
+        loading={loading}
+        rowKey="id"
+        totalRecords={total}
+        showAddButton={true}
+        onAddButtonClick={openModal}
+        addButtonLabel="Añadir Usuario"
+        showSearch={true}
+        onSearch={(value) => setSearchText(value)} // Conectar con el estado searchText y la lógica de fetch
+        searchPlaceholder="Buscar usuario..."
+        paginationConfig={paginationConfig}
+        containerClassName="mb-6" // Ajustar si es necesario, o quitar para usar el default
+      />
 
       <Modal
         title={editingCustomer ? "Editar Usuario" : "Nuevo Usuario"}

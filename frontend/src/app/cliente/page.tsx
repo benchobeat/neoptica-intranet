@@ -1,237 +1,363 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  User,
-  ShoppingBag,
-  Eye,
-  Calendar,
-  Bell,
-  Search,
-  ChevronDown,
-  LogOut,
-  Settings,
-  Receipt
-} from "lucide-react";
+import React from "react";
 import Image from "next/image";
+import {
+  Calendar,
+  FileText,
+  ShoppingBag,
+  Clock,
+  Eye,
+  Download,
+  PlusCircle,
+  MapPin,
+  Phone
+} from "lucide-react";
 
-// --- COMPONENTES DE UI (Consistentes con el resto de dashboards) ---
+// Componentes reutilizables
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-const Card = ({ children, className = "", ...props }: { children: React.ReactNode; className?: string; [key: string]: any }) => (
-  <div className={`bg-gray-800/50 border border-gray-700/50 rounded-xl shadow-lg ${className}`} {...props}>
+const Card = React.memo<CardProps>(({ children, className, ...props }) => (
+  <div className={`bg-slate-800 border border-slate-700 rounded-xl shadow-2xl transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-indigo-500/20 ${className || ''}`} {...props}>
     {children}
   </div>
-);
+));
+Card.displayName = "Card";
 
-const Button = ({ children, className = "", variant = "primary", icon: Icon, ...props }: { children: React.ReactNode; className?: string; variant?: "primary" | "secondary" | "danger"; icon?: React.ElementType; [key: string]: any }) => {
-    const baseClasses = "py-2 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none";
-    const variantClasses = {
-      primary: "bg-indigo-600 hover:bg-indigo-500 text-white focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500",
-      secondary: "bg-gray-700 hover:bg-gray-600 text-gray-200 focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-gray-500",
-      danger: "bg-red-600/20 hover:bg-red-600/40 text-red-400 focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-red-500",
-    };
+type ButtonVariant = "primary" | "secondary" | "success" | "danger" | "outline";
 
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+}
+
+const Button = React.memo<ButtonProps>(({ children, variant = "primary", className, ...props }) => {
+  const getVariantClasses = () => {
+    switch (variant) {
+      case "primary":
+        return "bg-indigo-600 hover:bg-indigo-700 text-white";
+      case "secondary":
+        return "bg-gray-700 hover:bg-gray-600 text-gray-100";
+      case "success":
+        return "bg-green-600 hover:bg-green-700 text-white";
+      case "danger":
+        return "bg-red-600 hover:bg-red-700 text-white";
+      case "outline":
+        return "bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-800";
+      default:
+        // Exhaustiveness check for variant
+        const _exhaustiveCheck: never = variant;
+        return "bg-indigo-600 hover:bg-indigo-700 text-white";
+    }
+  };
+  
   return (
-    <button className={`${baseClasses} ${variantClasses[variant]} ${className}`} {...props}>
-      {Icon && <Icon size={16} />}
+    <button 
+      className={`px-4 py-2 rounded-lg font-medium transition-colors ${getVariantClasses()} ${className || ''}`} 
+      {...props}
+    >
       {children}
     </button>
   );
+});
+Button.displayName = "Button";
+
+// Componente para las citas
+interface AppointmentCardProps {
+  date: string;
+  time: string;
+  doctor: string;
+  branch: string;
+  status: "completed" | "upcoming" | "cancelled" | string;
+}
+const AppointmentCard = ({ date, time, doctor, branch, status }: AppointmentCardProps) => {
+  const getStatusColor = () => {
+    switch (status) {
+      case "completed": return "bg-green-500 text-green-100";
+      case "upcoming": return "bg-blue-500 text-blue-100";
+      case "cancelled": return "bg-red-500 text-red-100";
+      default: return "bg-gray-500 text-gray-100";
+    }
+  };
+  
+  return (
+    <Card className="p-4 hover:bg-gray-800/80 transition-all">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2">
+          <Calendar className="text-indigo-400" size={18} />
+          <span className="font-medium text-white">{date}</span>
+        </div>
+        <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor()}`}>
+          {status === "completed" ? "Completada" : status === "upcoming" ? "Próxima" : "Cancelada"}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+        <Clock size={14} />
+        <span>{time}</span>
+      </div>
+      <div className="text-white font-medium mb-1">Dr. {doctor}</div>
+      <div className="flex items-center gap-2 text-gray-400 text-sm mb-3">
+        <MapPin size={14} />
+        <span>{branch}</span>
+      </div>
+      <div className="flex justify-between">
+        <Button 
+          variant={status === "completed" ? "secondary" : "primary"} 
+          className="text-sm px-3 py-1.5"
+        >
+          {status === "completed" ? "Ver detalles" : "Confirmar"}
+        </Button>
+        {status === "upcoming" && (
+          <Button variant="outline" className="text-sm px-3 py-1.5">
+            Reprogramar
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
 };
 
-// --- COMPONENTES DE LAYOUT (Consistentes con el resto de dashboards) ---
-
-const Sidebar = () => (
-  <aside className="w-64 bg-gray-900 text-gray-400 h-screen fixed top-0 left-0 flex flex-col border-r border-gray-800">
-    <div className="p-6 text-2xl font-bold text-white border-b border-gray-800 flex items-center gap-2">
-      <div className="bg-indigo-600 p-2 rounded-lg">
-        <Eye />
-      </div>
-      <span>Neóptica</span>
-    </div>
-    <nav className="flex-1 p-4 space-y-2">
-      <a href="#" className="flex items-center gap-3 py-2.5 px-4 rounded-lg bg-indigo-600/20 text-white transition-colors">
-        <User size={20} />
-        <span>Mi Perfil</span>
-      </a>
-      <a href="#" className="flex items-center gap-3 py-2.5 px-4 rounded-lg hover:bg-gray-800 transition-colors">
-        <Calendar size={20} />
-        <span>Mis Citas</span>
-      </a>
-      <a href="#" className="flex items-center gap-3 py-2.5 px-4 rounded-lg hover:bg-gray-800 transition-colors">
-        <Receipt size={20} />
-        <span>Mis Recetas</span>
-      </a>
-      <a href="#" className="flex items-center gap-3 py-2.5 px-4 rounded-lg hover:bg-gray-800 transition-colors">
-        <ShoppingBag size={20} />
-        <span>Mis Compras</span>
-      </a>
-    </nav>
-    <div className="p-4 border-t border-gray-800">
-      <div className="flex items-center gap-4">
-        <Image src="https://i.pravatar.cc/40?u=cliente" alt="Cliente" width={40} height={40} className="w-10 h-10 rounded-full" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-white">Juan Pérez</p>
-          <p className="text-xs text-gray-500">cliente@ejemplo.com</p>
-        </div>
-        <button 
-          className="text-gray-500 hover:text-white"
-          onClick={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('activeRole');
-            localStorage.removeItem('roles');
-            window.location.href = '/auth/login';
-          }}
-        >
-          <LogOut size={20} />
-        </button>
-      </div>
-    </div>
-  </aside>
-);
-
-const Header = () => (
-  <header className="bg-gray-900/60 backdrop-blur-md sticky top-0 z-10 p-4 flex justify-between items-center border-b border-gray-800">
-    <div className="relative">
-      <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-      <input
-        type="text"
-        placeholder="Buscar en mi cuenta..."
-        className="bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm w-80 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-      />
-    </div>
-    <div className="flex items-center space-x-6">
-      <button className="relative text-gray-400 hover:text-white transition-colors">
-        <Bell size={22} />
-      </button>
-      <div className="flex items-center space-x-3 cursor-pointer">
-        <Image src="https://i.pravatar.cc/40?u=cliente" alt="Usuario" width={40} height={40} className="w-10 h-10 rounded-full border-2 border-gray-700" />
-        <div className="text-sm text-right">
-          <span className="font-semibold text-white">Juan Pérez</span>
-          <p className="text-xs text-gray-500">Cliente</p>
-        </div>
-        <ChevronDown size={16} className="text-gray-500" />
-      </div>
-    </div>
-  </header>
-);
-
-// --- COMPONENTE PRINCIPAL DE LA PÁGINA DE CLIENTE ---
-
-export default function ClientePage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  
-  // Datos de ejemplo para el dashboard
-  const [citas] = useState([
-    { id: 1, fecha: "2025-06-10 15:30", tipo: "Examen de la vista", doctor: "Dra. Kathia Mena" },
-    { id: 2, fecha: "2025-07-15 10:00", tipo: "Seguimiento", doctor: "Dr. Carlos Suárez" },
-  ]);
-
-  const [recetas] = useState([
-    { id: 1, fecha: "2025-05-20", tipo: "Lentes de descanso", vigencia: "6 meses" },
-  ]);
-
-  useEffect(() => {
-    // Simulamos verificación de rol y carga de datos
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex bg-gray-900 text-white h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
-
+// Componente para las recetas
+interface PrescriptionCardProps {
+  date: string;
+  doctor: string;
+  type: string;
+  expiration: string;
+}
+const PrescriptionCard = ({ date, doctor, type, expiration }: PrescriptionCardProps) => {
   return (
-    <div className="flex bg-gray-900 text-white">
-      <Sidebar />
-      <main className="ml-64 flex-1 min-h-screen">
-        <Header />
-        <div className="p-8 space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Mi Cuenta</h1>
-            <p className="text-gray-400 mt-1">Bienvenido a tu área personal, Juan</p>
+    <Card className="p-4 hover:bg-gray-800/80 transition-all">
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-2">
+          <FileText className="text-indigo-400" size={18} />
+          <span className="font-medium text-white">{type}</span>
+        </div>
+        <Button variant="outline" className="p-1.5">
+          <Eye size={18} />
+        </Button>
+      </div>
+      <div className="text-sm text-gray-400 mb-1">Dr. {doctor}</div>
+      <div className="text-sm text-gray-400 mb-3">Expedida: {date}</div>
+      <div className="flex justify-between items-center">
+        <div className="text-xs text-gray-500">
+          Válida hasta: {expiration}
+        </div>
+        <Button variant="outline" className="text-sm px-3 py-1.5 flex items-center gap-1.5">
+          <Download size={16} />
+          PDF
+        </Button>
+      </div>
+    </Card>
+  );
+};
+
+// Componente para las compras
+interface PurchaseCardProps {
+  date: string;
+  items: string[];
+  total: string | number;
+  status: "entregado" | "en preparación" | string;
+  image: string;
+}
+const PurchaseCard = ({ date, items, total, status, image }: PurchaseCardProps) => {
+  return (
+    <Card className="p-4 hover:bg-gray-800/80 transition-all">
+      <div className="flex gap-3">
+        <div className="w-16 h-16 relative rounded-lg overflow-hidden flex-shrink-0">
+          <Image 
+            src={image} 
+            alt="Producto"
+            layout="fill"
+            objectFit="cover"
+            className="rounded-lg"
+          />
+        </div>
+        <div className="flex-1">
+          <div className="flex justify-between">
+            <div className="text-white font-medium mb-1">Compra #{items.length} productos</div>
+            <div className="text-white font-bold">${total}</div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Próximas Citas */}
-            <Card>
-              <div className="p-6 border-b border-gray-700/50">
-                <h3 className="text-lg font-semibold text-white">Próximas Citas</h3>
-              </div>
-              <div className="p-6">
-                {citas.length > 0 ? (
-                  <ul className="space-y-4">
-                    {citas.map((cita) => (
-                      <li key={cita.id} className="border border-gray-700/30 rounded-lg p-4">
-                        <div className="flex justify-between">
-                          <p className="font-medium text-white">{cita.tipo}</p>
-                          <span className="text-xs bg-indigo-600/20 text-indigo-300 px-2 py-1 rounded">
-                            {new Date(cita.fecha).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-400 mt-2">Doctor: {cita.doctor}</p>
-                        <p className="text-sm text-gray-400">
-                          Hora: {new Date(cita.fecha).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No tienes citas programadas</p>
-                    <Button variant="primary" className="mt-4">
-                      Solicitar una cita
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Recetas Activas */}
-            <Card>
-              <div className="p-6 border-b border-gray-700/50">
-                <h3 className="text-lg font-semibold text-white">Recetas Activas</h3>
-              </div>
-              <div className="p-6">
-                {recetas.length > 0 ? (
-                  <ul className="space-y-4">
-                    {recetas.map((receta) => (
-                      <li key={receta.id} className="border border-gray-700/30 rounded-lg p-4">
-                        <div className="flex justify-between">
-                          <p className="font-medium text-white">{receta.tipo}</p>
-                          <span className="text-xs bg-green-600/20 text-green-300 px-2 py-1 rounded">
-                            Vigente
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-400 mt-2">
-                          Fecha: {receta.fecha}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          Vigencia: {receta.vigencia}
-                        </p>
-                        <button className="text-indigo-400 text-sm mt-3 flex items-center gap-1 hover:text-indigo-300">
-                          <Eye size={14} /> Ver receta
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No tienes recetas activas</p>
-                  </div>
-                )}
-              </div>
-            </Card>
+          <div className="text-sm text-gray-400 mb-1">{date}</div>
+          <div className="text-sm text-gray-400 mb-3">
+            {items.map((item, i) => (
+              <span key={i}>
+                {item}{i < items.length - 1 ? ", " : ""}
+              </span>
+            ))}
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${status === "entregado" ? "bg-green-500" : "bg-yellow-500"}`}></span>
+              <span className="text-xs text-gray-400">
+                {status === "entregado" ? "Entregado" : "En preparación"}
+              </span>
+            </div>
+            <Button variant="outline" className="text-sm px-3 py-1.5">
+              Detalles
+            </Button>
           </div>
         </div>
-      </main>
+      </div>
+    </Card>
+  );
+};
+
+export default function ClienteDashboardPage() {
+  // Datos de ejemplo
+  const appointments = [
+    {
+      id: 1,
+      date: "15 Mayo, 2025",
+      time: "10:30 AM",
+      doctor: "Carlos Ramírez",
+      branch: "Sucursal Centro",
+      status: "upcoming"
+    },
+    {
+      id: 2,
+      date: "3 Abril, 2025",
+      time: "11:00 AM",
+      doctor: "Laura Sánchez",
+      branch: "Sucursal Norte",
+      status: "completed"
+    }
+  ];
+  
+  const prescriptions = [
+    {
+      id: 1,
+      date: "3 Abril, 2025",
+      doctor: "Laura Sánchez",
+      type: "Lentes graduados",
+      expiration: "3 Abril, 2026"
+    },
+    {
+      id: 2,
+      date: "10 Enero, 2025",
+      doctor: "Carlos Ramírez",
+      type: "Lentes de contacto",
+      expiration: "10 Enero, 2026"
+    }
+  ];
+  
+  const purchases = [
+    {
+      id: 1,
+      date: "5 Mayo, 2025",
+      items: ["Lentes Ray-Ban Aviator", "Estuche protector"],
+      total: 2450,
+      status: "preparación",
+      image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?q=80&w=1760&auto=format&fit=crop"
+    },
+    {
+      id: 2,
+      date: "15 Marzo, 2025",
+      items: ["Lentes de contacto Acuvue", "Solución limpiadora"],
+      total: 850,
+      status: "entregado",
+      image: "https://images.unsplash.com/photo-1587333284936-47df3ab415a2?q=80&w=1631&auto=format&fit=crop"
+    }
+  ];
+  
+  return (
+    <div className="p-8 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-white">Mi Cuenta</h1>
+        <p className="text-gray-400 mt-1">Bienvenido a tu panel personal</p>
+      </div>
+      
+      {/* Resumen del perfil */}
+      <Card className="p-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+          <div className="w-24 h-24 relative rounded-full overflow-hidden border-4 border-indigo-600">
+            <Image 
+              src="https://i.pravatar.cc/200?u=cliente" 
+              alt="Foto de perfil"
+              layout="fill"
+              objectFit="cover"
+            />
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <h2 className="text-2xl font-bold text-white">Juan Pérez</h2>
+            <p className="text-gray-400">Cliente desde: Enero 2025</p>
+            <div className="flex flex-col md:flex-row gap-4 mt-4">
+              <div>
+                <p className="text-sm text-gray-500">Correo electrónico</p>
+                <p className="text-white">juanperez@example.com</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Teléfono</p>
+                <p className="text-white">+52 55 1234 5678</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Button className="flex items-center gap-2">
+              <PlusCircle size={16} />
+              Nueva cita
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Phone size={16} />
+              Contactar
+            </Button>
+          </div>
+        </div>
+      </Card>
+      
+      {/* Secciones principales */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Citas */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-white">Mis Citas</h2>
+            <Button variant="outline" className="text-xs py-1 px-2">Ver todas</Button>
+          </div>
+          {appointments.map(appointment => (
+            <AppointmentCard 
+              key={appointment.id}
+              date={appointment.date}
+              time={appointment.time}
+              doctor={appointment.doctor}
+              branch={appointment.branch}
+              status={appointment.status}
+            />
+          ))}
+        </div>
+        
+        {/* Recetas */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-white">Mis Recetas</h2>
+            <Button variant="outline" className="text-xs py-1 px-2">Ver todas</Button>
+          </div>
+          {prescriptions.map(prescription => (
+            <PrescriptionCard 
+              key={prescription.id}
+              date={prescription.date}
+              doctor={prescription.doctor}
+              type={prescription.type}
+              expiration={prescription.expiration}
+            />
+          ))}
+        </div>
+        
+        {/* Compras */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-white">Mis Compras</h2>
+            <Button variant="outline" className="text-xs py-1 px-2">Ver todas</Button>
+          </div>
+          {purchases.map(purchase => (
+            <PurchaseCard 
+              key={purchase.id}
+              date={purchase.date}
+              items={purchase.items}
+              total={purchase.total}
+              status={purchase.status}
+              image={purchase.image}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

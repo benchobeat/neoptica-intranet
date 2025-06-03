@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import dynamic from "next/dynamic";
-import "../shared/dark-table.css";
+import CustomTable from "@/components/ui/CustomTable";
 
 // Importaciones selectivas de Ant Design para reducir el tamaño del bundle
-import Table from "antd/lib/table";
 import Button from "antd/lib/button";
 import Input from "antd/lib/input";
 // Modal importado dinámicamente para reducir el bundle inicial
@@ -25,7 +24,6 @@ import PlusOutlined from "@ant-design/icons/PlusOutlined";
 import EditOutlined from "@ant-design/icons/EditOutlined";
 import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
 import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
-import SearchOutlined from "@ant-design/icons/SearchOutlined";
 import LinkOutlined from "@ant-design/icons/LinkOutlined";
 
 // Servicios y tipos
@@ -217,58 +215,41 @@ export default function BrandsPage() {
   ], [handleCancel, handleSubmit, editingBrand, loading]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white">Gestión de Marcas</h1>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={() => showModal()}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          Nueva Marca
-        </Button>
-      </div>
+    <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
+      <CustomTable<Marca>
+        columns={columns}
+        dataSource={brands}
+        loading={loading}
+        rowKey="id"
+        headerTitle="Gestión de Marcas"
+        showAddButton={true}
+        onAddButtonClick={() => showModal()}
+        addButtonLabel="Nueva Marca"
+        showSearch={true}
+        onSearch={setSearchText}
+        searchPlaceholder="Buscar marca..."
+        paginationConfig={{
+          current: page,
+          pageSize: pageSize,
+          total: total,
+          onChange: (newPage, newPageSize) => {
+            setPage(newPage);
+            if (newPageSize) setPageSize(newPageSize);
+          },
+          showSizeChanger: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} marcas`,
+        }}
+        tableProps={{
+        }}
+      />
 
-      <div className="flex items-center justify-between mb-4">
-        <Input
-          prefix={<SearchOutlined style={{ color: '#aaa' }} />}
-          placeholder="Buscar marca"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ maxWidth: 300 }}
-          allowClear
-        />
-      </div>
-
-      <div className="relative">
-        <Table
-          className="custom-table"
-          columns={columns}
-          dataSource={brands}
-          rowKey="id"
-          loading={loading}
-          pagination={useMemo(() => ({
-            current: page,
-            pageSize: pageSize,
-            total: total,
-            onChange: (page: number, pageSize: number | undefined) => {
-              setPage(page);
-              if (pageSize) setPageSize(pageSize);
-            },
-            showSizeChanger: true,
-            showTotal: (total: number, range: number[]) => `${range[0]}-${range[1]} de ${total} marcas`,
-          }), [page, pageSize, total])}
-        />
-      </div>
-
-      {/* Solo renderizamos el Modal cuando modalVisible es true */}
       {modalVisible && (
         <Modal
           title={editingBrand ? "Editar Marca" : "Nueva Marca"}
           open={modalVisible}
           onCancel={handleCancel}
           footer={modalFooter}
+          width={600} 
         >
           <Form form={form} layout="vertical">
             <Form.Item
@@ -299,64 +280,16 @@ export default function BrandsPage() {
               label="Sitio Web"
               rules={[
                 { 
-                  pattern: /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/, 
+                  pattern: /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/, 
                   message: "Por favor ingresa una URL válida" 
                 },
               ]}
             >
               <Input placeholder="https://ejemplo.com" />
             </Form.Item>
-            
-            {/* Campo de logo eliminado para la versión actual */}
           </Form>
         </Modal>
       )}
-
-      {/* Estilos personalizados para tablas en modo oscuro */}
-      <style jsx global>{`
-        .custom-table .ant-table {
-          background-color: transparent;
-          color: white;
-        }
-        .custom-table .ant-table-thead > tr > th {
-          background-color: rgba(31, 41, 55, 0.7);
-          color: white;
-          border-bottom: 1px solid #374151;
-        }
-        .custom-table .ant-table-tbody > tr > td {
-          border-bottom: 1px solid #374151;
-          color: #e5e7eb;
-        }
-        .custom-table .ant-table-tbody > tr:hover > td {
-          background-color: rgba(55, 65, 81, 0.3);
-        }
-        .custom-table .ant-empty-description {
-          color: #9ca3af;
-        }
-        .custom-table .ant-table-pagination .ant-pagination-item-link,
-        .custom-table .ant-pagination-item a {
-          color: #e5e7eb;
-        }
-        .custom-table .ant-pagination-item-active {
-          background-color: #3730a3;
-          border-color: #3730a3;
-        }
-        .custom-table .ant-pagination-item-active a {
-          color: white;
-        }
-        .custom-table .ant-pagination-item:hover {
-          border-color: #6366f1;
-        }
-        .custom-table .ant-pagination-item:hover a {
-          color: #6366f1;
-        }
-        .custom-table .ant-table-column-sorter {
-          color: #9ca3af;
-        }
-        .custom-table .ant-table-column-sort {
-          background-color: rgba(31, 41, 55, 0.7);
-        }
-      `}</style>
     </div>
   );
 }
