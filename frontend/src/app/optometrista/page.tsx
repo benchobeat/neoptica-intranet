@@ -14,14 +14,25 @@ import {
 } from "lucide-react";
 
 // Componentes reutilizables
-const Card = React.memo(({ children, className = "", ...props }) => (
+type CardProps = React.PropsWithChildren<{
+  className?: string;
+  [key: string]: any;
+}>;
+
+const Card = React.memo(({ children, className = "", ...props }: CardProps) => (
   <div className={`bg-gray-800/50 border border-gray-700/50 rounded-xl shadow-lg ${className}`} {...props}>
     {children}
   </div>
 ));
 Card.displayName = "Card";
 
-const Button = React.memo(({ children, variant = "primary", className = "", ...props }) => {
+type ButtonProps = React.PropsWithChildren<{
+  variant?: "primary" | "secondary" | "success" | "danger";
+  className?: string;
+  [key: string]: any;
+}>;
+
+const Button = React.memo(({ children, variant = "primary", className = "", ...props }: ButtonProps) => {
   const getVariantClasses = () => {
     switch (variant) {
       case "primary":
@@ -61,12 +72,12 @@ const RecipeForm = () => {
     notes: ""
   });
   
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // Aquí se enviaría la receta al backend
     console.log("Receta enviada:", formData);
@@ -190,7 +201,14 @@ const RecipeForm = () => {
 };
 
 // Componente para citas del día
-const AppointmentItem = ({ patient, time, type, status }) => {
+type AppointmentItemProps = {
+  patient: string;
+  time: string;
+  type: string;
+  status: "completed" | "pending" | "upcoming" | string;
+};
+
+const AppointmentItem = ({ patient, time, type, status }: AppointmentItemProps) => {
   const getStatusColor = () => {
     switch (status) {
       case "completed": return "bg-green-500";

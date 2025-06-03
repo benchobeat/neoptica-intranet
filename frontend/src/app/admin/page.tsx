@@ -19,14 +19,27 @@ import {
 import Link from "next/link";
 
 // Componentes reutilizables para el dashboard memoizados para mejorar rendimiento
-const Card = React.memo(({ children, className = "", ...props }) => (
+type CardProps = React.PropsWithChildren<{
+  className?: string;
+  [key: string]: any;
+}>;
+
+const Card = React.memo(({ children, className = "", ...props }: CardProps) => (
   <div className={`bg-gray-800/50 border border-gray-700/50 rounded-xl shadow-lg ${className}`} {...props}>
     {children}
   </div>
 ));
 Card.displayName = "Card";
 
-const StatCard = React.memo(({ title, value, icon: Icon, change, changeType }) => (
+type StatCardProps = {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  change: string;
+  changeType: "increase" | "decrease";
+};
+
+const StatCard = React.memo(({ title, value, icon: Icon, change, changeType }: StatCardProps) => (
   <Card className="p-5 hover:bg-gray-800 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
     <div className="flex justify-between items-center mb-2">
       <h3 className="text-sm font-medium text-gray-400">{title}</h3>
@@ -47,7 +60,14 @@ const StatCard = React.memo(({ title, value, icon: Icon, change, changeType }) =
 ));
 StatCard.displayName = "StatCard";
 
-const ActivityItem = React.memo(({ icon: Icon, title, description, time }) => (
+type ActivityItemProps = {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  time: string;
+};
+
+const ActivityItem = React.memo(({ icon: Icon, title, description, time }: ActivityItemProps) => (
   <div className="flex items-start gap-4 py-3">
     <div className="bg-gray-800 p-2 rounded-lg">
       <Icon size={16} className="text-indigo-500" />

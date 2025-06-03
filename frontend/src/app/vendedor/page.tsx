@@ -20,14 +20,25 @@ import {
 import Image from "next/image";
 
 // Componentes reutilizables
-const Card = React.memo(({ children, className = "", ...props }) => (
+type CardProps = React.PropsWithChildren<{
+  className?: string;
+  [key: string]: any;
+}>;
+
+const Card = React.memo(({ children, className = "", ...props }: CardProps) => (
   <div className={`bg-gray-800/50 border border-gray-700/50 rounded-xl shadow-lg ${className}`} {...props}>
     {children}
   </div>
 ));
 Card.displayName = "Card";
 
-const Button = React.memo(({ children, variant = "primary", className = "", ...props }) => {
+type ButtonProps = React.PropsWithChildren<{
+  variant?: "primary" | "secondary" | "success" | "danger" | "outline";
+  className?: string;
+  [key: string]: any;
+}>;
+
+const Button = React.memo(({ children, variant = "primary", className = "", ...props }: ButtonProps) => {
   const getVariantClasses = () => {
     switch (variant) {
       case "primary":
@@ -57,7 +68,21 @@ const Button = React.memo(({ children, variant = "primary", className = "", ...p
 Button.displayName = "Button";
 
 // Componente para los elementos de productos
-const ProductItem = ({ product }) => {
+type Product = {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  sku: string;
+  image: string;
+};
+
+type ProductItemProps = {
+  product: Product;
+};
+
+const ProductItem = ({ product }: ProductItemProps) => {
   return (
     <div className="flex items-center space-x-4 p-3 hover:bg-gray-800 rounded-lg transition-colors">
       <div className="flex-shrink-0 w-12 h-12 relative rounded-lg overflow-hidden">
@@ -82,7 +107,20 @@ const ProductItem = ({ product }) => {
 };
 
 // Componente para los elementos de ventas recientes
-const SaleItem = ({ sale }) => {
+type Sale = {
+  id: number;
+  customer: string;
+  items: number;
+  total: number;
+  date: string;
+  status: string;
+};
+
+type SaleItemProps = {
+  sale: Sale;
+};
+
+const SaleItem = ({ sale }: SaleItemProps) => {
   return (
     <div className="flex items-center space-x-4 p-3 hover:bg-gray-800 rounded-lg transition-colors">
       <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
