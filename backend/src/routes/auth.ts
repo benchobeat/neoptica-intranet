@@ -6,8 +6,9 @@ import { login, forgotPassword, resetPassword } from '@/controllers/authControll
 const router = Router();
 
 function issueJWT(user: any) {
+  const roles = user.usuario_rol?.map(ur => ur.rol.nombre) || ['cliente'];
   return jwt.sign(
-    { id: user.id, email: user.email, rol: user.usuario_rol?.[0]?.rol?.nombre || 'cliente' },
+    { id: user.id, email: user.email, roles },
     process.env.JWT_SECRET!,
     { expiresIn: '7d' }
   );

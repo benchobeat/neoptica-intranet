@@ -1,4 +1,5 @@
 // Configuración de los elementos del menú para cada rol
+import React from 'react';
 import { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -27,7 +28,7 @@ import {
 export interface MenuItem {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<any>; // Cambio de LucideIcon a un tipo más genérico
   path: string;
   roles: string[];
   children?: MenuItem[];
@@ -117,14 +118,7 @@ export const adminMenuItems: MenuItem[] = [
     id: 'usuarios',
     label: 'Usuarios y Roles',
     icon: User,
-    path: '/dashboard/usuarios',
-    roles: ['admin'],
-  },
-  {
-    id: 'clientes',
-    label: 'Clientes',
-    icon: User,
-    path: '/dashboard/clientes',
+    path: '/admin/users',
     roles: ['admin'],
   },
   {

@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 export const crearColor = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
   const userId = (req as any).usuario?.id || (req as any).user?.id;
-  console.log('Body recibido en crearColor:', req.body);
+  // console.log('Body recibido en crearColor:', req.body);
   try {
     const { nombre, descripcion, activo, codigo_hex } = req.body;
 
@@ -173,7 +173,7 @@ export const listarColores = async (req: Request, res: Response) => {
         contains: searchTerm.trim(),
         mode: 'insensitive' // Búsqueda case-insensitive
       };
-      console.log(`Buscando colores que contengan: "${searchTerm}"`); 
+      // console.log(`Buscando colores que contengan: "${searchTerm}"`); 
     }
     
     // Buscar colores según filtros y ordenar alfabéticamente
@@ -265,7 +265,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
         contains: searchTerm.trim(),
         mode: 'insensitive' // Búsqueda case-insensitive
       };
-      console.log(`Buscando colores paginados que contengan: "${searchTerm}"`);
+      // console.log(`Buscando colores paginados que contengan: "${searchTerm}"`);
     }
     
     // Ejecutar consulta con count para obtener total

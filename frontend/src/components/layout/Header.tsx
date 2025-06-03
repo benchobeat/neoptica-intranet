@@ -2,16 +2,32 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Bell, Search, ChevronDown, LogOut, Settings, User } from 'lucide-react';
-import Image from 'next/image';
+import { Bell, Search, ChevronDown, LogOut, Settings, User, UserCircle2 } from 'lucide-react';
 
 interface HeaderProps {
   className?: string;
+  role?: string;
 }
 
-export function Header({ className = "" }: HeaderProps) {
+export function Header({ className = "", role = "admin" }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  
+  // Obtener la etiqueta del rol para mostrar en el header
+  const getRoleLabel = (role: string): string => {
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'vendedor':
+        return 'Vendedor';
+      case 'optometrista':
+        return 'Optometrista';
+      case 'cliente':
+        return 'Cliente';
+      default:
+        return 'Invitado';
+    }
+  };
   
   // Notificaciones de ejemplo
   const notifications = [
@@ -88,16 +104,10 @@ export function Header({ className = "" }: HeaderProps) {
             className="flex items-center space-x-3 cursor-pointer"
             onClick={() => setShowUserMenu(!showUserMenu)}
           >
-            <Image 
-              src="https://i.pravatar.cc/40?u=admin" 
-              alt="Usuario" 
-              width={40} 
-              height={40} 
-              className="w-10 h-10 rounded-full border-2 border-gray-700" 
-            />
+            <UserCircle2 size={40} className="w-10 h-10 text-gray-400" />
             <div className="text-sm text-right">
-              <span className="font-semibold text-white">Admin</span>
-              <p className="text-xs text-gray-500">Administrador</p>
+              <span className="font-semibold text-white">{role.charAt(0).toUpperCase() + role.slice(1)}</span>
+              <p className="text-xs text-gray-500">{getRoleLabel(role)}</p>
             </div>
             <ChevronDown 
               size={16} 
@@ -129,7 +139,8 @@ export function Header({ className = "" }: HeaderProps) {
                 <button 
                   onClick={() => {
                     localStorage.removeItem('token');
-                    localStorage.removeItem('role');
+                    localStorage.removeItem('activeRole');
+                    localStorage.removeItem('roles');
                     window.location.href = '/auth/login';
                   }}
                   className="flex items-center gap-2 p-3 hover:bg-gray-700 transition-colors text-sm text-gray-300 w-full text-left border-t border-gray-700"

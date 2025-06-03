@@ -29,7 +29,7 @@ export async function listarUsuarios(
       email: usuario.email,
       telefono: usuario.telefono,
       activo: usuario.activo,
-      rol: usuario.usuario_rol?.[0]?.rol?.nombre || "usuario",
+      roles: usuario.usuario_rol.map(ur => ur.rol.nombre),
     }));
 
     // Registrar auditoría de consulta de usuarios
@@ -49,6 +49,101 @@ export async function listarUsuarios(
     res.status(500).json(fail(errorMessage));
   }
 }
+
+export const listarUsuariosPaginados = async (req: Request, res: Response) => {
+  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  try {
+    // Extraer parámetros de paginación y búsqueda
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const searchText = (req.query.searchText as string) || "";
+    
+    // Calcular offset para la paginación
+    const skip = (page - 1) * pageSize;
+    
+    // Preparar filtros
+    const filtro: any = {
+      anulado_en: null, // Solo marcas no anuladas (soft delete)
+    };
+    
+    // Filtro adicional por nombre_completo si se proporciona en la búsqueda
+    if (searchText) {
+      filtro.nombre_completo = {
+        contains: searchText,
+        mode: 'insensitive'
+      };
+    }
+    
+    // Filtro adicional por activo si se proporciona en la consulta
+    if (req.query.activo !== undefined) {
+      filtro.activo = req.query.activo === 'true';
+    }
+    
+    // Consulta para obtener el total de registros
+    const total = await prisma.usuario.count({
+      where: filtro
+    });
+    
+    // Buscar usuarios según filtros, con paginación y ordenar alfabéticamente
+    const usuarios = await prisma.usuario.findMany({
+      where: filtro,
+      orderBy: {
+        nombre_completo: 'asc', // Ordenar alfabéticamente
+      },
+      skip,
+      take: pageSize,
+      include: {
+        usuario_rol: { include: { rol: true } }
+      }
+    });
+    
+    // Mapear usuarios para incluir sus roles
+    const usuariosConRoles = usuarios.map(usuario => ({
+      ...usuario,
+      roles: usuario.usuario_rol.map(ur => ur.rol.nombre)
+    }));
+    
+    // Registrar auditoría de listado exitoso
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_usuarios_paginados',
+      descripcion: `Se listaron ${usuarios.length} usuarios (página ${page})`,
+      ip: req.ip,
+      entidadTipo: 'usuario',
+      modulo: 'usuarios',
+    });
+    
+    return res.status(200).json({ 
+      ok: true, 
+      data: {
+        items: usuariosConRoles,
+        total,
+        page,
+        pageSize
+      }, 
+      error: null 
+    });
+  } catch (error: any) {
+    // console.error('Error al listar usuarios paginados:', error);
+    
+    // Registrar auditoría de error
+    await registrarAuditoria({
+      usuarioId: userId,
+      accion: 'listar_usuarios_paginados_fallido',
+      descripcion: error.message || 'Error desconocido',
+      ip: req.ip,
+      entidadTipo: 'usuario',
+      modulo: 'usuarios',
+    });
+    
+    return res.status(500).json({ 
+      ok: false, 
+      data: null, 
+      error: 'Ocurrió un error al obtener el listado paginado de usuarios.' 
+    });
+  }
+};
+
 
 /**
  * Obtiene un usuario por ID (sin exponer password)
@@ -77,7 +172,7 @@ export async function obtenerUsuario(
       email: usuario.email,
       telefono: usuario.telefono,
       activo: usuario.activo,
-      rol: usuario.usuario_rol?.[0]?.rol?.nombre || "usuario",
+      roles: usuario.usuario_rol.map(ur => ur.rol.nombre),
     };
 
     // Registrar auditoría de consulta de usuario
@@ -118,7 +213,7 @@ function telefonoValido(telefono: string): boolean {
 }
 
 export async function crearUsuario(req: Request, res: Response): Promise<void> {
-  const { nombre_completo, email, password, telefono, rol } = req.body;
+  const { nombre_completo, email, password, telefono, roles } = req.body;
   const usuarioId = (req as any).user?.id || "sistema";
   let mensajeError = "";
 
@@ -182,8 +277,12 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Control de acceso (solo admin)
-  if ((req as any).user?.rol !== "admin") {
+  // Control de acceso (solo admin multi-rol)
+  const userRoles = (req as any).user?.roles || [];
+  const esAdmin = Array.isArray(userRoles) && userRoles.includes("admin");
+  // console.log(`[DEBUG] Roles del usuario: ${JSON.stringify(userRoles)}`);
+  // console.log(`[DEBUG] Es admin: ${esAdmin}`);
+  if (!esAdmin) {
     mensajeError = "Solo admin puede crear usuarios";
     res.status(403).json(fail(mensajeError));
     await registrarAuditoria({
@@ -217,13 +316,14 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     // Hashear password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Rol a asignar: el que viene en el request, o "cliente" por defecto
-    const rolAsignar = rol || "cliente";
-    const rolObj = await prisma.rol.findUnique({
-      where: { nombre: rolAsignar },
+    // Definir roles a asignar
+    let rolesAsignar = Array.isArray(roles) && roles.length > 0 ? roles : ["cliente"];
+    // Validar que todos los roles existen
+    const rolesDb = await prisma.rol.findMany({
+      where: { nombre: { in: rolesAsignar } }
     });
-    if (!rolObj) {
-      mensajeError = "El rol especificado no existe";
+    if (rolesDb.length !== rolesAsignar.length) {
+      mensajeError = "Uno o más roles especificados no existen";
       res.status(400).json(fail(mensajeError));
       await registrarAuditoria({
         usuarioId,
@@ -235,7 +335,6 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       });
       return;
     }
-
     // Crear usuario
     const usuario = await prisma.usuario.create({
       data: {
@@ -246,22 +345,20 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
         activo: true,
         creado_en: new Date(),
         creado_por: usuarioId,
+        usuario_rol: {
+          create: rolesDb.map(r => ({ rol_id: r.id }))
+        }
       },
-    });
-
-    // Asocia el usuario al rol solicitado
-    await prisma.usuario_rol.create({
-      data: {
-        usuario_id: usuario.id,
-        rol_id: rolObj.id,
-      },
+      include: {
+        usuario_rol: { include: { rol: true } }
+      }
     });
 
     // Registrar auditoría con el rol en la descripción
     await registrarAuditoria({
       usuarioId,
       accion: "crear_usuario_exitoso",
-      descripcion: `Usuario creado: ${usuario.email} (rol: ${rolObj.nombre})`,
+      descripcion: `Usuario creado: ${usuario.email} (roles: ${usuario.usuario_rol.map(ur => ur.rol.nombre).join(", ")})`,
       ip: req.ip,
       entidadTipo: "usuario",
       entidadId: usuario.id,
@@ -276,7 +373,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
         email: usuario.email,
         telefono: usuario.telefono,
         activo: usuario.activo,
-        rol: rolObj.nombre,
+        roles: usuario.usuario_rol.map(ur => ur.rol.nombre),
       })
     );
   } catch (err) {
@@ -302,10 +399,11 @@ export async function actualizarUsuario(
 ): Promise<void> {
   const { id } = req.params;
   const usuarioId = (req as any).user?.id || "sistema";
-  const userRol = (req as any).user?.rol;
+  const userRoles = (req as any).user?.roles || [];
   // Control de acceso: solo admin o self
   // Control de acceso: solo admin o self
-  if (userRol !== 'admin' && usuarioId !== id) {
+  const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
+  if (!esAdmin && usuarioId !== id) {
     // Mensaje debe contener la palabra 'admin' para que los tests lo reconozcan
     res.status(403).json(fail('Acceso denegado: solo admin puede modificar usuarios'));
     return;
@@ -416,17 +514,16 @@ export async function actualizarUsuario(
       cambios.push(`dni: "${usuario.dni || ""}" → "${nuevoDni || ""}"`);
     }
 
-    // Validación de rol si se quiere actualizar
-    if (req.body.rol) {
+    // Validación de roles si se quiere actualizar (multirol)
+    if (req.body.roles) {
       // Solo los administradores pueden cambiar roles de usuario
-      if (userRol !== 'admin') {
-        // Mensaje debe contener 'admin' para que el test lo reconozca
+      if (!esAdmin) {
         res.status(403).json(fail('Acceso denegado: solo admin puede modificar roles de usuario'));
         return;
       }
-      const rolObj = await prisma.rol.findUnique({ where: { nombre: req.body.rol } });
-      if (!rolObj) {
-        mensajeError = "El rol especificado no existe";
+      const rolesNuevos = req.body.roles;
+      if (!Array.isArray(rolesNuevos) || rolesNuevos.length === 0) {
+        mensajeError = "Debes enviar un array de roles válido";
         res.status(400).json(fail(mensajeError));
         await registrarAuditoria({
           usuarioId,
@@ -439,11 +536,37 @@ export async function actualizarUsuario(
         });
         return;
       }
-      // Actualiza el rol si es válido
-      await prisma.usuario_rol.updateMany({
-        where: { usuario_id: usuario.id },
-        data: { rol_id: rolObj.id },
-      });
+      // Validar que todos los roles existen
+      const rolesDb = await prisma.rol.findMany({ where: { nombre: { in: rolesNuevos } } });
+      if (rolesDb.length !== rolesNuevos.length) {
+        mensajeError = "Uno o más roles especificados no existen";
+        res.status(400).json(fail(mensajeError));
+        await registrarAuditoria({
+          usuarioId,
+          accion: "modificar_usuario_fallido",
+          descripcion: mensajeError,
+          ip: req.ip,
+          entidadTipo: "usuario",
+          entidadId: id,
+          modulo: "usuarios",
+        });
+        return;
+      }
+      // Obtener ids actuales y nuevos
+      const nuevosIds = rolesDb.map(r => r.id);
+      const actuales = await prisma.usuario_rol.findMany({ where: { usuario_id: id } });
+      const actualesIds = actuales.map(ur => ur.rol_id);
+      // Eliminar los que ya no estén
+      const aEliminar = actualesIds.filter(rolId => !nuevosIds.includes(rolId));
+      if (aEliminar.length > 0) {
+        await prisma.usuario_rol.deleteMany({ where: { usuario_id: id, rol_id: { in: aEliminar } } });
+      }
+      // Agregar los nuevos
+      const aAgregar = nuevosIds.filter(rolId => !actualesIds.includes(rolId));
+      if (aAgregar.length > 0) {
+        await prisma.usuario_rol.createMany({ data: aAgregar.map(rol_id => ({ usuario_id: id, rol_id })) });
+      }
+      cambios.push(`roles: [${actualesIds.join(",")}] → [${nuevosIds.join(",")}]`);
     }
 
     // Actualiza el usuario
@@ -457,6 +580,9 @@ export async function actualizarUsuario(
         modificado_en: new Date(),
         modificado_por: usuarioId,
       },
+      include: {
+        usuario_rol: { include: { rol: true } }
+      }
     });
 
     await registrarAuditoria({
@@ -477,6 +603,7 @@ export async function actualizarUsuario(
         telefono: usuarioActualizado.telefono,
         dni: usuarioActualizado.dni,
         activo: usuarioActualizado.activo,
+        roles: usuarioActualizado.usuario_rol.map(ur => ur.rol.nombre),
       })
     );
   } catch (err) {
@@ -494,6 +621,179 @@ export async function actualizarUsuario(
   }
 }
 
+
+// En usuarioController.ts
+
+/**
+ * Permite a un usuario modificar su propio perfil (nombre, telefono, direccion, dni solo si está null)
+ */
+/**
+ * Permite a un usuario modificar su propio perfil (nombre, telefono, direccion, dni solo si está null)
+ * No permite modificar roles ni email para evitar escalada de privilegios
+ */
+export async function actualizarPerfilUsuario(req: Request, res: Response): Promise<void> {
+  const usuarioId = (req as any).user?.id || "sistema";
+  const { nombre_completo, telefono, direccion, dni, roles, email } = req.body;
+  
+  // Rechazar intentos de cambiar roles
+  if (roles !== undefined) {
+    res.status(403).json(fail('Acceso denegado: no puedes modificar tus propios roles'));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "modificar_perfil_fallido",
+      descripcion: "Intento de modificar roles propios",
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: usuarioId,
+      modulo: "usuarios",
+    });
+    return;
+  }
+  
+  // Rechazar intentos de cambiar email (por seguridad)
+  if (email !== undefined) {
+    res.status(403).json(fail('No puedes modificar tu email desde este endpoint por seguridad'));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "modificar_perfil_fallido",
+      descripcion: "Intento de modificar email propio",
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: usuarioId,
+      modulo: "usuarios",
+    });
+    return;
+  }
+
+  try {
+    // console.log(`Actualizando perfil del usuario: ${usuarioId}`);
+    const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
+    if (!usuario) {
+      res.status(404).json(fail("Usuario no encontrado"));
+      await registrarAuditoria({
+        usuarioId,
+        accion: "modificar_perfil_fallido",
+        descripcion: "Usuario no encontrado",
+        ip: req.ip,
+        entidadTipo: "usuario",
+        entidadId: usuarioId,
+        modulo: "usuarios",
+      });
+      return;
+    }
+
+    // DNI: Solo permitir actualización si actualmente está vacío o es null
+    let nuevoDni = usuario.dni;
+    if (dni !== undefined) {
+      try {
+        // Comprobamos tanto null como string vacía para mayor robustez
+        if (usuario.dni !== null && usuario.dni !== "") {
+          res.status(400).json(fail("El DNI ya está registrado y no puede ser modificado"));
+          await registrarAuditoria({
+            usuarioId,
+            accion: "modificar_perfil_fallido",
+            descripcion: "Intento de modificar DNI existente",
+            ip: req.ip,
+            entidadTipo: "usuario",
+            entidadId: usuarioId,
+            modulo: "usuarios",
+          });
+          return;
+        } else {
+          // Asegurar que el DNI tenga un formato válido antes de guardarlo
+          if (dni && typeof dni === 'string') {
+            nuevoDni = dni.trim();
+          } else {
+            res.status(400).json(fail("El DNI no puede estar vacío o no es válido"));
+            return;
+          }
+        }
+      } catch (error) {
+        // console.error("Error al procesar el DNI:", error);
+        res.status(500).json(fail("Error al procesar el DNI"));
+        return;
+      }
+    }
+
+    // Validaciones de nombre y teléfono si lo deseas
+    if (telefono && !telefonoValido(telefono)) {
+      res.status(400).json(fail("El teléfono debe ser un número celular de 10 dígitos"));
+      return;
+    }
+
+    // Preparar datos para actualización
+    const updateData: any = {
+      modificado_en: new Date(),
+      modificado_por: usuarioId
+    };
+    
+    // Solo incluir campos que realmente se están actualizando
+    if (nombre_completo !== undefined) updateData.nombre_completo = nombre_completo;
+    if (telefono !== undefined) updateData.telefono = telefono;
+    if (direccion !== undefined) updateData.direccion = direccion;
+    if (nuevoDni !== undefined) updateData.dni = nuevoDni;
+    
+    // console.log('Datos a actualizar:', JSON.stringify(updateData));
+    
+    // Actualizar usuario
+    const usuarioActualizado = await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: updateData,
+      include: {
+        usuario_rol: { include: { rol: true } }
+      }
+    });
+
+    // Detectar cambios
+    const cambios: string[] = [];
+    if (nombre_completo && nombre_completo !== usuario.nombre_completo) {
+      cambios.push(`nombre_completo: "${usuario.nombre_completo}" → "${nombre_completo}"`);
+    }
+    if (telefono !== undefined && telefono !== usuario.telefono) {
+      cambios.push(`telefono: "${usuario.telefono || ''}" → "${telefono || ''}"`);
+    }
+    if (direccion !== undefined && direccion !== usuario.direccion) {
+      cambios.push(`direccion: "${usuario.direccion || ''}" → "${direccion || ''}"`);
+    }
+    if (nuevoDni !== usuario.dni) {
+      cambios.push(`dni: "${usuario.dni || ''}" → "${nuevoDni || ''}"`);
+    }
+    
+    await registrarAuditoria({
+      usuarioId,
+      accion: "modificar_perfil_exitoso",
+      descripcion: `Perfil modificado. Cambios: ${cambios.length > 0 ? cambios.join("; ") : "sin cambios"}`,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: usuarioId,
+      modulo: "usuarios",
+    });
+
+    res.json(success({
+      id: usuarioActualizado.id,
+      nombre_completo: usuarioActualizado.nombre_completo,
+      telefono: usuarioActualizado.telefono,
+      direccion: usuarioActualizado.direccion,
+      dni: usuarioActualizado.dni,
+      roles: usuarioActualizado.usuario_rol.map(ur => ur.rol.nombre),
+      email: usuarioActualizado.email,
+    }));
+  } catch (err) {
+    // console.error("Error en actualizarPerfilUsuario:", err);
+    const mensajeError = err instanceof Error ? err.message : "Error desconocido";
+    res.status(500).json(fail(mensajeError));
+    await registrarAuditoria({
+      usuarioId,
+      accion: "modificar_perfil_fallido",
+      descripcion: mensajeError,
+      ip: req.ip,
+      entidadTipo: "usuario",
+      entidadId: usuarioId,
+      modulo: "usuarios",
+    });
+  }
+}
+
 /**
  * Marca un usuario como inactivo (borrado lógico). Solo admin puede hacerlo.
  */
@@ -503,11 +803,12 @@ export async function eliminarUsuario(
 ): Promise<void> {
   const { id } = req.params;
 
-  // Validación interna de rol admin
-  const userRol = (req as any).user?.rol;
+  // Validación interna de rol admin (multirol)
+  const userRoles = (req as any).user?.roles || [];
+  const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
   // Solo los administradores pueden eliminar usuarios. El mensaje debe contener 'admin' para los tests.
   // Si un usuario común intenta eliminarse a sí mismo, también debe recibir este mensaje.
-  if (userRol !== 'admin') {
+  if (!esAdmin) {
     res.status(403).json(fail('Acceso denegado: solo admin puede eliminar usuarios'));
     return;
   }
@@ -637,22 +938,23 @@ export async function cambiarPassword(req: Request, res: Response): Promise<void
  */
 export async function resetPasswordAdmin(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const { password_nuevo } = req.body;
+  const newPassword = req.body.password_nuevo || req.body.newPassword;
 
   // Control de acceso: solo admin
-  const userRol = (req as any).user?.rol;
-  if (userRol !== 'admin') {
+  const userRoles = (req as any).user?.roles || [];
+  const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
+  if (!esAdmin) {
     res.status(403).json(fail('Solo admin puede restablecer contraseñas'));
     return;
   }
 
   // Validación mínima
-  if (!password_nuevo) {
+  if (!newPassword) {
     res.status(400).json(fail('Debes enviar el nuevo password'));
     return;
   }
   // Validación de fuerza
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password_nuevo)) {
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword)) {
     res.status(400).json(fail('El password nuevo debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y números'));
     return;
   }
@@ -664,7 +966,7 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
       return;
     }
 
-    const nuevoHash = await bcrypt.hash(password_nuevo, 10);
+    const nuevoHash = await bcrypt.hash(newPassword, 10);
     await prisma.usuario.update({
       where: { id },
       data: { password: nuevoHash }

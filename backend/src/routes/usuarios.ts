@@ -2,10 +2,10 @@ import { Router } from 'express';
 import * as usuarioController from '@/controllers/usuarioController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
-import { cambiarPassword } from '@/controllers/usuarioController';
+import { actualizarPerfilUsuario, cambiarPassword } from '@/controllers/usuarioController';
 import { resetPasswordAdmin } from '@/controllers/usuarioController';
 import { eliminarUsuario } from '../controllers/usuarioController';
-
+import { listarUsuariosPaginados } from '../controllers/usuarioController';
 const router = Router();
 
 /**
@@ -15,11 +15,14 @@ const router = Router();
  *     UsuarioInput:
  *       type: object
  *       required:
- *         - nombre
+ *         - nombre_completo
  *         - email
  *         - password
+ *         - direccion
+ *         - telefono
+ *         - dni
  *       properties:
- *         nombre:
+ *         nombre_completo:
  *           type: string
  *           example: "Juan Pérez"
  *         email:
@@ -29,10 +32,22 @@ const router = Router();
  *         password:
  *           type: string
  *           example: "contraseñaSegura123"
- *         rol:
+ *         direccion:
  *           type: string
- *           enum: [admin, vendedor, optometrista, cliente]
- *           example: "vendedor"
+ *           example: "Av. Siempre Viva 123"
+ *         telefono:
+ *           type: string
+ *           example: "0999999999"
+ *         dni:
+ *           type: string
+ *           example: "12345678"
+ *         roles:
+ *           type: array
+ *           description: "Lista de roles a asignar al usuario"
+ *           items:
+ *             type: string
+ *             enum: [admin, vendedor, optometrista, cliente]
+ *           example: ["vendedor", "optometrista"]
  *     Usuario:
  *       type: object
  *       properties:
@@ -113,6 +128,134 @@ const router = Router();
  */
 import { autoregistroCliente } from '@/controllers/autoregistroController';
 router.post('/autoregistro', autoregistroCliente);
+
+/**
+ * @swagger
+ * /api/usuarios/perfil:
+ *   put:
+ *     summary: Permite a un usuario modificar su propio perfil (nombre, teléfono, dirección, dni solo si está null)
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre_completo:
+ *                 type: string
+ *                 example: "Juan Perez"
+ *               telefono:
+ *                 type: string
+ *                 example: "0991234567"
+ *               direccion:
+ *                 type: string
+ *                 example: "Calle Falsa 123"
+ *               dni:
+ *                 type: string
+ *                 example: "1234567890"
+ *     responses:
+ *       200:
+ *         description: Perfil actualizado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     nombre_completo:
+ *                       type: string
+ *                     telefono:
+ *                       type: string
+ *                     direccion:
+ *                       type: string
+ *                     dni:
+ *                       type: string
+ *                     roles:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     email:
+ *                       type: string
+ *                 error:
+ *                   type: string
+ *       400:
+ *         description: Error de validación o intento de modificar DNI existente
+ *       401:
+ *         description: No autenticado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.put("/perfil", authenticateJWT, actualizarPerfilUsuario);
+
+/**
+ * @swagger
+ * /api/usuarios/paginated:
+ *   get:
+ *     summary: Lista usuarios con paginación y búsqueda.
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Número de página (por defecto 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Cantidad de usuarios por página (por defecto 10)
+ *       - in: query
+ *         name: searchText
+ *         schema:
+ *           type: string
+ *         description: Texto de búsqueda por nombre
+ *       - in: query
+ *         name: activo
+ *         schema:
+ *           type: boolean
+ *         description: Filtrar usuarios activos/inactivos
+ *     responses:
+ *       200:
+ *         description: Lista paginada de usuarios
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Usuario'
+ *                     total:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     pageSize:
+ *                       type: integer
+ *                 error:
+ *                   type: string
+ *       401:
+ *         description: No autorizado
+ */
+router.get('/paginated', authenticateJWT, listarUsuariosPaginados);
 
 /**
  * @swagger

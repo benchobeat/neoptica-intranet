@@ -60,7 +60,8 @@ afterAll(async () => {
     // console.log("RESPUESTA TEST:", res.status, res.body);
     expect(res.status).toBe(201);
     expect(res.body.ok).toBe(true);
-    expect(res.body.data.rol).toBe("cliente");
+    expect(Array.isArray(res.body.data.roles)).toBe(true);
+    expect(res.body.data.roles).toEqual(["cliente"]);
   }, 20000); // Timeout específico para este test
 
 
@@ -74,7 +75,8 @@ afterAll(async () => {
       });
     expect(res.status).toBe(201);
     expect(res.body.ok).toBe(true);
-    expect(res.body.data.rol).toBe("cliente");
+    expect(Array.isArray(res.body.data.roles)).toBe(true);
+    expect(res.body.data.roles).toEqual(["cliente"]);
     expect(res.body.data.proveedor_oauth).toBe("google");
   });
 
@@ -135,7 +137,8 @@ afterAll(async () => {
       });
     expect(res.status).toBe(201);
     expect(res.body.data.proveedor_oauth).toBe("facebook");
-    expect(res.body.data.rol).toBe("cliente");
+    expect(Array.isArray(res.body.data.roles)).toBe(true);
+    expect(res.body.data.roles).toEqual(["cliente"]);
   });
 
   it("Debe registrar cliente con Instagram OAuth y guardar proveedor correctamente", async () => {
@@ -148,7 +151,8 @@ afterAll(async () => {
       });
     expect(res.status).toBe(201);
     expect(res.body.data.proveedor_oauth).toBe("instagram");
-    expect(res.body.data.rol).toBe("cliente");
+    expect(Array.isArray(res.body.data.roles)).toBe(true);
+    expect(res.body.data.roles).toEqual(["cliente"]);
   });
 
   it("No debe permitir crear usuario con rol diferente a cliente", async () => {
@@ -158,10 +162,11 @@ afterAll(async () => {
         nombre_completo: "Intento Admin",
         email: "autotest_admin@neoptica.com",
         password: "Test1234!",
-        rol: "admin"
+        roles: ["admin"]
       });
     expect(res.status).toBe(201);
-    expect(res.body.data.rol).toBe("cliente");
+    expect(Array.isArray(res.body.data.roles)).toBe(true);
+    expect(res.body.data.roles).toEqual(["cliente"]);
   });
 
   it("Debe guardar correctamente los datos recibidos de Google (nombre, email, etc)", async () => {

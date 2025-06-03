@@ -8,12 +8,12 @@ import jwt from 'jsonwebtoken';
 const prisma = new PrismaClient();
 
 // Token de prueba para simular un usuario administrador
-const createTestToken = (id: string, rol: string) => {
+const createTestToken = (id: string, roles: string[]) => {
   return jwt.sign(
     { 
       id, 
       email: 'test@example.com', 
-      rol 
+      roles
     },
     process.env.JWT_SECRET || 'test_secret',
     { expiresIn: '1h' }
@@ -37,7 +37,7 @@ describe('Auditoría Controller', () => {
 
     if (adminUser) {
       adminId = adminUser.id;
-      adminToken = createTestToken(adminUser.id, 'admin');
+      adminToken = createTestToken(adminUser.id, ['admin']);
     } else {
       throw new Error('No se encontró usuario administrador para pruebas');
     }
@@ -59,7 +59,7 @@ describe('Auditoría Controller', () => {
     if (normalUser) {
       usuarioId = normalUser.id;
       const rolNombre = normalUser.usuario_rol[0]?.rol?.nombre || 'cliente';
-      usuarioToken = createTestToken(normalUser.id, rolNombre);
+      usuarioToken = createTestToken(normalUser.id, [rolNombre]);
     } else {
       // Crear usuario normal si no existe
       const nuevoUsuario = await prisma.usuario.create({
@@ -86,7 +86,7 @@ describe('Auditoría Controller', () => {
       }
 
       usuarioId = nuevoUsuario.id;
-      usuarioToken = createTestToken(nuevoUsuario.id, 'cliente');
+      usuarioToken = createTestToken(nuevoUsuario.id, ['cliente']);
     }
 
     // Crear un registro de auditoría de prueba

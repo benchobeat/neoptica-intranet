@@ -7,8 +7,8 @@ import { registrarAuditoria } from "@/utils/auditoria";
 const prisma = new PrismaClient();
 
 /**
- * Permite el autoregistro de usuarios con rol 'cliente'.
- * Solo se permite crear usuarios con rol 'cliente' mediante este endpoint.
+ * Permite el autoregistro de usuarios con el rol 'cliente'.
+ * Solo se permite crear usuarios con el rol 'cliente' mediante este endpoint.
  * Puede ser usado por formulario tradicional o por redes sociales.
  */
 export async function autoregistroCliente(req: Request, res: Response): Promise<void> {
@@ -32,8 +32,8 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
     return;
   }
 
-  // Solo permite rol cliente
-  const rol = 'cliente';
+  // Solo permite el rol cliente
+  const roles = ['cliente'];
 
   try {
     // Verifica email único
@@ -62,7 +62,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
         proveedor_oauth: proveedor_oauth || null,
         oauth_id: oauth_id || null,
         usuario_rol: {
-          create: { rol: { connect: { nombre: rol } } }
+          create: { rol: { connect: { nombre: roles[0] } } }
         },
       },
       include: { usuario_rol: { include: { rol: true } } },
@@ -87,7 +87,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
       email: usuario.email,
       telefono: usuario.telefono,
       activo: usuario.activo,
-      rol: 'cliente',
+      roles: ['cliente'],
       proveedor_oauth: usuario.proveedor_oauth,
     }));
     // console.log("[autoregistroCliente] FIN OK", usuario.id);

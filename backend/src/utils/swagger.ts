@@ -54,7 +54,11 @@ const swaggerDefinition = {
           email: { type: "string", example: "admin@neoptica.com" },
           telefono: { type: "string", example: "0999999999" },
           activo: { type: "boolean", example: true },
-          rol: { type: "string", example: "admin" },
+          roles: { 
+            type: "array", 
+            items: { type: "string" },
+            example: ["admin", "optometrista"] 
+          },
         },
       },
       Producto: {

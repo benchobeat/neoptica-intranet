@@ -1,19 +1,36 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { HexColorPicker } from "react-colorful";
-import { Table, Button, Input, Modal, Form, message, Popconfirm, Tag, Tooltip } from "antd";
-import type { TableColumnType } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, SearchOutlined } from "@ant-design/icons";
-import { getColoresPaginados, createColor, updateColor, deleteColor } from "@/lib/api/colorService";
-import { Color } from "@/types";
+import CustomTable from "@/components/ui/CustomTable";
 
-/**
- * Genera un color hexadecimal basado en un texto
- * Esto garantiza que el mismo texto siempre genere el mismo color
- */
+// Importaciones selectivas de Ant Design para reducir el tamaño del bundle
+import Button from "antd/lib/button";
+import Input from "antd/lib/input";
+// Modal importado dinámicamente para reducir el bundle inicial
+const Modal = dynamic(() => import("antd/lib/modal"), {
+  ssr: false,
+  loading: () => <div className="bg-gray-800 p-6 rounded-lg animate-pulse">Cargando...</div>
+});
+import Form from "antd/lib/form";
+import message from "antd/lib/message";
+import Tooltip from "antd/lib/tooltip";
+import Popconfirm from "antd/lib/popconfirm";
+
+// Importación selectiva de iconos
+import PlusOutlined from "@ant-design/icons/PlusOutlined";
+import EditOutlined from "@ant-design/icons/EditOutlined";
+import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
+import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
+
+// Servicios y tipos
+import { createColor, deleteColor, getColoresPaginados, updateColor } from "@/lib/api/colorService";
+import type { Color } from "@/types";
+
+// Función utilitaria para generar colores consistentes basados en texto
 function generarColorDesdeTexto(texto: string): string {
-  // Función hash simple para convertir texto en un número
+  // Generar un hash basado en el texto
   let hash = 0;
   for (let i = 0; i < texto.length; i++) {
     hash = texto.charCodeAt(i) + ((hash << 5) - hash);
@@ -29,7 +46,6 @@ function generarColorDesdeTexto(texto: string): string {
   return color;
 }
 
-import "./colors-dark-table.css";
 
 export default function ColorsPage() {
   const [colors, setColors] = useState<Color[]>([]);
@@ -49,115 +65,71 @@ export default function ColorsPage() {
     setLoading(true);
     try {
       const response = await getColoresPaginados(page, pageSize, searchText);
-  
-    console.log("Iniciando carga de colores, página:", page, "tamaño:", pageSize, "buscar:", searchText);
-    try {
-      const response = await getColoresPaginados(page, pageSize, searchText);
-      console.log("Respuesta de la API (completa):", response);
-
-      let fetchedColors: Color[] = [];
-      let total = 0;
-
-      if (response && response.ok && response.data) {
-        if (Array.isArray(response.data)) {
-          fetchedColors = response.data;
-          total = response.data.length;
-        } else if (response.data.items && Array.isArray(response.data.items)) {
-          fetchedColors = response.data.items;
-          total = response.data.total || fetchedColors.length;
-        }
+      if (response.ok && response.data) {
+        setColors(response.data.items);
+        setTotal(response.data.total);
       } else {
-        console.error('Error en respuesta:', response);
-        message.error(response?.error || "Error al cargar los colores. Revisa la consola para más detalles.");
+        message.error(response.error || "Error al cargar los colores");
       }
-
-      // Inspeccionar detalladamente cada color para diagnosticar el problema
-      console.log("Colores cargados (detalle):", fetchedColors.map(color => {
-        // Inspeccionamos los datos exactamente como llegan de la API
-        console.log(`Color ID: ${color.id} - Nombre: ${color.nombre}`);
-        console.log(`codigo_hex: "${color.codigo_hex}"`);
-        console.log(`Tipo: ${typeof color.codigo_hex}`);
-        console.log(`Longitud: ${color.codigo_hex ? color.codigo_hex.length : 0}`);
-        console.log(`Tiene hash: ${color.codigo_hex ? color.codigo_hex.startsWith('#') : false}`);
-        
-        // Los datos completos del color para referencia
-        return {
-          id: color.id,
-          nombre: color.nombre,
-          codigo_hex: color.codigo_hex,
-          tipo: typeof color.codigo_hex,
-          longitud: color.codigo_hex ? color.codigo_hex.length : 0,
-          tiene_hash: color.codigo_hex ? color.codigo_hex.startsWith('#') : false,
-          codigo_completo: color.codigo_hex,
-        };
-      }));
-      
-      setColors(fetchedColors);
-      setTotal(total);
     } catch (error) {
       console.error("Error al cargar colores:", error);
-      message.error("Error al cargar los colores. Revisa la consola del navegador para más detalles.");
+      message.error("Error al cargar los colores");
     } finally {
       setLoading(false);
     }
-  } catch (error) {
-    console.error("Error al cargar colores:", error);
-    message.error("Error al cargar los colores. Revisa la consola del navegador para más detalles.");
-  } finally {
-    setLoading(false);
-  }
-}, [page, pageSize, searchText]);
+  }, [page, pageSize, searchText]);
 
-useEffect(() => {
-  fetchColors();
-}, [fetchColors]);
+  // Efecto para cargar colores al montar o cambiar el estado de dependencias
+  useEffect(() => {
+    fetchColors();
+  }, [fetchColors]);
   
-  // No necesitamos handleSearch ya que useEffect se encarga de esto
+  // Manejador para la búsqueda
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchText(e.target.value);
+    // La búsqueda se dispara automáticamente a través del useEffect cuando cambia searchText
+  }, []);
 
-  const showModal = (color?: Color) => {
+  // Mostrar modal para editar o crear
+  const showModal = useCallback((color?: Color) => {
     setEditingColor(color || null);
     form.resetFields();
+    
+    let initialColor = "#000000";
+    
     if (color) {
+      initialColor = color.codigo_hex;
       form.setFieldsValue({
         nombre: color.nombre,
         codigo_hex: color.codigo_hex,
       });
-      setPickerColor(color.codigo_hex || "#000000");
-    } else {
-      setPickerColor("#000000");
     }
+    
+    setPickerColor(initialColor);
     setModalVisible(true);
-  };
+  }, [form]);
 
-  const handleCancel = () => {
+  // Manejar cierre del modal
+  const handleCancel = useCallback(() => {
     setModalVisible(false);
-  };
+    setEditingColor(null);
+  }, []);
 
-  const handleSubmit = async () => {
+  // Manejar envío del formulario
+  const handleSubmit = useCallback(async () => {
     try {
       const values = await form.validateFields();
+      // Asegurarse que el código hex se guarda con el valor del picker
+      values.codigo_hex = pickerColor;
+      
       setLoading(true);
-      
-      // Asegurarnos que el código hexadecimal siempre tenga # al inicio
-      if (values.codigo_hex && typeof values.codigo_hex === 'string') {
-        if (!values.codigo_hex.startsWith('#')) {
-          values.codigo_hex = `#${values.codigo_hex}`;
-        }
-      }
-      
-      console.log('Datos a enviar al servidor:', values);
-      console.log(`Color seleccionado: ${values.codigo_hex}, Tipo: ${typeof values.codigo_hex}`);
-
       let response;
+      
       if (editingColor) {
-        console.log(`Actualizando color ID: ${editingColor.id}`);
         response = await updateColor(editingColor.id, values);
       } else {
-        console.log('Creando nuevo color');
         response = await createColor(values);
       }
-      
-      console.log('Respuesta del servidor:', response);
 
       if (response.ok) {
         message.success(
@@ -166,21 +138,20 @@ useEffect(() => {
             : "Color creado correctamente"
         );
         setModalVisible(false);
-        
-        // Recargar los datos después de crear/actualizar
-        await fetchColors();
+        fetchColors();
       } else {
-        message.error(response?.error || "Error al guardar el color");
+        message.error(response.error || "Error al procesar la solicitud");
       }
     } catch (error) {
-      console.error("Error al guardar color:", error);
-      message.error("Error al guardar el color");
+      console.error("Error al enviar formulario:", error);
+      message.error("Por favor verifica los campos del formulario");
     } finally {
       setLoading(false);
     }
-  };
+  }, [editingColor, form, pickerColor, fetchColors]);
 
-  const handleDelete = async (id: string) => {
+  // Manejar eliminación
+  const handleDelete = useCallback(async (id: string) => {
     setLoading(true);
     try {
       const response = await deleteColor(id);
@@ -196,36 +167,30 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchColors]);
 
-  const columns = [
+  // Actualizar manualmente el color y el campo de formulario
+  const handleColorChange = useCallback((newColor: string) => {
+    setPickerColor(newColor);
+    form.setFieldsValue({ codigo_hex: newColor });
+  }, [form]);
+
+  // Memoiza las columnas para evitar re-renderizados innecesarios
+  const columns = useMemo(() => [
     {
       title: "Color",
       dataIndex: "codigo_hex",
-      key: "color",
-      render: (_: any, record: Color) => {
-        // Usar un valor por defecto en caso de que codigo_hex sea undefined
-        // Esto garantiza que siempre haya un color visible
-        const defaultColor = record.nombre ? generarColorDesdeTexto(record.nombre) : "#000000"; 
-        const hex = record.codigo_hex
-          ? (record.codigo_hex.startsWith("#") ? record.codigo_hex : `#${record.codigo_hex}`)
-          : defaultColor;
-        
-        // Si el valor es undefined o inválido, mostramos un indicador visual
-        const esColorFaltante = !record.codigo_hex;
-        
-        return (
-          <Tooltip title={esColorFaltante ? "Color no definido" : hex}>
-            <div
-              className="w-6 h-6 rounded-full border border-gray-300"
-              style={{
-                backgroundColor: hex,
-                border: esColorFaltante ? "2px dashed #f00" : "1px solid rgba(0,0,0,0.2)"
-              }}
-            />
-          </Tooltip>
-        );
-      },
+      key: "codigo_hex",
+      width: 80,
+      render: (hex: string) => (
+        <div className="flex items-center">
+          <div 
+            className="rounded-md w-6 h-6 border border-gray-300" 
+            style={{ backgroundColor: hex }}
+          ></div>
+          <span className="ml-2 text-gray-300">{hex}</span>
+        </div>
+      )
     },
     {
       title: "Nombre",
@@ -234,32 +199,17 @@ useEffect(() => {
       sorter: (a: Color, b: Color) => a.nombre.localeCompare(b.nombre),
     },
     {
-      title: "Estado",
-      dataIndex: "activo",
-      key: "activo",
-      render: (activo: boolean) =>
-        activo ? (
-          <Tag color="green">Activo</Tag>
-        ) : (
-          <Tag color="red">Inactivo</Tag>
-        ),
-      filters: [
-        { text: "Activo", value: true },
-        { text: "Inactivo", value: false },
-      ],
-      onFilter: (value: any, record: Color) => record.activo === value,
-    },
-    {
-      title: "Creado",
-      dataIndex: "creado_en",
-      key: "creado_en",
-      render: (date: string) => new Date(date).toLocaleString(),
-      responsive: ["lg" as any],
+      title: "Descripción",
+      dataIndex: "descripcion",
+      key: "descripcion",
+      ellipsis: true,
+      render: (descripcion: string | null) => descripcion || "N/A",
     },
     {
       title: "Acciones",
-      key: "actions",
-      render: (_: any, record: Color) => (
+      key: "acciones",
+      width: 120,
+      render: (text: any, record: Color) => (
         <div className="flex gap-2">
           <Tooltip title="Editar">
             <Button
@@ -277,162 +227,108 @@ useEffect(() => {
             cancelText="No"
             icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
           >
-            <Button icon={<DeleteOutlined />} type="primary" size="small" danger />
+            <Tooltip title="Eliminar">
+              <Button icon={<DeleteOutlined />} type="primary" size="small" danger ghost />
+            </Tooltip>
           </Popconfirm>
         </div>
       ),
     },
-  ];
+  ], [showModal, handleDelete]);
+  
+  // Footer del modal memoizado para evitar re-renders
+  const modalFooter = useMemo(() => [
+    <Button key="cancel" onClick={handleCancel}>
+      Cancelar
+    </Button>,
+    <Button key="submit" type="primary" onClick={handleSubmit} loading={loading}>
+      {editingColor ? "Actualizar" : "Crear"}
+    </Button>,
+  ], [handleCancel, handleSubmit, editingColor, loading]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white">Gestión de Colores</h1>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
-          onClick={() => showModal()} 
-          className="bg-indigo-600 hover:bg-indigo-700"
+    <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
+      <CustomTable<Color>
+        columns={columns}
+        dataSource={colors}
+        loading={loading}
+        rowKey="id"
+        headerTitle="Gestión de Colores"
+        showAddButton={true}
+        onAddButtonClick={() => showModal()}
+        addButtonLabel="Nuevo Color"
+        showSearch={true}
+        onSearch={setSearchText} // CustomTable should pass the string value directly
+        searchPlaceholder="Buscar color..."
+        paginationConfig={{
+          current: page,
+          pageSize: pageSize,
+          total: total,
+          onChange: (newPage, newPageSize) => {
+            setPage(newPage);
+            if (newPageSize) setPageSize(newPageSize);
+          },
+          showSizeChanger: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} colores`,
+        }}
+        tableProps={{
+        }}
+      />
+
+      {modalVisible && (
+        <Modal
+          title={editingColor ? "Editar Color" : "Nuevo Color"}
+          open={modalVisible}
+          onCancel={handleCancel}
+          footer={modalFooter}
+          width={600} // Consistent modal width
         >
-          Nuevo Color
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between mb-4">
-        <Input
-          prefix={<SearchOutlined style={{ color: '#aaa' }} />}
-          placeholder="Buscar color o nombre"
-          value={searchText}
-          onChange={e => {
-            setSearchText(e.target.value);
-            setPage(1); // Reiniciar paginación al buscar
-          }}
-          allowClear
-          style={{ 
-            width: 250, 
-            background: '#23263a', 
-            color: '#fff', 
-            border: '1px solid #444',
-            fontWeight: 500
-          }}
-          // Ya no necesitamos onPressEnter porque el useEffect responde a los cambios en searchText
-        />
-      </div>
-
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-        <Table
-          columns={columns}
-          dataSource={colors}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: page,
-            pageSize: pageSize,
-            total: total,
-            onChange: (page, pageSize) => {
-              setPage(page);
-              if (pageSize) setPageSize(pageSize);
-            },
-            showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} colores`,
-          }}
-          className="rounded-lg overflow-hidden shadow-md custom-dark-table custom-table"
-          style={{ background: "#181c2a" }}
-        />
-      </div>
-
-      <Modal
-        title={editingColor ? "Editar Color" : "Nuevo Color"}
-        open={modalVisible}
-        onCancel={handleCancel}
-        footer={[
-          <Button key="cancel" onClick={handleCancel}>
-            Cancelar
-          </Button>,
-          <Button key="submit" type="primary" onClick={handleSubmit} loading={loading}>
-            {editingColor ? "Actualizar" : "Crear"}
-          </Button>,
-        ]}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="nombre"
-            label="Nombre"
-            rules={[
-              { required: true, message: "Por favor ingresa el nombre del color" },
-              { min: 3, message: "El nombre debe tener al menos 3 caracteres" },
-            ]}
-          >
-            <Input placeholder="Ej: Azul Marino" />
-          </Form.Item>
-          <Form.Item 
-            name="codigo_hex" 
-            label="Color"
-            rules={[
-              { required: true, message: "Por favor selecciona un color" },
-              {
-                pattern: /^#[0-9A-Fa-f]{6}$/,
-                message: "Formato de color hexadecimal inválido (ej: #FF5733)",
-              },
-            ]}
-          >
-            <div>
-              <HexColorPicker
-                color={pickerColor}
-                onChange={(color) => {
-                  setPickerColor(color);
-                  form.setFieldsValue({ codigo_hex: color });
-                }}
-                style={{ width: "100%" }}
+          <Form form={form} layout="vertical">
+            <Form.Item
+              name="nombre"
+              label="Nombre"
+              rules={[
+                { required: true, message: "Por favor ingresa el nombre del color" },
+                { min: 2, message: "El nombre debe tener al menos 2 caracteres" },
+              ]}
+            >
+              <Input placeholder="Ej: Rojo Intenso" />
+            </Form.Item>
+            
+            <Form.Item
+              name="codigo_hex"
+              label="Código Hexadecimal"
+              rules={[{ required: true, message: "Por favor selecciona un color" }]}
+            >
+              <Input 
+                prefix={<div className="w-4 h-4 mr-2 border border-gray-400 rounded" style={{ backgroundColor: pickerColor }}></div>}
+                value={pickerColor} // This will be updated by handleColorChange via form.setFieldsValue
+                placeholder="#FFFFFF"
+                readOnly // User interacts with HexColorPicker, not this input directly
               />
-              <div className="flex items-center mt-4 gap-3">
-                <div 
-                  className="w-10 h-10 rounded-full border border-gray-300" 
-                  style={{ backgroundColor: pickerColor }}
-                />
-                <div className="text-lg font-medium">{pickerColor}</div>
+            </Form.Item>
+            
+            <div className="mb-4">
+              <div className="mb-2 text-sm font-medium text-gray-300">Selecciona un color:</div>
+              <div className="flex justify-center items-center p-2 bg-gray-700 rounded-md">
+                <HexColorPicker color={pickerColor} onChange={handleColorChange} />
               </div>
             </div>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <style jsx global>{`
-        .custom-table .ant-table {
-          background-color: transparent;
-          color: white;
-        }
-        .custom-table .ant-table-thead > tr > th {
-          background-color: rgba(31, 41, 55, 0.7);
-          color: white;
-          border-bottom: 1px solid rgba(75, 85, 99, 0.5);
-        }
-        .custom-table .ant-table-tbody > tr > td {
-          border-bottom: 1px solid rgba(75, 85, 99, 0.3);
-          color: rgba(229, 231, 235, 0.9);
-        }
-        .custom-table .ant-table-tbody > tr:hover > td {
-          background-color: rgba(55, 65, 81, 0.5);
-        }
-        .custom-table .ant-pagination {
-          color: rgba(229, 231, 235, 0.9);
-        }
-        .custom-table .ant-pagination-item a {
-          color: rgba(229, 231, 235, 0.9);
-        }
-        .custom-table .ant-pagination-item-active {
-          background-color: rgba(79, 70, 229, 0.8);
-        }
-        .custom-table .ant-pagination-item-active a {
-          color: white;
-        }
-        .custom-table .ant-pagination-item-link {
-          color: rgba(229, 231, 235, 0.9);
-        }
-        .custom-table .ant-empty-description {
-          color: rgba(229, 231, 235, 0.9);
-        }
-      `}</style>
+            
+            <Form.Item
+              name="descripcion"
+              label="Descripción"
+            >
+              <Input.TextArea 
+                placeholder="Descripción del color (opcional)" 
+                rows={2}
+                maxLength={200}
+                showCount
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
+      )}
     </div>
   );
 }

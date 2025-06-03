@@ -51,36 +51,71 @@ export default function LoginPage() {
         return;
       }
 
-      const role = data?.data?.usuario?.rol;
-      if (role) {
-        localStorage.setItem("role", role); // Almacena el rol en localStorage
-        localStorage.setItem("token", data?.data?.token); // Almacena el token JWT
+      // Verifica si hay un array de roles en la respuesta
+      const roles = data?.data?.usuario?.roles;
+      
+      if (roles && Array.isArray(roles) && roles.length > 0) {
         
-        // Redirige según el rol del usuario
-        switch (role) {
+        // Almacena el token JWT
+        localStorage.setItem("token", data?.data?.token);
+        
+        // Almacena el array completo de roles como JSON
+        localStorage.setItem("roles", JSON.stringify(roles));
+        
+        // Almacena el primer rol como rol activo
+        const activeRole = roles[0];
+        
+        localStorage.setItem("activeRole", activeRole);
+        
+        
+        // Mensaje para el usuario con todos sus roles
+        const rolesMessage = roles.length > 1 
+          ? `¡Inicio de sesión exitoso! Roles: ${roles.join(', ')}. Usando: ${activeRole}`
+          : `¡Inicio de sesión exitoso! Rol: ${activeRole}`;
+        
+        message.success(rolesMessage);
+        
+        
+        // Redirige según el rol activo (el primero del array)
+        switch (activeRole) {
+          
           case "admin":
-            message.success("¡Inicio de sesión exitoso! Rol Administrador.");
+            
             window.location.href = "/admin";
+            
             break;
+          
           case "vendedor":
-            message.success("¡Inicio de sesión exitoso! Rol Vendedor.");
-            window.location.href = "/vendor";
+            
+            window.location.href = "/vendedor";
+            
             break;
-          case "optometrista": 
-            message.success("¡Inicio de sesión exitoso! Rol Optometrista.");
-            window.location.href = "/optometrist"; 
+          
+          case "optometrista":
+            
+            window.location.href = "/optometrista";
+            
             break;
+          
           case "cliente":
-            message.success("¡Inicio de sesión exitoso! Rol Cliente.");
-            window.location.href = "/client";
+            
+            window.location.href = "/cliente";
+            
             break;
+          
           default:
+            
             message.warning("Rol no reconocido. Redirigiendo a la página principal.");
-            window.location.href = "/"; 
+            
+            window.location.href = "/";
+            
         }
+      
       } else {
-        // Si no se encuentra el rol en la respuesta
+        
+        // Si no se encuentra ningún rol en la respuesta
         message.error("No se pudo determinar el rol del usuario.");
+      
       }
     } catch (err: any) {
       // Maneja errores de red u otros errores inesperados
@@ -109,7 +144,7 @@ export default function LoginPage() {
       >
         <div className="flex flex-col items-center mb-8">
           <Image
-            src="/logo-optica.svg" // Asegúrate que esta ruta sea correcta
+            src="/logo-optica.png" // Asegúrate que esta ruta sea correcta
             alt="Neóptica Logo"
             width={64} // Tamaño del logo ligeramente aumentado
             height={64}

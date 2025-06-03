@@ -399,7 +399,33 @@ Para ver el esquema prisma de la base de datos puedes usar el archivo backend/pr
 # 18. CRONOGRAMA
 Para mayor información revisar docs/manuales/cronograma.md
 
-# 19. AUTENTICACIÓN CON REDES SOCIALES (GOOGLE, FACEBOOK, INSTAGRAM)
+# 19. SISTEMA MULTI-ROL DE USUARIOS
+
+## Visión General del Sistema Multi-Rol
+
+El sistema de Neóptica Intranet implementa una arquitectura multi-rol avanzada que permite a un mismo usuario tener asignados múltiples roles simultáneamente. Esto facilita escenarios como un empleado que puede actuar como vendedor y como optometrista en diferentes contextos.
+
+### Características principales:
+
+1. **Asignación de múltiples roles**: Un usuario puede tener varios roles asignados (vendedor, optometrista, administrador, etc.).
+
+2. **JWT con array de roles**: Los tokens JWT incluyen todos los roles del usuario para autorización dinámica.
+
+3. **Cambio dinámico de rol activo**: Desde la UI, los usuarios pueden cambiar su rol activo en cualquier momento sin cerrar sesión.
+
+4. **Middleware de autorización multi-rol**: Valida permisos considerando todos los roles asignados al usuario.
+
+5. **Auditoría completa**: Cada asignación, modificación y revocación de rol queda registrada con usuario y timestamp.
+
+### Implementación técnica:
+
+- Tabla asociativa `usuario_rol` con campos completos de auditoría
+- Generación de tokens JWT que incluyen array de roles
+- Middleware especializado para validación de permisos basado en múltiples roles
+
+Para más detalles técnicos sobre la implementación, consultar `docs/manuales/auth-roles.md`.
+
+# 20. AUTENTICACIÓN CON REDES SOCIALES (GOOGLE, FACEBOOK, INSTAGRAM)
 
 Este proyecto soporta autenticación de usuarios a través de Google, Facebook e Instagram usando Passport.js en el backend y JWT para la gestión de sesiones.
 
@@ -408,21 +434,21 @@ Este proyecto soporta autenticación de usuarios a través de Google, Facebook e
 2. El frontend redirige al backend (`/api/auth/google`, `/api/auth/facebook`, `/api/auth/instagram`).
 3. El usuario autoriza la app en la red social.
 4. La red social redirige al backend (`/api/auth/{proveedor}/callback`).
-5. El backend valida el perfil y genera un JWT.
+5. El backend valida el perfil y genera un JWT que incluye array con todos los roles asignados al usuario.
 6. El backend redirige al frontend con el token JWT como parámetro en la URL (`/oauth-success?token=...`).
-7. El frontend captura el token, lo almacena y autentica al usuario en la app.
+7. El frontend captura el token, lo almacena y autentica al usuario en la app, mostrando la interfaz adaptada a sus roles.
 
 ---
 
 ## Configuración Backend (Node/Express)
 
 - **Passport.js:** Configurado con estrategias para Google, Facebook e Instagram.
-- **JWT:** El backend emite un token JWT válido por 7 días tras el login social o tradicional.
+- **JWT:** El backend emite un token JWT válido por 7 días tras el login social o tradicional, incluyendo un array con todos los roles asignados al usuario para autorización multi-rol.
 - **Rutas OAuth:**
   - `/api/auth/google` y `/api/auth/google/callback`
   - `/api/auth/facebook` y `/api/auth/facebook/callback`
   - `/api/auth/instagram` y `/api/auth/instagram/callback`
-- **Protección de rutas:** Usa el middleware `authenticateJWT` para proteger endpoints que requieran autenticación.
+- **Protección de rutas:** Usa los middlewares `validarJWT` para autenticación y `validarRoles` para autorización multi-rol, protegiendo endpoints según los permisos requeridos.
 - **Variables de entorno requeridas:**
 
 ```env
@@ -444,8 +470,19 @@ FRONTEND_URL=http://localhost:3000
 model usuario {
   id              String   @id @default(uuid())
   email           String   @unique
+  nombre_completo String
+  password        String?
+  telefono        String?
   proveedor_oauth String?
   oauth_id        String?
+  activo          Boolean  @default(true)
+  creado_en       DateTime @default(now()) @db.Timestamptz(6)
+  creado_por      String?
+  modificado_en   DateTime? @db.Timestamptz(6)
+  modificado_por  String?
+  anulado_en      DateTime? @db.Timestamptz(6)
+  anulado_por     String?
+  usuario_rol     usuario_rol[] // Relación con roles (many-to-many)
   // ...otros campos...
   @@unique([proveedor_oauth, oauth_id])
 }
@@ -516,8 +553,9 @@ El backend crea el usuario (si no existe) y lo autentica.
 El sistema Neóptica Intranet utiliza un esquema de base de datos relacional PostgreSQL gestionado a través de Prisma ORM. La estructura principal se organiza en los siguientes grupos funcionales:
 
 ### Gestión de Usuarios y Autenticación
-- `usuario` ↔️ `rol` (a través de `usuario_rol`)
+- `usuario` ↔️ `rol` (a través de `usuario_rol` - relación many-to-many para el sistema multi-rol)
 - `usuario` ↔️ `reset_token` (tokens para recuperación de contraseñas)
+- `usuario_rol` con campos completos de auditoría (creado_en, modificado_en, anulado_en)
 
 ### Gestión Clínica
 - `cita` ↔️ `usuario` (como cliente y como optometrista)
@@ -848,8 +886,9 @@ Esta sección proporciona una visión general de todos los modelos de la base de
 - `usuario_rol[]` → Asignaciones de este rol a usuarios
 
 #### `usuario_rol`
-**Descripción**: Tabla asociativa para la relación muchos a muchos entre usuarios y roles.
-**Campos principales**: `id`, `usuario_id`, `rol_id`
+**Descripción**: Tabla asociativa para la relación muchos a muchos entre usuarios y roles, implementa el sistema multi-rol que permite a un usuario tener múltiples roles simultáneamente.
+**Campos principales**: `id`, `usuario_id`, `rol_id`, `creado_en`, `creado_por`, `modificado_en`, `modificado_por`, `anulado_en`, `anulado_por`
+**Funcionalidad**: Permite que un mismo usuario pueda tener múltiples roles (ej: ser vendedor y optometrista simultáneamente), con auditoría completa de asignación, modificación y revocación de roles.
 **Relaciones**:
 - `usuario` → Usuario al que se asigna el rol
 - `rol` → Rol asignado
