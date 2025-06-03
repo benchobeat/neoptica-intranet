@@ -52,9 +52,19 @@ La aplicación implementa un sistema de navegación basado en roles:
 ### Flujo de Autenticación
 
 1. El usuario inicia sesión en la página principal mediante credenciales (email/contraseña) o proveedores OAuth.
-2. El backend valida las credenciales y devuelve un token JWT junto con la información del usuario, incluyendo su rol.
-3. Basado en el rol del usuario, la aplicación redirecciona al dashboard correspondiente.
-4. El token JWT se almacena en localStorage para mantener la sesión activa.
+2. El backend valida las credenciales y devuelve un token JWT junto con la información del usuario, incluyendo sus roles (array).
+3. La aplicación guarda el array de roles en localStorage como `roles` y selecciona el primer rol como `activeRole`.
+4. Basado en el rol activo del usuario, la aplicación redirecciona al dashboard correspondiente.
+5. El token JWT y la información de roles se almacenan en localStorage para mantener la sesión activa.
+
+### Sistema Multi-Rol
+
+La aplicación implementa un sistema avanzado de gestión multi-rol que permite:
+
+1. **Asignación de múltiples roles**: Un usuario puede tener asignados varios roles simultáneamente (ej. vendedor y optometrista).
+2. **Selector de rol activo**: En el menú lateral, los usuarios con múltiples roles pueden cambiar entre ellos sin necesidad de cerrar sesión.
+3. **Persistencia del rol activo**: El sistema recuerda el último rol utilizado por el usuario mediante `localStorage`.
+4. **Redireccionamiento inteligente**: Al cambiar de rol, el sistema redirecciona automáticamente al dashboard correspondiente.
 
 ### Roles de Usuario
 

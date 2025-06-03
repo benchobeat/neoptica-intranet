@@ -42,7 +42,7 @@ let marcaId: string;
 // Función auxiliar para generar token JWT para pruebas
 const generateAuthToken = (userId: string, role: string) => {
   return jwt.sign(
-    { id: userId, rol: role },
+    { id: userId, roles: [role] },
     process.env.JWT_SECRET || 'secret-de-prueba',
     { expiresIn: '1h' }
   );

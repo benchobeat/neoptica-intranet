@@ -129,7 +129,8 @@ export function Header({ className = "" }: HeaderProps) {
                 <button 
                   onClick={() => {
                     localStorage.removeItem('token');
-                    localStorage.removeItem('role');
+                    localStorage.removeItem('activeRole');
+                    localStorage.removeItem('roles');
                     window.location.href = '/auth/login';
                   }}
                   className="flex items-center gap-2 p-3 hover:bg-gray-700 transition-colors text-sm text-gray-300 w-full text-left border-t border-gray-700"

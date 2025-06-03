@@ -28,9 +28,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Memoizamos la función de verificación de autenticación para evitar recrearla en cada render
   const verifyAuth = useCallback(() => {
-    // Verificar autenticación y rol
+    // Verificar autenticación y rol activo
     const token = localStorage.getItem("token");
-    const userRole = localStorage.getItem("role");
+    const userRole = localStorage.getItem("activeRole");
 
     if (!token) {
       router.replace("/auth/login");
@@ -38,7 +38,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
 
     if (userRole !== "admin") {
-      // Redireccionar según el rol
+      // Redireccionar según el rol activo
       switch (userRole) {
         case "vendor":
           router.replace("/vendor");

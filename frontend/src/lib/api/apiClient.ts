@@ -75,7 +75,8 @@ export async function fetchApi<T>(
       if (response.status === 401 && typeof window !== 'undefined') {
         // Sesión expirada o token inválido
         localStorage.removeItem('token');
-        localStorage.removeItem('role');
+        localStorage.removeItem('activeRole');
+        localStorage.removeItem('roles');
         
         // Redirigir al login si no estamos ya en la página de login
         if (!window.location.pathname.includes('/auth/login')) {

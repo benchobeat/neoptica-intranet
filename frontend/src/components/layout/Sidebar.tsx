@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { ChevronDown, LogOut } from 'lucide-react';
 import { MenuItem, getMenuItemsByRole } from '../../config/menuItems';
 import Image from 'next/image';
+import RoleSelector from '../RoleSelector';
 
 interface SidebarProps {
   className?: string;
@@ -18,10 +19,10 @@ export default function Sidebar({ className = "", role }: SidebarProps) {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [userRole, setUserRole] = useState<string>('');
 
-  // Obtener el rol del usuario desde localStorage (solo en el cliente)
+  // Obtener el rol activo del usuario desde localStorage (solo en el cliente)
   useEffect(() => {
     // Usar el role proporcionado como prop o tomarlo del localStorage
-    const userRoleValue = role || localStorage.getItem('role') || 'guest';
+    const userRoleValue = role || localStorage.getItem('activeRole') || 'guest';
     setUserRole(userRoleValue);
     setMenuItems(getMenuItemsByRole(userRoleValue));
     
@@ -180,23 +181,23 @@ export default function Sidebar({ className = "", role }: SidebarProps) {
 
   return (
     <aside className={`w-64 bg-gray-900 text-gray-400 h-screen fixed top-0 left-0 flex flex-col border-r border-gray-800 ${className}`}>
-      <div className="p-6 text-2xl font-bold text-white border-b border-gray-800 flex items-center gap-2">
-        <div className="bg-indigo-600 p-2 rounded-lg">
-          {/* Logo de la aplicación */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-5 h-5"
-          >
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-          </svg>
-        </div>
-        <span>Neóptica</span>
+      <div className="p-4 space-y-3 border-b border-gray-800">
+        <Link 
+          href="/" 
+          className="flex items-center gap-2 text-xl font-bold text-white">
+          <div className="bg-indigo-600 p-2 rounded-lg">
+            <Image 
+              src="/logo-optica.svg" 
+              alt="Neóptica Logo" 
+              width={22} 
+              height={22}
+            />
+          </div>
+          <span>Neóptica</span>
+        </Link>
+        
+        {/* Selector de roles */}
+        <RoleSelector className="mt-3" />
       </div>
       
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -218,7 +219,8 @@ export default function Sidebar({ className = "", role }: SidebarProps) {
           </div>
           <button 
             onClick={() => {
-              localStorage.removeItem('role');
+              localStorage.removeItem('activeRole');
+              localStorage.removeItem('roles');
               window.location.href = '/';
             }}
             className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400"

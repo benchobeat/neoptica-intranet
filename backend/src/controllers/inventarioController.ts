@@ -194,7 +194,7 @@ export const crearInventario = async (req: Request, res: Response) => {
   } catch (error) {
     // Solo mostrar en consola si NO es test o desarrollo
     if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
-      console.error('Error al crear inventario:', error);
+      // console.error('Error al crear inventario:', error);
     }
     // Registrar auditoría de error
     await registrarAuditoria({
@@ -234,8 +234,9 @@ export const crearInventario = async (req: Request, res: Response) => {
  */
 export const registrarMovimientoInventario = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
-  const userRole = (req as any).usuario?.rol?.nombre || (req as any).user?.rol?.nombre;
+  const userId = (req as any).user?.id;
+  // Usar exclusivamente el sistema multi-rol
+  const userRoles = (req as any).user?.roles || [];
   
   try {
     const { inventario_id, tipo, cantidad, motivo } = req.body as MovimientoInventarioDTO;
@@ -404,7 +405,7 @@ export const registrarMovimientoInventario = async (req: Request, res: Response)
       error: null 
     });
   } catch (error) {
-    console.error('Error al registrar movimiento de inventario:', error);
+    // console.error('Error al registrar movimiento de inventario:', error);
     
     // Registrar auditoría de error
     await registrarAuditoria({
@@ -510,7 +511,7 @@ export const listarInventario = async (req: Request, res: Response) => {
       error: null,
     });
   } catch (error) {
-    console.error('Error al listar inventario:', error);
+    // console.error('Error al listar inventario:', error);
     
     // Registrar auditoría de error
     await registrarAuditoria({
@@ -633,7 +634,7 @@ export const obtenerInventarioPorId = async (req: Request, res: Response) => {
       error: null,
     });
   } catch (error) {
-    console.error('Error al obtener inventario por ID:', error);
+    // console.error('Error al obtener inventario por ID:', error);
     
     // Registrar auditoría de error
     await registrarAuditoria({
@@ -760,7 +761,7 @@ export const actualizarInventario = async (req: Request, res: Response) => {
       error: null,
     });
   } catch (error) {
-    console.error('Error al actualizar inventario:', error);
+    // console.error('Error al actualizar inventario:', error);
     
     // Registrar auditoría de error
     await registrarAuditoria({
@@ -861,7 +862,7 @@ export const eliminarInventario = async (req: Request, res: Response) => {
       error: null,
     });
   } catch (error) {
-    console.error('Error al eliminar inventario:', error);
+    // console.error('Error al eliminar inventario:', error);
     
     // Registrar auditoría de error
     await registrarAuditoria({
@@ -953,7 +954,7 @@ export const listarAlertasStock = async (req: Request, res: Response) => {
       error: null,
     });
   } catch (error) {
-    console.error('Error al listar alertas de stock:', error);
+    // console.error('Error al listar alertas de stock:', error);
     
     // Registrar auditoría de error
     await registrarAuditoria({
@@ -1146,7 +1147,7 @@ export const reversarMovimientoInventario = async (req: Request, res: Response) 
       error: null,
     });
   } catch (error) {
-    console.error('Error al reversar movimiento de inventario:', error);
+    // console.error('Error al reversar movimiento de inventario:', error);
     
     // Registrar auditoría de error
     await registrarAuditoria({

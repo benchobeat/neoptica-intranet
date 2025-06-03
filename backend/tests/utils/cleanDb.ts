@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
  * Limpia completamente la base de datos, eliminando todos los registros de todas las tablas.
  * Esta función debe usarse SOLO en entornos de prueba.
  * También recrea el usuario administrador y verifica que existan los roles correctos.
- * 
+ * npx ts-node tests/utils/cleanDb.ts
  * @returns {Promise<void>}
  */
 export async function cleanDatabase(): Promise<void> {

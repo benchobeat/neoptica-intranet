@@ -365,20 +365,40 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Rol principal (puedes ajustar si soportas varios roles por usuario)
-    const rol = usuario.usuario_rol?.[0]?.rol?.nombre || 'cliente';
+    // Extraer todos los roles del usuario
+    const roles = usuario.usuario_rol?.map(ur => ur.rol.nombre) || ['cliente'];
+    
+    // console.log(`[DEBUG] Roles obtenidos del usuario: ${JSON.stringify(roles)}`);
 
-    // Genera JWT
+    // Asegurar que siempre haya un JWT_SECRET
+    const JWT_SECRET = process.env.JWT_SECRET || 'default-test-secret-key-only-for-testing';
+    
+    if (!JWT_SECRET) {
+      console.error('¡ADVERTENCIA! JWT_SECRET no está configurado. Usando clave predeterminada insegura.');
+    }
+    
+    // Log para debugging en tests
+    if (process.env.NODE_ENV === 'test') {
+      // console.log(`Generando token JWT para usuario ${usuario.email} con roles: ${JSON.stringify(roles)}`);
+    }
+    
+    // Genera JWT solo con multirol
     const token = jwt.sign(
       {
         id: usuario.id,
         email: usuario.email,
         nombre_completo: usuario.nombre_completo,
-        rol
+        roles // Array con todos los roles del usuario
       },
-      process.env.JWT_SECRET || 'cambia-esto-en-produccion',
+      JWT_SECRET,
       { expiresIn: '8h' }
     );
+    
+    // Verificar que se generó el token correctamente
+    if (!token) {
+      // console.error('Error: No se pudo generar el token JWT');
+      throw new Error('No se pudo generar el token JWT');
+    }
 
     // Registrar log de acceso exitoso
     await registrarAuditoria({
@@ -400,8 +420,8 @@ export async function login(req: Request, res: Response): Promise<void> {
         id: usuario.id,
         nombre_completo: usuario.nombre_completo,
         email: usuario.email,
-        rol
-    // otros campos públicos si los necesitas
+        roles // Array completo de roles
+        // otros campos públicos si los necesitas
       }
     }));
 

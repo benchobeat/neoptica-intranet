@@ -102,7 +102,15 @@ const Sidebar = () => (
           <p className="text-sm font-semibold text-white">Dr. Kathia Mena</p>
           <p className="text-xs text-gray-500">optometrista@neoptica.com</p>
         </div>
-        <button className="text-gray-500 hover:text-white">
+        <button 
+          className="text-gray-500 hover:text-white"
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('activeRole');
+            localStorage.removeItem('roles');
+            window.location.href = '/auth/login';
+          }}
+        >
           <LogOut size={20} />
         </button>
       </div>

@@ -10,14 +10,14 @@
 - **Adjuntos de Inventario**: API para subir, listar, descargar y eliminar archivos adjuntos de inventario implementada y testeada. Resolución de problemas de middleware de autenticación y validación.
 - **Autenticación**: Login JWT y OAuth (Google, Facebook, Instagram) funcionando, recuperación de contraseña implementada y validada.
 - **Auditoría**: Sistema de auditoría completo, registra todas las operaciones CRUD relevantes y errores para todos los módulos, incluyendo inventario.
-- **Roles y permisos**: Middleware de roles y JWT para proteger rutas según permisos.
+- **Roles y permisos**: Sistema multirol que permite a usuarios tener múltiples roles simultáneos (ej: vendedor y optometrista), con middleware JWT para proteger rutas según permisos.
 - **Testing**: 238 tests automáticos (Jest) cubriendo autenticación, usuarios, roles, productos, sucursales, colores, marcas, inventario y adjuntos. Todos los tests pasan y la salida está limpia de logs innecesarios.
 - **Documentación**: Swagger/OpenAPI documentando todos los endpoints principales.
 - **Seed y migraciones**: Scripts de seed y migraciones Prisma funcionando correctamente.
 
 ### Pendientes para Finalizar Fase 1
 - [ ] **Modelos y endpoints de Stock y Pedido**: Faltan implementar modelos y endpoints básicos para stock y pedidos (ver checklist en README).
-- [ ] **Gestión de clientes**: La gestión de clientes se realiza mediante el modelo `usuario` (no existe modelo cliente independiente). Asegúrate de que los endpoints y roles permitan registrar y distinguir usuarios de tipo cliente.
+- [ ] **Gestión de clientes**: La gestión de clientes se realiza mediante el modelo `usuario` (no existe modelo cliente independiente). Gracias al sistema multirol implementado, un usuario puede ser simultáneamente cliente y tener otros roles adicionales. Asegúrate de que los endpoints y roles permitan registrar y distinguir usuarios por sus múltiples roles.
 - [ ] **Diagrama de base de datos actualizado**: Agregar/exportar el diagrama ERD actualizado.
 - [ ] **Ejemplos de uso en Postman**: Exportar y documentar colecciones de pruebas para facilitar QA/UAT.
 - [ ] **Variables de entorno de producción**: Revisar y definir .env para despliegue (seguridad, emails, OAuth, etc).

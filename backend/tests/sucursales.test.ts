@@ -31,7 +31,7 @@ let secondSucursalId: string;
 // Función auxiliar para generar token JWT para pruebas
 const generateAuthToken = (userId: string, role: string) => {
   return jwt.sign(
-    { id: userId, rol: role },
+    { id: userId, roles: [role] },
     process.env.JWT_SECRET || 'secret-de-prueba',
     { expiresIn: '1h' }
   );
@@ -83,15 +83,6 @@ beforeAll(async () => {
 
 // Limpieza después de todas las pruebas
 afterAll(async () => {
-  // Eliminar sucursales creadas durante las pruebas
-  await prisma.sucursal.deleteMany({
-    where: {
-      nombre: {
-        startsWith: 'Test Sucursal'
-      }
-    }
-  });
-
   // Cerrar conexión con la base de datos
   await prisma.$disconnect();
 });

@@ -226,6 +226,51 @@ Al agregar nuevas características a formularios existentes:
 - [ ] Manejar adecuadamente estados de carga y errores
 - [ ] Evitar referencias a características no implementadas
 
+## Implementación del Sistema Multi-Rol
+
+La aplicación ahora soporta que un usuario tenga múltiples roles simultáneos. Al desarrollar formularios administrativos o cualquier funcionalidad, considere las siguientes directrices:
+
+### Acceso al Rol Activo
+
+1. **Obtención del rol activo**:
+   ```tsx
+   // CORRECTO: Usar activeRole en lugar de role
+   const activeRole = localStorage.getItem('activeRole');
+   
+   // INCORRECTO: Ya no usar
+   // const role = localStorage.getItem('role'); 
+   ```
+
+2. **Obtención de todos los roles disponibles**:
+   ```tsx
+   const roles = JSON.parse(localStorage.getItem('roles') || '[]');
+   ```
+
+3. **Verificación de permisos**:
+   ```tsx
+   // Verificar si el usuario tiene un rol activo específico
+   if (localStorage.getItem('activeRole') === 'admin') {
+     // Mostrar opciones de administrador
+   }
+   
+   // Verificar si el usuario tiene un rol específico asignado (aunque no sea el activo)
+   const roles = JSON.parse(localStorage.getItem('roles') || '[]');
+   if (roles.includes('optometrista')) {
+     // El usuario tiene el rol de optometrista asignado
+   }
+   ```
+
+4. **Implementación de interfaces adaptativas**:
+   - Adaptar la interfaz según el rol activo, no según todos los roles disponibles
+   - Para interfaces que muestran permisos disponibles, considerar mostrar opciones para cambiar de rol
+
+### Consideraciones de Auditoría
+
+Al implementar auditoría con múltiples roles, asegúrarse de:
+
+- Registrar el rol activo que realiza cada acción, no solo el usuario
+- Mantener consistencia en la auditoría cuando un mismo usuario cambia entre roles
+
 ## Implementación de Auditoría
 
 Recordar que todos los controladores deben implementar auditoría según se estableció en el sistema:
