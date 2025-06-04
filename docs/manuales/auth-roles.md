@@ -1,16 +1,40 @@
 # Sistema de Autenticación y Gestión Multi-Rol - Intranet Neóptica
 
-> **Versión:** 1.0 (Noviembre 2023)  
+> **Versión:** 1.1 (Junio 2025)  
 > **Autor:** Equipo de Desarrollo Neóptica  
-> **Estado:** Implementado - Documentación completa
+> **Estado:** Implementado - Documentación actualizada
 
 ## 1. Visión General
 
 La Intranet Neóptica implementa un sistema avanzado de gestión de usuarios con capacidades multi-rol, permitiendo que un mismo usuario pueda tener asignados múltiples roles simultáneamente (por ejemplo, ser tanto vendedor como optometrista). Este documento detalla la arquitectura, implementación y consideraciones de seguridad del sistema.
 
-## 2. Arquitectura de la Solución Multi-Rol
+## 2. Usuarios del Sistema
 
-### 2.1. Modelo de datos
+### 2.1. Usuario System
+
+El sistema cuenta con un usuario especial denominado "usuario system" (o usuario del sistema), el cual se utiliza específicamente para operaciones automáticas y registros de auditoría generados por el propio sistema cuando no hay un usuario humano asociado a la acción.
+
+**Características del usuario system:**
+
+- **Email reservado:** `system@internal.neoptica.com`
+- **Inactivo por diseño:** Este usuario está siempre configurado como inactivo (`activo: false`)
+- **Sin roles asignados:** Para evitar que aparezca en listados normales de usuarios
+- **Protegido contra modificaciones:** El sistema impide que este usuario sea modificado o eliminado
+- **Generación automática:** Creado en el script de seed con contraseña aleatoria segura
+- **Uso en auditoría:** Utilizado automáticamente por el sistema de auditoría cuando no se proporciona un ID de usuario válido
+
+**Seguridad:**
+
+El usuario system está protegido contra:
+- Eliminación accidental o maliciosa
+- Modificación de sus propiedades
+- Cambio de contraseña
+
+No debe confundirse este usuario con la cuenta de administrador. El usuario system nunca debe utilizarse para iniciar sesión y solo sirve como actor para los registros de auditoría generados automáticamente.
+
+## 3. Arquitectura de la Solución Multi-Rol
+
+### 3.1. Modelo de datos
 
 El sistema utiliza una relación many-to-many entre usuarios y roles implementada a través de la tabla asociativa `usuario_rol`:
 
@@ -30,7 +54,7 @@ Usuario (1) ------ (*) usuario_rol (*) ------ (1) Rol
 
 Esta tabla asociativa incluye todos los campos de control temporal estándar para mantener la integridad de la auditoría.
 
-### 2.2. JWT con Múltiples Roles
+### 3.2. JWT con Múltiples Roles
 
 Los tokens JWT generados al autenticarse incluyen un array de todos los roles asignados al usuario:
 
@@ -48,9 +72,9 @@ Este diseño permite:
 - Facilitar el cambio dinámico de rol activo en la UI
 - Mantener una única sesión para todas las capacidades del usuario
 
-## 3. Implementación
+## 4. Implementación
 
-### 3.1. Autenticación
+### 4.1. Autenticación
 
 ```typescript
 // Ejemplo simplificado de generación de JWT con múltiples roles
@@ -77,7 +101,7 @@ export const generarJWT = async (uid: number, roles: string[]): Promise<string> 
 };
 ```
 
-### 3.2. Middleware de Validación de Roles
+### 4.2. Middleware de Validación de Roles
 
 ```typescript
 // Middleware que verifica si el usuario tiene alguno de los roles requeridos
