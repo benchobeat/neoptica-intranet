@@ -157,24 +157,7 @@ export default function BrandsPage() {
       ellipsis: true,
       render: (descripcion: string | null) => descripcion || "N/A",
     },
-    {
-      title: "Sitio Web",
-      dataIndex: "website",
-      key: "website",
-      render: (website: string | null) =>
-        website ? (
-          <a 
-            href={website} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
-          >
-            <LinkOutlined /> {website}
-          </a>
-        ) : (
-          "N/A"
-        ),
-    },
+    // Columna de sitio web eliminada ya que no es parte del modelo
     {
       title: "Acciones",
       key: "acciones",
@@ -273,19 +256,6 @@ export default function BrandsPage() {
                 maxLength={500}
                 showCount
               />
-            </Form.Item>
-            
-            <Form.Item
-              name="website"
-              label="Sitio Web"
-              rules={[
-                { 
-                  pattern: /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/, 
-                  message: "Por favor ingresa una URL válida" 
-                },
-              ]}
-            >
-              <Input placeholder="https://ejemplo.com" />
             </Form.Item>
           </Form>
         </Modal>

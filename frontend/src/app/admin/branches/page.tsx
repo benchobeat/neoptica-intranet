@@ -14,6 +14,7 @@ import Popconfirm from "antd/lib/popconfirm";
 import Tag from "antd/lib/tag";
 import Tooltip from "antd/lib/tooltip";
 import InputNumber from "antd/lib/input-number";
+import Switch from "antd/lib/switch";
 import type { ColumnType } from "antd/lib/table";
 
 // Modal importado dinámicamente para reducir el bundle inicial
@@ -31,6 +32,8 @@ import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlin
 import EnvironmentOutlined from "@ant-design/icons/EnvironmentOutlined";
 import PhoneOutlined from "@ant-design/icons/PhoneOutlined";
 import MailOutlined from "@ant-design/icons/MailOutlined";
+import CheckOutlined from "@ant-design/icons/CheckOutlined";
+import CloseOutlined from "@ant-design/icons/CloseOutlined";
 import { getSucursalesPaginadas, createSucursal, updateSucursal, deleteSucursal } from "@/lib/api/sucursalService";
 import { Sucursal } from "@/types";
 import { debounce } from "@/utils/debounce";
@@ -79,10 +82,11 @@ export default function BranchesPage() {
   };
 
   // Memoiza la función showModal para evitar recrearla en cada render
-  const showModal = useCallback((branch?: Sucursal) => {
-    setEditingBranch(branch || null);
+  const openModal = useCallback((branch?: Sucursal) => {
     form.resetFields();
+    
     if (branch) {
+      setEditingBranch(branch);
       form.setFieldsValue({
         nombre: branch.nombre,
         direccion: branch.direccion,
@@ -90,8 +94,14 @@ export default function BranchesPage() {
         email: branch.email,
         latitud: branch.latitud,
         longitud: branch.longitud,
+        activo: branch.activo !== undefined ? branch.activo : true,
       });
+    } else {
+      setEditingBranch(null);
+      // Por defecto, las nuevas sucursales están activas
+      form.setFieldsValue({ activo: true });
     }
+    
     setModalVisible(true);
   }, [form]);
 
@@ -195,7 +205,7 @@ export default function BranchesPage() {
   // Celda memoizada para acciones
   const ActionsCell = React.memo(({ record }: { record: Sucursal }) => {
     // En lugar de useCallback anidado, usamos funciones simples ya que el componente está memoizado
-    const handleEdit = () => showModal(record);
+    const handleEdit = () => openModal(record);
     const handleDeleteConfirm = () => handleDelete(record.id);
     
     return (
@@ -281,7 +291,7 @@ export default function BranchesPage() {
         rowKey="id"
         headerTitle="Gestión de Sucursales"
         showAddButton={true}
-        onAddButtonClick={() => showModal()} 
+        onAddButtonClick={() => openModal()} 
         addButtonLabel="Nueva Sucursal"
         showSearch={true}
         onSearch={handleSearch} 
@@ -405,6 +415,19 @@ export default function BranchesPage() {
                 />
               </Form.Item>
             </div>
+            
+            <Form.Item
+              name="activo"
+              label="Estado"
+              valuePropName="checked"
+              initialValue={true}
+            >
+              <Switch
+                checkedChildren={<CheckOutlined />}
+                unCheckedChildren={<CloseOutlined />}
+                defaultChecked
+              />
+            </Form.Item>
             
             <div className="mt-2 p-3 bg-gray-100 rounded-md">
               <p className="text-sm text-gray-500 mb-1">

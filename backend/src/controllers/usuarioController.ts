@@ -173,6 +173,8 @@ export async function obtenerUsuario(
       email: usuario.email,
       telefono: usuario.telefono,
       activo: usuario.activo,
+      direccion: usuario.direccion,
+      dni: usuario.dni,
       roles: usuario.usuario_rol.map(ur => ur.rol.nombre),
     };
 
@@ -214,7 +216,13 @@ function telefonoValido(telefono: string): boolean {
 }
 
 export async function crearUsuario(req: Request, res: Response): Promise<void> {
-  const { nombre_completo, email, password, telefono, roles } = req.body;
+  const { nombre_completo, email, password, telefono, roles, dni, direccion } = req.body;
+  
+  // Log para debug
+  console.log('[DEBUG] Datos recibidos en crearUsuario:', {
+    nombre_completo, email, telefono, roles, dni, direccion
+  });
+  
   const usuarioId = (req as any).user?.id || "sistema";
   let mensajeError = "";
 
@@ -281,8 +289,6 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   // Control de acceso (solo admin multi-rol)
   const userRoles = (req as any).user?.roles || [];
   const esAdmin = Array.isArray(userRoles) && userRoles.includes("admin");
-  // console.log(`[DEBUG] Roles del usuario: ${JSON.stringify(userRoles)}`);
-  // console.log(`[DEBUG] Es admin: ${esAdmin}`);
   if (!esAdmin) {
     mensajeError = "Solo admin puede crear usuarios";
     res.status(403).json(fail(mensajeError));
@@ -343,6 +349,8 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
         email,
         password: passwordHash,
         telefono,
+        dni,
+        direccion,
         activo: true,
         creado_en: new Date(),
         creado_por: usuarioId,
@@ -373,6 +381,8 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
         nombre_completo: usuario.nombre_completo,
         email: usuario.email,
         telefono: usuario.telefono,
+        dni: usuario.dni,
+        direccion: usuario.direccion,
         activo: usuario.activo,
         roles: usuario.usuario_rol.map(ur => ur.rol.nombre),
       })
@@ -409,7 +419,7 @@ export async function actualizarUsuario(
     res.status(403).json(fail('Acceso denegado: solo admin puede modificar usuarios'));
     return;
   }
-  const { nombre_completo, email, telefono, dni } = req.body;
+  const { nombre_completo, email, telefono, dni, direccion } = req.body;
   let mensajeError = "";
 
   try {
@@ -484,6 +494,7 @@ export async function actualizarUsuario(
     // Lógica para dni: solo permitir si actualmente es null
     let nuevoDni = usuario.dni;
     if (dni !== undefined) {
+      // Si el usuario ya tiene DNI, no permitir cambios
       if (usuario.dni !== null) {
         mensajeError = "El DNI ya está registrado y no puede ser modificado";
         res.status(400).json(fail(mensajeError));
@@ -497,7 +508,23 @@ export async function actualizarUsuario(
           modulo: "usuarios",
         });
         return;
-      } else {
+      } else if (dni && dni.trim() !== '') { // Si no tiene DNI y se está asignando uno
+        // Verificar que el DNI no esté ya asignado a otro usuario
+        const dniExistente = await prisma.usuario.findFirst({ where: { dni } });
+        if (dniExistente) {
+          mensajeError = "El DNI ya está registrado para otro usuario";
+          res.status(409).json(fail(mensajeError));
+          await registrarAuditoria({
+            usuarioId,
+            accion: "modificar_usuario_fallido",
+            descripcion: mensajeError,
+            ip: req.ip,
+            entidadTipo: "usuario",
+            entidadId: id,
+            modulo: "usuarios",
+          });
+          return;
+        }
         nuevoDni = dni;
       }
     }
@@ -533,7 +560,10 @@ export async function actualizarUsuario(
       cambios.push(`telefono: "${usuario.telefono || ""}" → "${telefono || ""}"`);
     }
     if (nuevoDni !== usuario.dni) {
-      cambios.push(`dni: "${usuario.dni || ""}" → "${nuevoDni || ""}"`);
+      cambios.push(`dni: "${usuario.dni || ""}" → "${nuevoDni || ""}"`); 
+    }
+    if (direccion !== undefined && direccion !== usuario.direccion) {
+      cambios.push(`direccion: "${usuario.direccion || ""}" → "${direccion || ""}"`);
     }
 
     // Validación de roles si se quiere actualizar (multirol)
@@ -591,14 +621,26 @@ export async function actualizarUsuario(
       cambios.push(`roles: [${actualesIds.join(",")}] → [${nuevosIds.join(",")}]`);
     }
 
+    // Log para debug
+    console.log('[DEBUG] Datos a actualizar:', {
+      nombre_completo: nombre_completo || undefined,
+      email: email || undefined,
+      telefono: telefono ?? null,
+      dni: nuevoDni,
+      direccion: direccion !== undefined ? direccion : usuario.direccion,
+    });
+
     // Actualiza el usuario
     const usuarioActualizado = await prisma.usuario.update({
       where: { id },
       data: {
-        nombre_completo,
-        email,
-        telefono,
+        nombre_completo: nombre_completo || undefined,
+        email: email || undefined,
+        telefono: telefono ?? null,
+        // Solo actualizamos el DNI si es explícitamente nuevo y ha pasado todas las validaciones
         dni: nuevoDni,
+        // Manejamos dirección de forma explícita para permitir strings vacías
+        direccion: direccion !== undefined ? direccion : usuario.direccion,
         modificado_en: new Date(),
         modificado_por: usuarioId,
       },

@@ -35,6 +35,7 @@ export async function createSucursal(data: {
   email: string;
   latitud: number;
   longitud: number;
+  activo: boolean;
 }) {
   return fetchApi<SucursalResponse>(BASE_ENDPOINT, 'POST', data);
 }
@@ -49,6 +50,7 @@ export async function updateSucursal(id: string, data: {
   email?: string;
   latitud?: number;
   longitud?: number;
+  activo?: boolean;
 }) {
   return fetchApi<SucursalResponse>(`${BASE_ENDPOINT}/${id}`, 'PUT', data);
 }
