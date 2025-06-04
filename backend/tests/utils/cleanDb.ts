@@ -14,8 +14,14 @@ export async function cleanDatabase(): Promise<void> {
   try {
     console.log('Iniciando limpieza de la base de datos...');
     
-    // Desactivar restricciones de clave foránea temporalmente
-    await prisma.$executeRaw`SET session_replication_role = 'replica';`;
+    // Intentar desactivar restricciones de clave foránea si es posible (funciona en Supabase)
+    // Si falla (en Render), continuamos con el enfoque ordenado de eliminación
+    try {
+      await prisma.$executeRaw`SET session_replication_role = 'replica';`;
+      console.log('Restricciones de clave foránea desactivadas temporalmente');
+    } catch (e) {
+      console.log('No se pudieron desactivar restricciones de clave foránea, continuando con enfoque estándar');
+    }
     
     // Eliminar registros de todas las tablas en orden para manejar dependencias
     // 1. Primero las tablas más dependientes
@@ -68,6 +74,19 @@ export async function cleanDatabase(): Promise<void> {
     
     // 3. Ahora limpiamos usuarios (excepto admin) y aseguramos roles correctos
     // Eliminar todos los usuarios excepto el admin
+    // Primero limpiamos archivo_entidad que tiene FK a archivo_adjunto
+    try {
+      await prisma.archivo_entidad.deleteMany({});
+      console.log('Tabla archivo_entidad limpiada');
+    } catch (e) { console.error('Error limpiando archivo_entidad', e); }
+    
+    // Luego limpiamos archivo_adjunto que tiene FK a usuario
+    try {
+      await prisma.archivo_adjunto.deleteMany({});
+      console.log('Tabla archivo_adjunto limpiada');
+    } catch (e) { console.error('Error limpiando archivo_adjunto', e); }
+    
+    // Ahora podemos eliminar usuarios
     try {
       await prisma.usuario.deleteMany({
         where: {
@@ -183,8 +202,13 @@ export async function cleanDatabase(): Promise<void> {
       console.error('Error: No se pudo crear o encontrar el usuario admin');
     }
     
-    // Reactivar restricciones de clave foránea
-    await prisma.$executeRaw`SET session_replication_role = 'origin';`;
+    // Intentar reactivar restricciones de clave foránea si se desactivaron previamente
+    try {
+      await prisma.$executeRaw`SET session_replication_role = 'origin';`;
+      console.log('Restricciones de clave foránea reactivadas');
+    } catch (e) {
+      // Ignoramos el error si no se pueden reactivar
+    }
     
     console.log('Base de datos limpiada exitosamente.');
   } catch (error) {
