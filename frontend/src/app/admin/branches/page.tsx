@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import dynamic from "next/dynamic";
-import CustomTable from "@/components/ui/CustomTable"; // Importar CustomTable
+import ResponsiveTable from "@/components/ui/ResponsiveTable"; // Importar ResponsiveTable
 
 // Importaciones selectivas de Ant Design para reducir el tamaño del bundle
 // Table ya no se importa directamente, CustomTable lo maneja
@@ -28,7 +28,7 @@ import PlusOutlined from "@ant-design/icons/PlusOutlined";
 import EditOutlined from "@ant-design/icons/EditOutlined";
 import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
 import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
-// SearchOutlined podría no ser necesario si CustomTable maneja su propio icono de búsqueda
+import SearchOutlined from "@ant-design/icons/SearchOutlined";
 import EnvironmentOutlined from "@ant-design/icons/EnvironmentOutlined";
 import PhoneOutlined from "@ant-design/icons/PhoneOutlined";
 import MailOutlined from "@ant-design/icons/MailOutlined";
@@ -116,11 +116,14 @@ export default function BranchesPage() {
       const values = await form.validateFields();
       setLoading(true);
 
+      // Asegurar que el estado siempre sea true
+      const formData = { ...values, activo: true };
+
       let response;
       if (editingBranch) {
-        response = await updateSucursal(editingBranch.id, values);
+        response = await updateSucursal(editingBranch.id, formData);
       } else {
-        response = await createSucursal(values);
+        response = await createSucursal(formData);
       }
 
       if (response.ok) {
@@ -192,16 +195,7 @@ export default function BranchesPage() {
   });
   ContactCell.displayName = "ContactCell";
   
-  // Celda memoizada para estado
-  const StatusCell = React.memo(({ activo }: { activo: boolean }) => {
-    return activo ? (
-      <Tag color="green">Activo</Tag>
-    ) : (
-      <Tag color="red">Inactivo</Tag>
-    );
-  });
-  StatusCell.displayName = "StatusCell";
-  
+
   // Celda memoizada para acciones
   const ActionsCell = React.memo(({ record }: { record: Sucursal }) => {
     // En lugar de useCallback anidado, usamos funciones simples ya que el componente está memoizado
@@ -255,22 +249,70 @@ export default function BranchesPage() {
       responsive: ["md" as any],
     },
     {
-      title: "Estado",
-      dataIndex: "activo",
-      key: "activo",
-      render: (activo: boolean) => <StatusCell activo={activo} />,
-      filters: [
-        { text: "Activo", value: true },
-        { text: "Inactivo", value: false },
-      ],
-      onFilter: (value: any, record: Sucursal) => record.activo === value,
-    },
-    {
       title: "Acciones",
       key: "actions",
       render: (_: any, record: Sucursal) => <ActionsCell record={record} />,
     },
-  ], [AddressCell, ContactCell, StatusCell, ActionsCell]);
+  ], [AddressCell, ContactCell, ActionsCell]);
+
+  // Renderizado personalizado para móviles
+  const mobileCardRender = useCallback((item: Sucursal) => {
+    return (
+      <div className="mobile-card bg-gray-800 rounded-lg p-4 mb-3 border border-gray-700">
+        <div className="mobile-card-content">
+          <div className="mobile-card-row">
+            <span className="mobile-card-label">Nombre:</span>
+            <span className="mobile-card-value font-medium">{item.nombre}</span>
+          </div>
+          <div className="mobile-card-row">
+            <span className="mobile-card-label">Dirección:</span>
+            <span className="mobile-card-value">{item.direccion}</span>
+          </div>
+          <div className="mobile-card-row">
+            <span className="mobile-card-label">Teléfono:</span>
+            <span className="mobile-card-value">{item.telefono}</span>
+          </div>
+          <div className="mobile-card-row">
+            <span className="mobile-card-label">Email:</span>
+            <span className="mobile-card-value">{item.email || 'N/A'}</span>
+          </div>
+          <div className="mobile-card-actions">
+            <Tooltip title="Editar">
+              <Button
+                icon={<EditOutlined />}
+                type="primary"
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openModal(item);
+                }}
+                className="mr-2"
+              />
+            </Tooltip>
+            <Popconfirm
+              title="¿Estás seguro de eliminar esta sucursal?"
+              onConfirm={(e) => {
+                e?.stopPropagation();
+                handleDelete(item.id);
+              }}
+              onCancel={(e) => e?.stopPropagation()}
+              okText="Sí"
+              cancelText="No"
+              icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
+            >
+              <Button 
+                icon={<DeleteOutlined />} 
+                type="primary" 
+                size="small" 
+                danger 
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Popconfirm>
+          </div>
+        </div>
+      </div>
+    );
+  }, [openModal, handleDelete]);
 
   // Memoizamos los botones del footer del modal fuera del renderizado condicional
   const modalFooter = useMemo(() => [
@@ -284,31 +326,34 @@ export default function BranchesPage() {
 
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
-      <CustomTable<Sucursal>
-        columns={columns}
-        dataSource={branches}
-        loading={loading}
-        rowKey="id"
-        headerTitle="Gestión de Sucursales"
-        showAddButton={true}
-        onAddButtonClick={() => openModal()} 
-        addButtonLabel="Nueva Sucursal"
-        showSearch={true}
-        onSearch={handleSearch} 
-        searchPlaceholder="Buscar sucursal..."
-        paginationConfig={{
-          current: page,
-          pageSize: pageSize,
-          total: total,
-          onChange: (newPage, newPageSize) => {
-            setPage(newPage);
-            if (newPageSize) setPageSize(newPageSize);
-          },
-        }}
-        tableProps={{
-          scroll: { x: 'max-content' },
-        }}
-      />
+<div className="responsive-table-container">
+        <ResponsiveTable<Sucursal>
+          columns={columns}
+          dataSource={branches}
+          loading={loading}
+          rowKey="id"
+          headerTitle="Gestión de Sucursales"
+          showAddButton={true}
+          onAddButtonClick={() => openModal()} 
+          showSearch={true}
+          onSearch={handleSearch} 
+          searchPlaceholder="Buscar sucursal..."
+          pagination={{
+            current: page,
+            pageSize: pageSize,
+            total: total,
+            onChange: (newPage, newPageSize) => {
+              setPage(newPage);
+              if (newPageSize) setPageSize(newPageSize);
+            },
+            showSizeChanger: true,
+            showTotal: (total) => `Total ${total} sucursales`,
+            pageSizeOptions: ['5', '10', '20', '50'],
+          }}
+          className="responsive-table"
+          mobileCardRender={mobileCardRender}
+        />
+      </div>
 
       {modalVisible && (
         <Modal
@@ -416,17 +461,9 @@ export default function BranchesPage() {
               </Form.Item>
             </div>
             
-            <Form.Item
-              name="activo"
-              label="Estado"
-              valuePropName="checked"
-              initialValue={true}
-            >
-              <Switch
-                checkedChildren={<CheckOutlined />}
-                unCheckedChildren={<CloseOutlined />}
-                defaultChecked
-              />
+            {/* El campo activo ahora siempre será true y está oculto del formulario */}
+            <Form.Item name="activo" hidden initialValue={true}>
+              <Input type="hidden" />
             </Form.Item>
             
             <div className="mt-2 p-3 bg-gray-100 rounded-md">

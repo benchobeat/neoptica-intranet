@@ -15,19 +15,23 @@ import Tag from "antd/lib/tag";
 import Tooltip from "antd/lib/tooltip";
 import Select from "antd/lib/select";
 // Importaciones optimizadas de iconos
-import PlusOutlined from "@ant-design/icons/PlusOutlined";
-import EditOutlined from "@ant-design/icons/EditOutlined";
-import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
-import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
-import CustomTable from '@/components/ui/CustomTable';
-import UploadOutlined from "@ant-design/icons/UploadOutlined";
-import UserOutlined from "@ant-design/icons/UserOutlined";
-import PhoneOutlined from "@ant-design/icons/PhoneOutlined";
-import MailOutlined from "@ant-design/icons/MailOutlined";
-import HomeOutlined from "@ant-design/icons/HomeOutlined";
-import IdcardOutlined from "@ant-design/icons/IdcardOutlined";
-import LockOutlined from "@ant-design/icons/LockOutlined";
-import InfoCircleOutlined from "@ant-design/icons/InfoCircleOutlined";
+import { 
+  PlusOutlined, 
+  EditOutlined, 
+  DeleteOutlined, 
+  ExclamationCircleOutlined, 
+  UploadOutlined, 
+  UserOutlined, 
+  PhoneOutlined, 
+  MailOutlined, 
+  HomeOutlined, 
+  IdcardOutlined, 
+  LockOutlined, 
+  InfoCircleOutlined 
+} from '@ant-design/icons';
+
+import ResponsiveTable from '@/components/ui/ResponsiveTable';
+
 import { getClientesPaginados, createCliente, updateCliente, deleteCliente, getRoles, getClienteById } from "@/lib/api/usuarioService";
 
 // Interfaz para datos de cliente/usuario
@@ -88,6 +92,14 @@ const PhoneCell = memo(({ telefono }: { telefono?: string }) => (
   </div>
 ));
 PhoneCell.displayName = "PhoneCell";
+
+const DniCell = memo(({ dni }: { dni?: string }) => (
+  <div className="flex items-center gap-2">
+    <IdcardOutlined className="text-purple-400" />
+    <span>{dni || "--"}</span>
+  </div>
+));
+DniCell.displayName = "DniCell";
 
 const AddressCell = memo(({ direccion }: { direccion?: string }) => (
   <MemoizedTooltip title={direccion}>
@@ -181,10 +193,7 @@ const RolesCell: React.FC<{ roles?: (RoleObject | RoleString)[] | undefined }> =
 });
 RolesCell.displayName = "RolesCell";
 
-const StatusCell = memo(({ activo }: { activo: boolean }) => (
-  activo ? <MemoizedTag color="green">Activo</MemoizedTag> : <MemoizedTag color="red">Inactivo</MemoizedTag>
-));
-StatusCell.displayName = "StatusCell";
+
 
 const ActionCell = memo(({ record, onEdit, onDelete }: { 
   record: Customer, 
@@ -396,6 +405,7 @@ const CustomersPage = () => {
   
   // Abrir modal (crear/editar)
   const openModal = useCallback(async (customer?: Customer) => {
+    console.log('[DEBUG] openModal llamado con customer:', customer);
     // Resetear formulario y selección
     form.resetFields();
     setEditingCustomer(customer || null);
@@ -419,24 +429,27 @@ const CustomersPage = () => {
           console.log("[DEBUG] Roles del usuario:", userDetail.roles);
           console.log("[DEBUG] Roles disponibles:", availableRoles);
           
-          // Usar setTimeout para asegurar que el formulario esté completamente renderizado
+          // Preparar los datos del formulario
+          const formData = {
+            nombre_completo: userDetail.nombre_completo || "",
+            email: userDetail.email || "",
+            telefono: userDetail.telefono || "",
+            dni: userDetail.dni || "",
+            direccion: userDetail.direccion || "",
+            foto_perfil: userDetail.foto_perfil || "",
+          };
+          
+          // Logging adicional para diagnóstico
+          console.log("[DEBUG] Datos del formulario a establecer:", formData);
+          console.log("[DEBUG] Dirección del usuario:", userDetail.direccion);
+          console.log("[DEBUG] DNI del usuario:", userDetail.dni);
+          
+          // Establecer valores directamente
+          form.setFieldsValue(formData);
+          
+          // Forzar una actualización con un pequeño retraso para asegurar la renderización
           setTimeout(() => {
-            // Asegurar que todos los campos se carguen correctamente, incluyendo dirección y dni
-            const formData = {
-              nombre_completo: userDetail.nombre_completo || "",
-              email: userDetail.email || "",
-              telefono: userDetail.telefono || "",
-              dni: userDetail.dni || "",
-              direccion: userDetail.direccion || "",
-              foto_perfil: userDetail.foto_perfil || "",
-            };
-            
-            // Logging adicional para diagnóstico
-            console.log("[DEBUG] Dirección del usuario:", userDetail.direccion);
-            console.log("[DEBUG] DNI del usuario:", userDetail.dni);
-            
-            form.setFieldsValue(formData);
-            console.log("[DEBUG] Valores establecidos en el formulario:", form.getFieldsValue());
+            console.log("[DEBUG] Valores actuales del formulario:", form.getFieldsValue());
           }, 100);
           
           // Esperar a que availableRoles esté cargado
@@ -665,6 +678,12 @@ const CustomersPage = () => {
       render: (telefono: string) => <PhoneCell telefono={telefono} />,
     },
     {
+      title: "DNI",
+      dataIndex: "dni",
+      key: "dni",
+      render: (dni: string) => <DniCell dni={dni} />,
+    },
+    {
       title: "Dirección",
       dataIndex: "direccion",
       key: "direccion",
@@ -675,18 +694,7 @@ const CustomersPage = () => {
       title: "Roles",
       dataIndex: "roles",
       key: "roles",
-      render: (roles: { id: string; nombre: string }[]) => <RolesCell roles={roles} />,
-    },
-    {
-      title: "Estado",
-      dataIndex: "activo",
-      key: "activo",
-      render: (activo: boolean) => <StatusCell activo={activo} />,
-      filters: [
-        { text: "Activo", value: true },
-        { text: "Inactivo", value: false },
-      ],
-      onFilter: (value: any, record: Customer) => record.activo === value,
+      render: (roles: { id: string; nombre: string }[]) => <RolesCell roles={roles} />
     },
     {
       title: "Acciones",
@@ -728,6 +736,13 @@ const CustomersPage = () => {
     setSelectedRoles(matchedRoles);
   }, [availableRoles]);
 
+  // Manejar la búsqueda/filtrado
+  const handleSearch = useCallback((value: string) => {
+    console.log("[DEBUG] Ejecutando búsqueda con valor:", value);
+    setSearchText(value);
+    setPage(1); // Resetear a la primera página al buscar
+  }, []);
+  
   // Propiedades para la paginación (memoizado)
   const paginationConfig = useMemo(() => ({
     current: page,
@@ -741,25 +756,116 @@ const CustomersPage = () => {
     showTotal: (total: number, range: number[]) => `${range[0]}-${range[1]} de ${total} usuarios`,
   }), [page, pageSize, total]);
 
+  // Renderizar tarjeta para móviles
+  const renderMobileCard = (record: Customer) => {
+    const handleEditClick = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      // Usar la misma lógica que en el modo escritorio
+      await openModal(record);
+    };
+
+    const handleDeleteClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      handleDelete(record.id);
+    };
+
+    return (
+      <div className="space-y-2 p-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <UserOutlined className="text-indigo-400" />
+            <span className="font-medium">{record.nombre_completo}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {record.roles?.map((role: any) => (
+              <Tag 
+                key={role.id || role} 
+                color={getRoleColor(typeof role === 'object' ? role.nombre : role)}
+                className="text-xs"
+              >
+                {typeof role === 'object' ? role.nombre : role}
+              </Tag>
+            ))}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="flex items-center gap-2 text-gray-600">
+            <MailOutlined className="text-blue-400" />
+            <span className="truncate">{record.email}</span>
+          </div>
+          
+          {record.telefono && (
+            <div className="flex items-center gap-2 text-gray-600">
+              <PhoneOutlined className="text-green-400" />
+              <span>{record.telefono}</span>
+            </div>
+          )}
+          
+          {record.dni && (
+            <div className="flex items-center gap-2 text-gray-600">
+              <IdcardOutlined className="text-purple-400" />
+              <span>{record.dni}</span>
+            </div>
+          )}
+          
+          {record.direccion && (
+            <div className="flex items-center gap-2 text-gray-600 col-span-2">
+              <HomeOutlined className="text-amber-400" />
+              <span className="truncate">{record.direccion}</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end gap-2 mt-2">
+          <Button 
+            icon={<EditOutlined />} 
+            size="small"
+            onClick={handleEditClick}
+          />
+          <Button 
+            icon={<DeleteOutlined />} 
+            danger 
+            size="small"
+            onClick={handleDeleteClick}
+          />
+        </div>
+      </div>
+    );
+  };
+  
+  // Renderizar la tabla de usuarios
+  const renderUserTable = () => (
+    <ResponsiveTable
+      columns={columns}
+      dataSource={customers}
+      loading={loading}
+      rowKey="id"
+      pagination={{
+        current: page,
+        pageSize: pageSize,
+        total: total,
+        onChange: (newPage: number, newPageSize?: number) => {
+          setPage(newPage);
+          if (newPageSize) setPageSize(newPageSize);
+        },
+        showSizeChanger: true,
+        showTotal: (total: number, range: number[]) => `${range[0]}-${range[1]} de ${total} usuarios`,
+      }}
+      headerTitle="Gestión de Usuarios"
+      showAddButton={true}
+      onAddButtonClick={() => openModal()}
+      showSearch={true}
+      onSearch={handleSearch}
+      searchPlaceholder="Buscar por nombre, email o DNI..."
+      mobileCardRender={renderMobileCard}
+      className="dark-table"
+    />
+  );
+
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen">
-      <CustomTable<Customer>
-        headerTitle="Gestión de Usuarios"
-        columns={columns}
-        dataSource={customers}
-        loading={loading}
-        rowKey="id"
-        totalRecords={total}
-        showAddButton={true}
-        onAddButtonClick={() => openModal()} // Explícitamente llamar sin argumentos
-        addButtonLabel="Añadir Usuario"
-        showSearch={true}
-        onSearch={(value) => setSearchText(value)} // Conectar con el estado searchText y la lógica de fetch
-        searchPlaceholder="Buscar usuario..."
-        paginationConfig={paginationConfig}
-        containerClassName="mb-6" // Ajustar si es necesario, o quitar para usar el default
-      />
-
+      {renderUserTable()}
       <Modal
         title={editingCustomer ? "Editar Usuario" : "Nuevo Usuario"}
         open={modalVisible}
