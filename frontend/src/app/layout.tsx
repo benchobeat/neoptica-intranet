@@ -13,7 +13,26 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Neoptica Intranet",
   description: "Creado por Rubén Mosquera",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Neoptica Intranet',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
+
+export function generateViewport() {
+  return {
+    themeColor: '#1e214d',
+    width: 'device-width',
+    initialScale: 0.6,
+    maximumScale: 1,
+    userScalable: true,
+    viewportFit: 'cover',
+  };
+}
 
 const theme = {
   token: {
