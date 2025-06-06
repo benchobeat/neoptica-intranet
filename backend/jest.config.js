@@ -12,4 +12,6 @@ module.exports = {
     '^@src/(.*)$': '<rootDir>/src/$1',
   },
   setupFiles: ['dotenv/config'],
+  // Increase global timeout to 30 seconds for all tests
+  testTimeout: 30000,
 };

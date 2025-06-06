@@ -2,11 +2,31 @@
 
 Bienvenido al repositorio oficial de **Neóptica Intranet**, la plataforma de gestión administrativa, clínica y operativa para ópticas modernas.
 
+## 🚀 Últimas Mejoras
+
+### Mejoras en la Experiencia de Usuario (Junio 2024)
+
+- **Formularios con Pestañas**: Reorganización de formularios complejos en pestañas lógicas para mejor usabilidad
+- **Indicadores de Carga Mejorados**: Feedback visual durante operaciones asíncronas
+- **Validación en Tiempo Real**: Validación mejorada con mensajes claros y precisos
+- **Diseño Adaptativo**: Mejoras en la experiencia móvil y de escritorio
+- **Optimización de Rendimiento**: Carga más rápida y suave de formularios complejos
+
+### Características Principales
+
+- **Interfaz intuitiva** con navegación clara entre secciones
+- **Diseño responsivo** que se adapta perfectamente a móviles y escritorio
+- **Feedback visual** en acciones importantes
+- **Carga optimizada** para mejor rendimiento
+- **Accesibilidad** mejorada siguiendo estándares WCAG
+
 ## Documentación Detallada
 
 ### Documentación General
 - **Cronograma:** Ver [docs/manuales/cronograma.md](docs/manuales/cronograma.md) para el plan detallado de desarrollo y estado actual del proyecto.
 - **Setup del proyecto:** Ver [docs/setup.md](docs/setup.md) para instrucciones de configuración.
+- **Guía de Estilo y Componentes:** Ver [frontend/README.md](frontend/README.md) para estándares de desarrollo frontend.
+- **Directrices de Formularios:** Ver [frontend/docs/ADMIN_FORMS_GUIDELINES.md](frontend/docs/ADMIN_FORMS_GUIDELINES.md) para estándares de formularios administrativos.
 
 ### Documentación por Módulos
 - **Backend:** Ver [backend/README.md](backend/README.md) para detalles sobre la API, endpoints, arquitectura, y pruebas.
@@ -16,10 +36,23 @@ Bienvenido al repositorio oficial de **Neóptica Intranet**, la plataforma de ge
   - Test unitarios (238+ tests)
   
 - **Frontend:** Ver [frontend/README.md](frontend/README.md) para detalles sobre la estructura, componentes, y flujos de usuario.
-  - Formularios Admin (Marcas, Colores, Sucursales)
-  - Lineamientos para componentes ([frontend/docs/ADMIN_FORMS_GUIDELINES.md](frontend/docs/ADMIN_FORMS_GUIDELINES.md))
-  - Organización por roles
-  - Servicios API y autenticación
+  - **Formularios Avanzados**
+    - Formularios con pestañas para mejor organización
+    - Validación en tiempo real
+    - Indicadores de carga mejorados
+    - Retroalimentación visual mejorada
+  - **Componentes UI Reutilizables**
+    - `CustomTable` para listados consistentes
+    - `FormModal` para formularios modales
+    - `LoadingButton` con estados integrados
+  - **Experiencia de Usuario**
+    - Carga perezosa de componentes
+    - Esqueletos de carga
+    - Manejo de errores mejorado
+  - **Seguridad**
+    - Autenticación JWT
+    - Control de acceso basado en roles
+    - Protección de rutas
 
 # 1. INTRODUCCIÓN Y VISIÓN GENERAL – INTRANET NEÓPTICA
 

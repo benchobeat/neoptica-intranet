@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 const theme = {
   token: {
-    colorPrimary: '#00b96b', // Un verde moderno y accesible
+    colorPrimary: '#1e214d', // Color azul oscuro principal #1e214d
     fontFamily: 'Inter, sans-serif',
     borderRadius: 6, // Bordes ligeramente redondeados para un look moderno
     // Ensure text colors have good contrast on dark backgrounds
@@ -25,9 +25,11 @@ const theme = {
   },
   components: {
     Button: {
-      colorPrimary: '#00b96b',
+      colorPrimary: '#1e214d',
       algorithm: true,
       controlHeight: 36, // Altura estándar para botones
+      colorPrimaryHover: '#2f3466', // Hover un poco más claro
+      colorPrimaryActive: '#141735', // Active un poco más oscuro
       // Podrías agregar aquí estilos para variantes como 'default', 'primary', 'dashed', etc.
     },
     Table: {
@@ -48,17 +50,25 @@ const theme = {
       pagination: {
         colorText: '#cbd5e1', // Tailwind slate-300, for better visibility of "1-10 of 100"
         colorTextDisabled: '#6b7280', // Tailwind gray-500
-        itemActiveBg: '#00b96b',
+        itemActiveBg: '#1e214d', // #1e214d para elemento activo de paginación
+        itemActiveBorder: '#1e214d', // #1e214d para borde del elemento activo
         colorBgContainer: 'transparent', // Ensure pagination items blend with the table footer area
+        colorPrimary: '#1e214d', // #1e214d para texto y números activos
+        colorPrimaryHover: '#2f3466', // Hover un poco más claro
+        colorPrimaryActive: '#141735', // Active un poco más oscuro
       },
     },
     Pagination: { // Global pagination styles if needed, or can be specific to table
       colorText: '#cbd5e1', // Tailwind slate-300
       colorTextDisabled: '#6b7280', // Tailwind gray-500
-      itemActiveBg: '#00b96b',
+      itemActiveBg: '#1e214d', // #1e214d para elemento activo de paginación
+      itemActiveBorder: '#1e214d', // #1e214d para borde del elemento activo
+      colorPrimary: '#1e214d', // #1e214d para texto y números activos
       colorBgContainer: 'transparent',
       itemInputBg: '#1f2937', // Background for the page number input in "jumper"
-      itemHoverBg: '#374151', // Hover for pagination items
+      itemHoverBg: '#2f3466', // Hover un poco más claro
+      colorPrimaryHover: '#2f3466', // Hover un poco más claro
+      colorPrimaryActive: '#141735', // Active un poco más oscuro
       // Ensure the "total text" (e.g., "1-10 of 100") is clearly visible
       // This is often controlled by a specific class Ant Design uses, we might need global CSS for it
     },
@@ -76,8 +86,11 @@ const theme = {
       colorBorder: '#4b5563',
       colorText: '#e5e7eb',
       colorTextPlaceholder: '#9ca3af',
-      optionSelectedBg: '#00b96b',
-      optionActiveBg: '#374151', // Hover for select options
+      optionSelectedBg: '#1e214d',
+      optionActiveBg: '#2f3466', // Hover un poco más claro
+      colorPrimary: '#1e214d',
+      colorPrimaryHover: '#2f3466',
+      colorPrimaryActive: '#141735', // Active un poco más oscuro
     },
     Card: {
       actionsBg: '#1f2937', // Darker background for card actions

@@ -124,75 +124,296 @@ El archivo `dark-table.css` proporciona estilos consistentes para todas las tabl
    - El parámetro de búsqueda SIEMPRE debe ser `searchText` (no `search`, `query`, etc.)
    - La ruta para endpoints paginados SIEMPRE debe terminar en `/paginated`
 
-## Formularios Modal
+## Formularios con Pestañas
 
-### Estructura Básica del Modal
+### Estructura de Formularios Complejos
+
+Para formularios con múltiples secciones, utilizar el componente `Tabs` de Ant Design:
 
 ```tsx
 <Modal
-  title={editingItem ? "Editar Item" : "Nuevo Item"}
+  title={
+    <div className="flex items-center gap-2">
+      {formLoading ? <LoadingOutlined /> : <UserOutlined />}
+      <span>{editingItem ? 'Editar Item' : 'Nuevo Item'}</span>
+    </div>
+  }
   open={modalVisible}
   onCancel={handleCancel}
   footer={[
-    <Button key="cancel" onClick={handleCancel}>
+    <Button key="back" onClick={handleCancel} disabled={formLoading}>
       Cancelar
     </Button>,
-    <Button key="submit" type="primary" onClick={handleSubmit} loading={loading}>
+    <Button 
+      key="submit" 
+      type="primary" 
+      onClick={handleSubmit} 
+      loading={loading}
+      disabled={formLoading}
+    >
       {editingItem ? "Actualizar" : "Crear"}
     </Button>,
   ]}
+  width={800}
+  maskClosable={!formLoading}
+  keyboard={!formLoading}
+  className="form-modal"
 >
-  <Form form={form} layout="vertical">
-    {/* Campos del formulario */}
-  </Form>
+  <Spin spinning={formLoading} tip="Cargando datos...">
+    <Form form={form} layout="vertical">
+      <Tabs 
+        activeKey={activeTab} 
+        onChange={setActiveTab}
+        items={[
+          {
+            key: '1',
+            label: (
+              <span>
+                <UserOutlined />
+                <span>Información Básica</span>
+              </span>
+            ),
+            children: <BasicInfoTab />
+          },
+          {
+            key: '2',
+            label: (
+              <span>
+                <SafetyCertificateOutlined />
+                <span>Seguridad</span>
+              </span>
+            ),
+            children: <SecurityTab />
+          },
+        ]}
+      />
+    </Form>
+  </Spin>
 </Modal>
 ```
 
-### Validación de Formularios
+### Mejores Prácticas para Formularios con Pestañas
 
-Siempre incluir validaciones en el cliente que sean consistentes con las validaciones del backend:
+1. **Carga por Pestaña**:
+   - Cargar datos específicos de cada pestaña solo cuando se accede a ella
+   - Usar `destroyInactiveTabPane` para optimizar el rendimiento
+
+2. **Validación entre Pestañas**:
+   - Validar los datos de la pestaña actual antes de permitir el cambio
+   - Mostrar indicadores visuales en las pestañas con errores
+
+3. **Guardado Parcial**:
+   - Implementar autoguardado en pestañas individuales
+   - Mostrar estado de guardado para cada sección
+
+### Validación Mejorada de Formularios
+
+#### Validación en Tiempo Real
 
 ```tsx
 <Form.Item
-  name="nombre"
-  label="Nombre"
+  name="email"
+  label="Correo Electrónico"
   rules={[
-    { required: true, message: "Campo obligatorio" },
-    { min: 3, message: "Mínimo 3 caracteres" },
-    // Otras reglas según requiera el backend
+    { 
+      required: true, 
+      message: 'Por favor ingrese su correo electrónico' 
+    },
+    { 
+      type: 'email', 
+      message: 'Ingrese un correo electrónico válido',
+      validateTrigger: 'onBlur' 
+    },
+    // Validación asíncrona para verificar disponibilidad
+    {
+      validator: async (_, value) => {
+        if (value) {
+          const isAvailable = await checkEmailAvailability(value);
+          if (!isAvailable) {
+            throw new Error('Este correo ya está en uso');
+          }
+        }
+      },
+      validateTrigger: 'onBlur'
+    }
   ]}
+  hasFeedback
+  validateFirst
 >
-  <Input placeholder="Ingrese nombre..." />
+  <Input 
+    prefix={<MailOutlined />}
+    placeholder="ejemplo@dominio.com"
+    disabled={formLoading}
+  />
 </Form.Item>
 ```
 
-## Mejores Prácticas
+#### Validación Cruzada entre Campos
 
-### Prevención de Errores
+```tsx
+// En el nivel del formulario
+<Form
+  form={form}
+  onFinish={onFinish}
+  onValuesChange={(changedValues, allValues) => {
+    // Validar cuando cambian campos relacionados
+    if ('password' in changedValues || 'confirmPassword' in changedValues) {
+      if (allValues.password && allValues.confirmPassword) {
+        form.validateFields(['confirmPassword']);
+      }
+    }
+  }}
+>
+  <Form.Item
+    name="password"
+    label="Contraseña"
+    rules={[
+      { required: true, message: 'Por favor ingrese una contraseña' },
+      { min: 8, message: 'Mínimo 8 caracteres' },
+    ]}
+  >
+    <Input.Password />
+  </Form.Item>
 
-1. **No crear endpoints duplicados**: Verificar siempre que no existan rutas duplicadas en el backend.
+  <Form.Item
+    name="confirmPassword"
+    label="Confirmar Contraseña"
+    dependencies={['password']}
+    rules={[
+      { required: true, message: 'Por favor confirme su contraseña' },
+      ({ getFieldValue }) => ({
+        validator(_, value) {
+          if (!value || getFieldValue('password') === value) {
+            return Promise.resolve();
+          }
+          return Promise.reject(new Error('Las contraseñas no coinciden'));
+        },
+      }),
+    ]}
+  >
+    <Input.Password />
+  </Form.Item>
+</Form>
+```
 
-2. **Consistencia en parámetros URL**: Usar siempre los mismos nombres de parámetros para funciones similares:
-   - ✅ `searchText` (correcto)
-   - ❌ `search`, `query`, `term` (incorrecto)
+## Mejores Prácticas Mejoradas
 
-3. **Resetear paginación**: Siempre resetear a página 1 cuando se cambia el texto de búsqueda:
-   ```tsx
-   setSearchText(value);
-   setPage(1); // Importante
-   ```
+### 1. Mejoras en la Experiencia de Usuario
 
-4. **Manejo de errores**: Implementar siempre mensajes de error descriptivos:
+#### Indicadores de Carga Mejorados
+
+```tsx
+// Botón con estado de carga
+<Button
+  type="primary"
+  loading={isSubmitting}
+  icon={isSubmitting ? <LoadingOutlined /> : <SaveOutlined />}
+  onClick={handleSubmit}
+  disabled={isSubmitting}
+>
+  {isSubmitting ? 'Guardando...' : 'Guardar'}
+</Button>
+
+// Esqueleto de carga para formularios
+const FormSkeleton = () => (
+  <div className="space-y-4">
+    <Skeleton.Input active className="w-full" />
+    <Skeleton.Input active className="w-3/4" />
+    <Skeleton.Input active className="w-1/2" />
+  </div>
+);
+
+// Uso en el componente
+<Modal>
+  {isLoading ? (
+    <FormSkeleton />
+  ) : (
+    <Form>
+      {/* Campos del formulario */}
+    </Form>
+  )}
+</Modal>
+```
+
+#### Retroalimentación Visual Mejorada
+
+```tsx
+// Mostrar notificaciones contextuales
+const showSuccess = (message: string) => {
+  notification.success({
+    message: 'Éxito',
+    description: message,
+    placement: 'topRight',
+    duration: 3,
+  });
+};
+
+// Mostrar errores de validación de forma destacada
+<Form.Item
+  name="username"
+  label="Nombre de usuario"
+  validateStatus={errors.username ? 'error' : ''}
+  help={errors.username?.message}
+  hasFeedback
+>
+  <Input />
+</Form.Item>
+```
+
+### 2. Prevención de Errores
+
+1. **Validación de Formularios**:
+   - Validar en el cliente antes de enviar al servidor
+   - Mostrar mensajes de error claros y específicos
+   - Resaltar visualmente los campos con errores
+
+2. **Manejo de Errores Mejorado**:
    ```tsx
    try {
-     // operación
+     setSubmitting(true);
+     const response = await api.saveData(formData);
+     showSuccess('Datos guardados correctamente');
+     onSuccess?.(response);
    } catch (error) {
-     message.error(error instanceof Error ? error.message : "Error desconocido");
-     console.error("Error detallado:", error);
+     if (error.response?.status === 400) {
+       // Mostrar errores de validación del servidor
+       const { errors } = error.response.data;
+       Object.entries(errors).forEach(([field, message]) => {
+         form.setFields([{ name: field, errors: [message] }]);
+       });
+     } else {
+       // Mostrar error genérico
+       message.error(
+         error.response?.data?.message || 
+         'Ocurrió un error al procesar su solicitud'
+       );
+     }
+   } finally {
+     setSubmitting(false);
    }
    ```
 
-5. **Evitar referencias a características no implementadas**: No incluir en la interfaz opciones o campos que no estén completamente implementados (como el caso de los logos).
+3. **Consistencia en la API**:
+   - Usar `searchText` para búsquedas
+   - Usar `page` y `pageSize` para paginación
+   - Mantener nombres de parámetros consistentes en toda la aplicación
+
+4. **Optimización de Rendimiento**:
+   - Usar `useCallback` para manejadores de eventos
+   - Usar `useMemo` para valores calculados costosos
+   - Implementar carga perezosa de componentes con `React.lazy`
+   - Usar `React.memo` para componentes que no necesitan re-renderizarse frecuentemente
+
+5. **Accesibilidad**:
+   - Usar etiquetas `label` para todos los campos de formulario
+   - Asegurar que los controles sean accesibles por teclado
+   - Proporcionar texto alternativo para imágenes
+   - Usar contraste adecuado para texto y fondos
+
+6. **Pruebas**:
+   - Escribir pruebas unitarias para componentes críticos
+   - Probar diferentes casos de uso y flujos de usuario
+   - Verificar el manejo de errores y casos extremos
 
 ### Rendimiento
 
@@ -225,6 +446,8 @@ Al agregar nuevas características a formularios existentes:
 - [ ] Implementar validaciones consistentes con el backend
 - [ ] Manejar adecuadamente estados de carga y errores
 - [ ] Evitar referencias a características no implementadas
+- [ ] Asegurar responsividad para dispositivos móviles (landscape y portrait)
+- [ ] Usar componentes responsive (`ResponsiveTable` en lugar de `Table` o `CustomTable`)
 
 ## Implementación del Sistema Multi-Rol
 
@@ -280,3 +503,66 @@ Recordar que todos los controladores deben implementar auditoría según se esta
 - Captura de operación realizada (crear, actualizar, eliminar)
 - Entidad afectada y su ID
 - Registro de operaciones fallidas también
+
+## Responsividad y Diseño Móvil
+
+La aplicación debe funcionar correctamente en todos los dispositivos y orientaciones. Seguir estas pautas:
+
+### Menú Móvil
+
+1. **Uso del MobileSidebar**:
+   - El menú debe cerrarse automáticamente cuando:
+     - El usuario cambia de ruta
+     - Cambia la orientación del dispositivo (landscape/portrait)
+     - La pantalla se redimensiona a tamaño desktop (>= 768px)
+     - El usuario presiona la tecla Escape
+     - Se hace clic fuera del menú
+
+2. **Manejo de scroll**:
+   ```tsx
+   useEffect(() => {
+     if (isOpen) {
+       // Bloquear scroll cuando el menú está abierto
+       document.body.style.overflow = 'hidden';
+       document.body.style.position = 'fixed';
+       document.body.style.width = '100%';
+     } else {
+       // Restaurar cuando se cierra
+       document.body.style.overflow = '';
+       document.body.style.position = '';
+       document.body.style.width = '';
+     }
+   }, [isOpen]);
+   ```
+
+3. **Detección de cambios de orientación**:
+   ```tsx
+   // Para todos los tamaños de pantalla, incluyendo tamaños específicos como
+   // 915x412, 896x414, 884x390, 932x430, 882x344
+   const orientationMediaQuery = window.matchMedia('(orientation: landscape)');
+   orientationMediaQuery.addEventListener('change', handleOrientationChange);
+   ```
+
+### Tablas Responsivas
+
+1. **Usar componente `ResponsiveTable`**:
+   - Siempre utilizar este componente en lugar de `Table` o `CustomTable`
+   - Proporciona vista de tarjetas en móviles (<991px) y tabla tradicional en desktop
+
+2. **Pruebas en múltiples dispositivos**:
+   - Verificar funcionamiento en orientaciones vertical y horizontal
+   - Probar en las dimensiones comunes: 740x360, 667x375, 915x412, 896x414, 884x390, 932x430, 882x344
+
+3. **Estilos adaptativos**:
+   ```tsx
+   const mobileStyles = {
+     card: {
+       backgroundColor: 'rgba(31, 41, 55, 0.5)',
+       borderRadius: '0.5rem',
+       marginBottom: '0.75rem',
+       padding: '0.75rem',
+       boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+       border: '1px solid rgba(75, 85, 99, 0.2)'
+     }
+   };
+   ```

@@ -15,19 +15,23 @@ import Tag from "antd/lib/tag";
 import Tooltip from "antd/lib/tooltip";
 import Select from "antd/lib/select";
 // Importaciones optimizadas de iconos
-import PlusOutlined from "@ant-design/icons/PlusOutlined";
-import EditOutlined from "@ant-design/icons/EditOutlined";
-import DeleteOutlined from "@ant-design/icons/DeleteOutlined";
-import ExclamationCircleOutlined from "@ant-design/icons/ExclamationCircleOutlined";
-import CustomTable from '@/components/ui/CustomTable';
-import UploadOutlined from "@ant-design/icons/UploadOutlined";
-import UserOutlined from "@ant-design/icons/UserOutlined";
-import PhoneOutlined from "@ant-design/icons/PhoneOutlined";
-import MailOutlined from "@ant-design/icons/MailOutlined";
-import HomeOutlined from "@ant-design/icons/HomeOutlined";
-import IdcardOutlined from "@ant-design/icons/IdcardOutlined";
-import LockOutlined from "@ant-design/icons/LockOutlined";
-import InfoCircleOutlined from "@ant-design/icons/InfoCircleOutlined";
+import { 
+  PlusOutlined, 
+  EditOutlined, 
+  DeleteOutlined, 
+  ExclamationCircleOutlined, 
+  UploadOutlined, 
+  UserOutlined, 
+  PhoneOutlined, 
+  MailOutlined, 
+  HomeOutlined, 
+  IdcardOutlined, 
+  LockOutlined, 
+  InfoCircleOutlined 
+} from '@ant-design/icons';
+
+import ResponsiveTable from '@/components/ui/ResponsiveTable';
+
 import { getClientesPaginados, createCliente, updateCliente, deleteCliente, getRoles, getClienteById } from "@/lib/api/usuarioService";
 
 // Interfaz para datos de cliente/usuario
@@ -89,6 +93,14 @@ const PhoneCell = memo(({ telefono }: { telefono?: string }) => (
 ));
 PhoneCell.displayName = "PhoneCell";
 
+const DniCell = memo(({ dni }: { dni?: string }) => (
+  <div className="flex items-center gap-2">
+    <IdcardOutlined className="text-purple-400" />
+    <span>{dni || "--"}</span>
+  </div>
+));
+DniCell.displayName = "DniCell";
+
 const AddressCell = memo(({ direccion }: { direccion?: string }) => (
   <MemoizedTooltip title={direccion}>
     <div className="flex items-center gap-2">
@@ -100,58 +112,88 @@ const AddressCell = memo(({ direccion }: { direccion?: string }) => (
 AddressCell.displayName = "AddressCell";
 
 // Componente para mostrar roles en la tabla (memoizado)
-const RolesCell: React.FC<{ roles?: { id: string; nombre: string }[] }> = memo(({ roles }) => {
+// Definimos tipos específicos para manejar múltiples formatos de roles
+type RoleObject = { id: string; nombre: string };
+type RoleString = string;
+type RoleType = RoleObject | RoleString;
+
+const RolesCell: React.FC<{ roles?: (RoleObject | RoleString)[] | undefined }> = memo(({ roles }) => {
   // Añadir depuración
   console.log('[DEBUG] Renderizando RolesCell con roles:', roles);
 
-  // Validar explícitamente que roles es un array no vacío
-  if (!roles || !Array.isArray(roles) || roles.length === 0) {
-    return <Tag color="default">Sin rol</Tag>;
-  }
-
-  // Filtrar roles vacíos o inválidos
-  const validRoles = roles.filter(role => role && typeof role === 'object' && role.nombre);
+  // Normalización de roles en diferentes formatos posibles
+  let validRoles: RoleObject[] = [];
   
+  if (roles && Array.isArray(roles)) {
+    // Procesar cada rol y normalizarlo
+    validRoles = roles.reduce<RoleObject[]>((acc, role) => {
+      // Si es un objeto con nombre
+      if (role && typeof role === 'object' && 'nombre' in role && role.nombre) {
+        acc.push({
+          id: role.id || `role-${role.nombre}`,
+          nombre: role.nombre
+        });
+      }
+      // Si es un string
+      else if (typeof role === 'string') {
+        acc.push({
+          id: `role-${role}`,
+          nombre: role
+        });
+      }
+      return acc;
+    }, []);
+  }
+  
+  // Si no hay roles válidos, mostrar "Sin rol"
   if (validRoles.length === 0) {
     return <Tag color="default">Sin rol</Tag>;
   }
-
+  
+  // Crear string concatenado de todos los roles (para mostrar en la tabla)
+  const rolesString = validRoles.map(r => r.nombre).join(', ');
+  
   return (
-    <div className="flex flex-wrap gap-1">
-      {validRoles.map((role) => {
-        let color;
-        const roleName = role.nombre?.toLowerCase() || '';
-        
-        switch (roleName) {
-          case 'admin':
-          case 'administrador':
-            color = 'red';
-            break;
-          case 'gerente':
-            color = 'blue';
-            break;
-          case 'vendedor':
-            color = 'green';
-            break;
-          default:
-            color = 'default';
-        }
-        
-        return (
-          <Tag key={role.id || `role-${roleName}`} color={color}>
-            {role.nombre}
-          </Tag>
-        );
-      })}
-    </div>
+    <MemoizedTooltip title={rolesString}>
+      <div className="flex flex-wrap gap-1">
+        {validRoles.map((role) => {
+          let color = 'default';
+          const roleName = role.nombre?.toLowerCase() || '';
+          
+          switch (roleName) {
+            case 'admin':
+            case 'administrador':
+              color = 'red';
+              break;
+            case 'gerente':
+              color = 'blue';
+              break;
+            case 'vendedor':
+              color = 'green';
+              break;
+            case 'optometrista':
+              color = 'purple';
+              break;
+            case 'cliente':
+              color = 'cyan';
+              break;
+            default:
+              color = 'default';
+          }
+          
+          return (
+            <Tag key={role.id || `role-${roleName}`} color={color}>
+              {role.nombre}
+            </Tag>
+          );
+        })}
+      </div>
+    </MemoizedTooltip>
   );
 });
 RolesCell.displayName = "RolesCell";
 
-const StatusCell = memo(({ activo }: { activo: boolean }) => (
-  activo ? <MemoizedTag color="green">Activo</MemoizedTag> : <MemoizedTag color="red">Inactivo</MemoizedTag>
-));
-StatusCell.displayName = "StatusCell";
+
 
 const ActionCell = memo(({ record, onEdit, onDelete }: { 
   record: Customer, 
@@ -222,30 +264,44 @@ const CustomersPage = () => {
         // Transformar usuarios a formato Customer
         setCustomers(usuarios.map((user: any) => {
           // Normalizar roles
-          let userRoles = [];
+          let userRoles: { id: string; nombre: string }[] = [];
           
-          // Si tiene roles como array
-          if (Array.isArray(user.roles) && user.roles.length > 0) {
-            userRoles = user.roles;
-          }
-          // Si tiene usuario_rol (formato respuesta directa de Prisma)
-          else if (Array.isArray(user.usuario_rol) && user.usuario_rol.length > 0) {
-            userRoles = user.usuario_rol.map((ur: any) => ({
-              id: ur.rol?.id || ur.rol_id,
-              nombre: ur.rol?.nombre || ''
-            })).filter((r: any) => r.id && r.nombre);
-          }
-          // Si tiene rol como string, buscar en availableRoles y convertir
-          else if (user.rol && typeof user.rol === 'string') {
-            const matchedRole = availableRoles.find(r => 
-              r.nombre.toLowerCase() === user.rol.toLowerCase() || r.id === user.rol
-            );
-            if (matchedRole) {
-              userRoles = [matchedRole];
-            } else {
-              // Si no hay match, crear un objeto simple
-              userRoles = [{ id: 'temp-id', nombre: user.rol }];
+          try {
+            // Si tiene roles como array
+            if (Array.isArray(user.roles) && user.roles.length > 0) {
+              // Si el primer elemento es un objeto con nombre
+              if (user.roles[0] && typeof user.roles[0] === 'object' && user.roles[0].nombre) {
+                userRoles = user.roles;
+              } 
+              // Si es array de strings
+              else if (typeof user.roles[0] === 'string') {
+                userRoles = user.roles.map((roleName: string) => ({
+                  id: `role-${roleName}`,
+                  nombre: roleName
+                }));
+              }
             }
+            // Si tiene usuario_rol (formato respuesta directa de Prisma)
+            else if (Array.isArray(user.usuario_rol) && user.usuario_rol.length > 0) {
+              userRoles = user.usuario_rol.map((ur: any) => ({
+                id: ur.rol?.id || ur.rol_id || `role-${ur.rol?.nombre || 'unknown'}`,
+                nombre: ur.rol?.nombre || ''
+              })).filter((r: any) => r.nombre);
+            }
+            // Si tiene rol como string, buscar en availableRoles y convertir
+            else if (user.rol && typeof user.rol === 'string') {
+              const matchedRole = availableRoles.find(r => 
+                r.nombre.toLowerCase() === user.rol.toLowerCase() || r.id === user.rol
+              );
+              if (matchedRole) {
+                userRoles = [matchedRole];
+              } else {
+                // Si no hay match, crear un objeto simple
+                userRoles = [{ id: `role-${user.rol}`, nombre: user.rol }];
+              }
+            }
+          } catch (error) {
+            console.error('[DEBUG] Error al normalizar roles:', error);
           }
           
           // Asegurar que userRoles siempre sea un array válido para evitar "Sin rol"
@@ -349,6 +405,7 @@ const CustomersPage = () => {
   
   // Abrir modal (crear/editar)
   const openModal = useCallback(async (customer?: Customer) => {
+    console.log('[DEBUG] openModal llamado con customer:', customer);
     // Resetear formulario y selección
     form.resetFields();
     setEditingCustomer(customer || null);
@@ -372,17 +429,27 @@ const CustomersPage = () => {
           console.log("[DEBUG] Roles del usuario:", userDetail.roles);
           console.log("[DEBUG] Roles disponibles:", availableRoles);
           
-          // Usar setTimeout para asegurar que el formulario esté completamente renderizado
+          // Preparar los datos del formulario
+          const formData = {
+            nombre_completo: userDetail.nombre_completo || "",
+            email: userDetail.email || "",
+            telefono: userDetail.telefono || "",
+            dni: userDetail.dni || "",
+            direccion: userDetail.direccion || "",
+            foto_perfil: userDetail.foto_perfil || "",
+          };
+          
+          // Logging adicional para diagnóstico
+          console.log("[DEBUG] Datos del formulario a establecer:", formData);
+          console.log("[DEBUG] Dirección del usuario:", userDetail.direccion);
+          console.log("[DEBUG] DNI del usuario:", userDetail.dni);
+          
+          // Establecer valores directamente
+          form.setFieldsValue(formData);
+          
+          // Forzar una actualización con un pequeño retraso para asegurar la renderización
           setTimeout(() => {
-            form.setFieldsValue({
-              nombre_completo: userDetail.nombre_completo || "",
-              email: userDetail.email || "",
-              telefono: userDetail.telefono || "",
-              dni: userDetail.dni || "",
-              direccion: userDetail.direccion || "",
-              foto_perfil: userDetail.foto_perfil || "",
-            });
-            console.log("[DEBUG] Valores establecidos en el formulario:", form.getFieldsValue());
+            console.log("[DEBUG] Valores actuales del formulario:", form.getFieldsValue());
           }, 100);
           
           // Esperar a que availableRoles esté cargado
@@ -392,82 +459,63 @@ const CustomersPage = () => {
             // Intentar cargar roles de nuevo
             fetchRoles();
           } else {
-            // Manejar múltiples formatos posibles de roles
-            let userRoles: any[] = [];
+            // SIMPLIFICACIÓN DEL PROCESAMIENTO DE ROLES
+            // Más robusto y tolerante a distintos formatos de datos
+            console.log("[DEBUG] Datos de usuario completos:", userDetail);
             
-            // 1. Si userDetail.roles existe y es un array
+            let userRoleNames: string[] = [];
+            
+            // Caso 1: Array de objetos con propiedad nombre
             if (userDetail.roles && Array.isArray(userDetail.roles)) {
-              userRoles = userDetail.roles;
-            } 
-            // 2. Si tiene usuario_rol (formato respuesta directa de Prisma)
-            else if (userDetail.usuario_rol && Array.isArray(userDetail.usuario_rol) && userDetail.usuario_rol.length > 0) {
-              console.log("[DEBUG] Encontrado formato usuario_rol en la respuesta", userDetail.usuario_rol);
-              userRoles = userDetail.usuario_rol.map((ur: any) => {
-                console.log("[DEBUG] Procesando usuario_rol:", ur);
-                return {
-                  id: ur.rol?.id || ur.rol_id,
-                  nombre: ur.rol?.nombre || ''
-                };
-              }).filter((r: any) => r.id && r.nombre);
-            }
-            // 3. Si hay un solo rol como objeto
-            else if (userDetail.rol && typeof userDetail.rol === 'object') {
-              userRoles = [userDetail.rol];
-            } 
-            // 4. Si hay un solo rol como string o id
-            else if (userDetail.rol) {
-              userRoles = [{ id: userDetail.rol, nombre: userDetail.rol }];
+              userRoleNames = userDetail.roles
+                .filter((role: any) => typeof role === 'object' && role?.nombre)
+                .map((role: any) => role.nombre);
+              console.log("[DEBUG] Extraídos desde userDetail.roles como objetos:", userRoleNames);
             }
             
-            console.log("[DEBUG] Roles normalizados para mapeo:", userRoles);
+            // Caso 2: Array de strings
+            if (userDetail.roles && Array.isArray(userDetail.roles) && 
+                userDetail.roles.length > 0 && typeof userDetail.roles[0] === 'string') {
+              userRoleNames = userDetail.roles;
+              console.log("[DEBUG] Extraídos desde userDetail.roles como strings:", userRoleNames);
+            }
             
-            if (userRoles.length > 0) {
-              // Mapeo mejorado: intenta coincidir por id, nombre, o incluso valor string directo
-              // Tipado explícito para el resultado del mapeo
-              const rolesMatched = userRoles
-                .map((ur: any) => {
-                  // Si es un objeto con id
-                  if (ur && ur.id) {
-                    const match = availableRoles.find(ar => ar.id === ur.id);
-                    if (match) return match;
-                  }
-                  
-                  // Si es un objeto con nombre
-                  if (ur && ur.nombre) {
-                    const match = availableRoles.find(
-                      ar => ar.nombre.toLowerCase() === ur.nombre.toLowerCase()
-                    );
-                    if (match) return match;
-                  }
-                  
-                  // Si es un string (podría ser id o nombre)
-                  if (typeof ur === 'string') {
-                    // Intentar por id primero
-                    let match = availableRoles.find(ar => ar.id === ur);
-                    if (match) return match;
-                    
-                    // Luego por nombre
-                    match = availableRoles.find(
-                      ar => ar.nombre.toLowerCase() === ur.toLowerCase()
-                    );
-                    if (match) return match;
-                  }
-                  
-                  return undefined;
-                })
-                // Filtro explícito para garantizar que no hay undefined
-                .filter((role): role is {id: string; nombre: string} => role !== undefined);
+            // Caso 3: Array de usuario_rol con objetos anidados
+            if (userDetail.usuario_rol && Array.isArray(userDetail.usuario_rol) && userDetail.usuario_rol.length > 0) {
+              const roleNames = userDetail.usuario_rol
+                .filter((ur: any) => ur.rol?.nombre || '')
+                .map((ur: any) => ur.rol?.nombre || '');
+                
+              if (roleNames.length > 0) {
+                userRoleNames = roleNames;
+                console.log("[DEBUG] Extraídos desde usuario_rol:", userRoleNames);
+              }
+            }
+            
+            console.log("[DEBUG] Nombres de roles finales:", userRoleNames);
+            
+            // Mapear nombres de roles a objetos de rol completos
+            if (userRoleNames.length > 0) {
+              const matchedRoles = [];
               
-              console.log("[DEBUG] Roles mapeados final:", rolesMatched);
-              setSelectedRoles(rolesMatched);
-              
-              // Si no se encontró ninguna coincidencia pero había roles, mostrar advertencia
-              if (rolesMatched.length === 0 && userRoles.length > 0) {
-                message.warning(
-                  "No se pudieron mapear los roles del usuario. Asigne los roles manualmente."
+              for (const roleName of userRoleNames) {
+                const match = availableRoles.find(
+                  r => r.nombre.toLowerCase() === roleName.toLowerCase()
                 );
+                
+                if (match) matchedRoles.push(match);
+              }
+              
+              console.log("[DEBUG] Roles mapeados final:", matchedRoles);
+              
+              if (matchedRoles.length > 0) {
+                setSelectedRoles(matchedRoles);
+              } else {
+                message.warning("No se pudieron mapear los roles del usuario. Por favor, asigne los roles manualmente.");
+                setSelectedRoles([]);
               }
             } else {
+              console.log("[DEBUG] No se encontraron roles en la respuesta");
               setSelectedRoles([]);
             }
           }
@@ -504,22 +552,73 @@ const CustomersPage = () => {
       
       setLoading(true);
       
-      // Preparar datos de usuario
-      const userData = {
+      // Preparar datos de usuario básicos
+      let userData = {
         ...values,
-        // Asegurar que DNI y dirección no sean undefined
-        dni: values.dni || '',
+        // Asegurar que dirección no sea undefined
         direccion: values.direccion || '',
-        // Ahora enviamos todos los roles como array de nombres, ya que el backend lo soporta
+        // Enviamos todos los roles como array de nombres
         roles: selectedRoles.map(role => role.nombre),
         activo: true
       };
       
+      // Manejo especial del campo DNI
+      if (editingCustomer) {
+        // Caso 1: Si el usuario ya tiene DNI (no nulo y no vacío), no lo enviamos en la solicitud
+        if (editingCustomer.dni && editingCustomer.dni.trim() !== '') {
+          const { dni, ...dataWithoutDni } = userData;
+          userData = dataWithoutDni;
+          console.log("[DEBUG] DNI ya registrado, no se enviará en la solicitud");
+        } 
+        // Caso 2: Si el DNI en el formulario está vacío o es null, tampoco lo enviamos
+        // para evitar problemas con duplicidad de DNIs nulos
+        else if (!values.dni || values.dni.trim() === '') {
+          const { dni, ...dataWithoutDni } = userData;
+          userData = dataWithoutDni;
+          console.log("[DEBUG] DNI vacío o nulo, no se enviará en la solicitud");
+        }
+        // Caso 3: Si el usuario no tenía DNI pero ahora se está agregando uno válido
+        else {
+          userData.dni = values.dni.trim();
+          console.log("[DEBUG] Agregando nuevo DNI al usuario:", userData.dni);
+        }
+      } else {
+        // Para usuarios nuevos, solo incluimos el DNI si no está vacío
+        if (values.dni && values.dni.trim() !== '') {
+          userData.dni = values.dni.trim();
+        } else {
+          // Si está vacío, lo eliminamos de los datos
+          const { dni, ...dataWithoutDni } = userData;
+          userData = dataWithoutDni;
+        }
+      }
+      
       console.log("[DEBUG] Datos a enviar al backend:", userData);
       
       if (editingCustomer) {
-        await updateCliente(editingCustomer.id, userData);
-        message.success("Usuario actualizado correctamente");
+        try {
+          // Capturar la respuesta de la actualización
+          const updateResponse = await updateCliente(editingCustomer.id, userData);
+          
+          // Verificar si la actualización fue exitosa
+          const updateResponseData = updateResponse as any;
+          if (updateResponseData.ok) {
+            message.success("Usuario actualizado correctamente");
+          } else {
+            // Mostrar mensaje de error detallado
+            const errorMsg = updateResponseData.error || "Error al actualizar el usuario";
+            message.error(errorMsg);
+            console.error("Error al actualizar usuario:", updateResponseData);
+            // No cerrar el modal para permitir corregir el error
+            setLoading(false);
+            return; // Salir de la función para evitar cerrar el modal
+          }
+        } catch (error) {
+          console.error("Excepción al actualizar usuario:", error);
+          message.error("Error al actualizar el usuario: " + (error instanceof Error ? error.message : String(error)));
+          setLoading(false);
+          return; // Salir de la función para evitar cerrar el modal
+        }
       } else {
         // Para nuevos usuarios
         try {
@@ -579,6 +678,12 @@ const CustomersPage = () => {
       render: (telefono: string) => <PhoneCell telefono={telefono} />,
     },
     {
+      title: "DNI",
+      dataIndex: "dni",
+      key: "dni",
+      render: (dni: string) => <DniCell dni={dni} />,
+    },
+    {
       title: "Dirección",
       dataIndex: "direccion",
       key: "direccion",
@@ -589,18 +694,7 @@ const CustomersPage = () => {
       title: "Roles",
       dataIndex: "roles",
       key: "roles",
-      render: (roles: { id: string; nombre: string }[]) => <RolesCell roles={roles} />,
-    },
-    {
-      title: "Estado",
-      dataIndex: "activo",
-      key: "activo",
-      render: (activo: boolean) => <StatusCell activo={activo} />,
-      filters: [
-        { text: "Activo", value: true },
-        { text: "Inactivo", value: false },
-      ],
-      onFilter: (value: any, record: Customer) => record.activo === value,
+      render: (roles: { id: string; nombre: string }[]) => <RolesCell roles={roles} />
     },
     {
       title: "Acciones",
@@ -636,9 +730,19 @@ const CustomersPage = () => {
       .map(id => availableRoles.find(role => role.id === id))
       .filter((role): role is { id: string; nombre: string } => role !== undefined);
     
+    console.log("[DEBUG] Roles seleccionados:", matchedRoles);
+    
+    // Actualizar el estado con los roles seleccionados
     setSelectedRoles(matchedRoles);
   }, [availableRoles]);
 
+  // Manejar la búsqueda/filtrado
+  const handleSearch = useCallback((value: string) => {
+    console.log("[DEBUG] Ejecutando búsqueda con valor:", value);
+    setSearchText(value);
+    setPage(1); // Resetear a la primera página al buscar
+  }, []);
+  
   // Propiedades para la paginación (memoizado)
   const paginationConfig = useMemo(() => ({
     current: page,
@@ -652,25 +756,116 @@ const CustomersPage = () => {
     showTotal: (total: number, range: number[]) => `${range[0]}-${range[1]} de ${total} usuarios`,
   }), [page, pageSize, total]);
 
+  // Renderizar tarjeta para móviles
+  const renderMobileCard = (record: Customer) => {
+    const handleEditClick = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      // Usar la misma lógica que en el modo escritorio
+      await openModal(record);
+    };
+
+    const handleDeleteClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      handleDelete(record.id);
+    };
+
+    return (
+      <div className="space-y-2 p-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <UserOutlined className="text-indigo-400" />
+            <span className="font-medium">{record.nombre_completo}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {record.roles?.map((role: any) => (
+              <Tag 
+                key={role.id || role} 
+                color={getRoleColor(typeof role === 'object' ? role.nombre : role)}
+                className="text-xs"
+              >
+                {typeof role === 'object' ? role.nombre : role}
+              </Tag>
+            ))}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="flex items-center gap-2 text-gray-600">
+            <MailOutlined className="text-blue-400" />
+            <span className="truncate">{record.email}</span>
+          </div>
+          
+          {record.telefono && (
+            <div className="flex items-center gap-2 text-gray-600">
+              <PhoneOutlined className="text-green-400" />
+              <span>{record.telefono}</span>
+            </div>
+          )}
+          
+          {record.dni && (
+            <div className="flex items-center gap-2 text-gray-600">
+              <IdcardOutlined className="text-purple-400" />
+              <span>{record.dni}</span>
+            </div>
+          )}
+          
+          {record.direccion && (
+            <div className="flex items-center gap-2 text-gray-600 col-span-2">
+              <HomeOutlined className="text-amber-400" />
+              <span className="truncate">{record.direccion}</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end gap-2 mt-2">
+          <Button 
+            icon={<EditOutlined />} 
+            size="small"
+            onClick={handleEditClick}
+          />
+          <Button 
+            icon={<DeleteOutlined />} 
+            danger 
+            size="small"
+            onClick={handleDeleteClick}
+          />
+        </div>
+      </div>
+    );
+  };
+  
+  // Renderizar la tabla de usuarios
+  const renderUserTable = () => (
+    <ResponsiveTable
+      columns={columns}
+      dataSource={customers}
+      loading={loading}
+      rowKey="id"
+      pagination={{
+        current: page,
+        pageSize: pageSize,
+        total: total,
+        onChange: (newPage: number, newPageSize?: number) => {
+          setPage(newPage);
+          if (newPageSize) setPageSize(newPageSize);
+        },
+        showSizeChanger: true,
+        showTotal: (total: number, range: number[]) => `${range[0]}-${range[1]} de ${total} usuarios`,
+      }}
+      headerTitle="Gestión de Usuarios"
+      showAddButton={true}
+      onAddButtonClick={() => openModal()}
+      showSearch={true}
+      onSearch={handleSearch}
+      searchPlaceholder="Buscar por nombre, email o DNI..."
+      mobileCardRender={renderMobileCard}
+      className="dark-table"
+    />
+  );
+
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen">
-      <CustomTable<Customer>
-        headerTitle="Gestión de Usuarios"
-        columns={columns}
-        dataSource={customers}
-        loading={loading}
-        rowKey="id"
-        totalRecords={total}
-        showAddButton={true}
-        onAddButtonClick={openModal}
-        addButtonLabel="Añadir Usuario"
-        showSearch={true}
-        onSearch={(value) => setSearchText(value)} // Conectar con el estado searchText y la lógica de fetch
-        searchPlaceholder="Buscar usuario..."
-        paginationConfig={paginationConfig}
-        containerClassName="mb-6" // Ajustar si es necesario, o quitar para usar el default
-      />
-
+      {renderUserTable()}
       <Modal
         title={editingCustomer ? "Editar Usuario" : "Nuevo Usuario"}
         open={modalVisible}
@@ -758,10 +953,23 @@ const CustomersPage = () => {
                       placeholder="Contraseña"
                       autoComplete="new-password"
                     />
+                  ) : field.name === 'dni' ? (
+                    <Input 
+                      prefix={<IdcardOutlined />}
+                      placeholder={field.label} 
+                      disabled={editingCustomer?.dni ? true : false}
+                      // Agregar tooltip si está deshabilitado
+                      suffix={
+                        editingCustomer?.dni ? (
+                          <Tooltip title="El DNI no se puede cambiar una vez registrado">
+                            <InfoCircleOutlined style={{ color: 'rgba(200, 200, 200, 0.8)' }} />
+                          </Tooltip>
+                        ) : null
+                      }
+                    />
                   ) : (
                     <Input 
                       prefix={
-                        field.name === 'dni' ? <IdcardOutlined /> :
                         field.name === 'direccion' ? <HomeOutlined /> :
                         <UserOutlined />
                       } 

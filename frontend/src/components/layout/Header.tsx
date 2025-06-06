@@ -2,14 +2,22 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Bell, Search, ChevronDown, LogOut, Settings, User, UserCircle2 } from 'lucide-react';
+import { Bell, Search, ChevronDown, LogOut, Settings, User, UserCircle2, Menu } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   className?: string;
   role?: string;
+  onMenuToggle?: () => void;
+  isMobileMenuOpen?: boolean;
 }
 
-export function Header({ className = "", role = "admin" }: HeaderProps) {
+export function Header({ 
+  className = "", 
+  role = "admin",
+  onMenuToggle,
+  isMobileMenuOpen = false 
+}: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   
@@ -39,17 +47,29 @@ export function Header({ className = "", role = "admin" }: HeaderProps) {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header className={`bg-gray-900/60 backdrop-blur-md sticky top-0 z-10 p-4 flex justify-between items-center border-b border-gray-800 ${className}`}>
-      <div className="relative">
-        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-        <input
-          type="text"
-          placeholder="Buscar transacciones, productos..."
-          className="bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm w-80 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-        />
+    <header className={cn(
+      'bg-gray-900/60 backdrop-blur-md sticky top-0 z-10 p-4 flex justify-between items-center border-b border-gray-800',
+      className
+    )}>
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={onMenuToggle}
+          className="md:hidden p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+          aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+        <div className="relative">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Buscar transacciones, productos..."
+            className="bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm w-80 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+          />
+        </div>
       </div>
       
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-4">
         {/* Notificaciones */}
         <div className="relative">
           <button 

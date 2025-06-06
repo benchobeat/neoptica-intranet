@@ -77,11 +77,23 @@ La aplicación implementa un sistema avanzado de gestión multi-rol que permite:
 
 ### Componentes Base Reutilizables
 
-- **Card**: Contenedor base con estilo consistente para todas las secciones.
-- **Button**: Botón personalizable con variantes (primary, secondary, danger).
-- **Input**: Campo de entrada estilizado.
-- **Select**: Selector desplegable personalizado.
-- **Label**: Etiqueta para formularios.
+- **FormModal**: Componente de formulario modal con pestañas integradas
+- **LoadingButton**: Botón con estados de carga integrados
+- **FormTabs**: Sistema de pestañas para formularios complejos
+- **AsyncSelect**: Selector con carga asíncrona y búsqueda
+- **Card**: Contenedor base con estilo consistente para todas las secciones
+- **Button**: Botón personalizable con variantes (primary, secondary, danger)
+- **Input**: Campo de entrada estilizado con validación
+- **Select**: Selector desplegable personalizado
+- **Label**: Etiqueta para formularios
+
+### Mejoras en Formularios
+
+- **Validación en tiempo real** con mensajes claros
+- **Guardado automático** en campos no sensibles
+- **Deshabilitación inteligente** de controles durante operaciones
+- **Retroalimentación visual** durante acciones asíncronas
+- **Organización por pestañas** para formularios complejos
 
 ### Componentes de Layout
 
@@ -320,7 +332,7 @@ Esta guía está diseñada para evitar los problemas más frecuentes encontrados
 
 3. **Uso de `useMemo` y `useCallback`**
    - ✅ **Usar `useMemo` para valores computados costosos**
-     ```jsx
+     ```typescript
      // Valor calculado costoso (array de objetos complejos)
      const calculatedColumns = useMemo(() => [
        { title: 'Nombre', key: 'name', render: (text) => <b>{text}</b> },
@@ -328,7 +340,7 @@ Esta guía está diseñada para evitar los problemas más frecuentes encontrados
      ], [dependencias]);
      ```
    - ✅ **Establecer `displayName` para componentes memoizados**
-     ```jsx
+     ```typescript
      const MemoizedComponent = memo(({ prop }) => <div>{prop}</div>);
      // Añadir displayName para depuración y mejor soporte ESLint
      MemoizedComponent.displayName = "MemoizedComponent";
@@ -425,9 +437,59 @@ Esta guía está diseñada para evitar los problemas más frecuentes encontrados
      import EditOutlined from '@ant-design/icons/EditOutlined';
      ```
 
-## Buenas Prácticas de Optimización
+### Buenas Prácticas de Optimización
 
 Las siguientes técnicas de optimización se han implementado para mejorar el rendimiento de la aplicación:
+
+### Menú Móvil y Responsividad
+
+La aplicación implementa un sistema robusto de navegación móvil que se adapta automáticamente a diferentes tamaños y orientaciones de pantalla:
+
+#### Componentes Clave
+
+- **DashboardLayout**: Administra el estado global del menú móvil y detecta cambios de viewport.
+- **MobileSidebar**: Implementa el menú lateral responsivo con soporte para todos los tamaños y orientaciones.
+- **Header**: Contiene el botón hamburguesa que controla la visibilidad del menú móvil.
+
+#### Características Principales
+
+1. **Cierre Automático**: El menú se cierra automáticamente cuando:
+   - El usuario navega a una nueva ruta
+   - El dispositivo cambia de orientación (vertical a horizontal o viceversa)
+   - La ventana se redimensiona a tamaño de escritorio (>= 768px)
+   - Se hace clic fuera del menú
+   - Se presiona la tecla Escape
+
+2. **Optimización para Múltiples Dispositivos**:
+   - Soporte para dimensiones comunes: 740x360, 667x375, 915x412, 896x414, 884x390, 932x430, 882x344
+   - Detección de cambios de orientación mediante MediaQueries
+   - Manejo eficiente del scroll y prevención de desplazamiento de fondo
+
+3. **Accesibilidad**:
+   - Manejo apropiado del foco cuando el menú se abre/cierra
+   - Atributos ARIA para lectores de pantalla
+   - Navegación completa por teclado
+
+4. **Prevención de Memory Leaks**:
+   - Limpieza adecuada de event listeners en efectos de React
+   - Uso de `useCallback` para optimizar funciones entre renders
+
+5. **Consistencia de Experiencia**:
+   - Mismo comportamiento en todas las orientaciones
+   - Transiciones suaves entre estados
+   - Bloqueo de scroll del body cuando el menú está abierto
+
+#### Requisitos para Nuevos Componentes
+
+Al desarrollar nuevas páginas o componentes, asegurar que:
+
+- Sean responsivos para todos los tamaños de pantalla (móvil, tablet, desktop)
+- Se comporten correctamente en ambas orientaciones (portrait y landscape)
+- Utilicen los hooks y componentes existentes para mantener consistencia
+- Implementen `ResponsiveTable` en lugar de `Table` para tablas adaptativas
+- Manejen correctamente el scroll y los event listeners
+
+Para más detalles sobre la implementación de interfaces responsivas, ver la [documentación de directrices para formularios admin](./docs/ADMIN_FORMS_GUIDELINES.md).
 
 ### Optimización de Rendimiento en Páginas de Administración
 
@@ -731,7 +793,7 @@ Esta sección contiene lineamientos cruciales para mantener la calidad del códi
 - [ ] Comprobar que los hooks tienen todas sus dependencias declaradas correctamente
 - [ ] Asegurar que caracteres especiales en JSX están escapados
 - [ ] Verificar que la configuración de dominios de imágenes en `next.config.js` está completa
-- [ ] Probar la aplicación en diferentes tamaños de pantalla
+- [ ] Probar la aplicación en diferentes tamaños de pantalla y orientaciones (portrait/landscape)
 
 ## Recursos adicionales
 

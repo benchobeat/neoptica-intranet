@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { getSystemUserId } from "./system";
 
 const prisma = new PrismaClient();
 
@@ -10,7 +9,7 @@ function safeUUID(value: string | null | undefined): string | null {
 
 /**
  * Registra una entrada en el log de auditoría
- * Si no se proporciona un usuarioId, utilizará el usuario system
+ * Si no se proporciona un usuarioId, se registrará como null
  */
 export async function registrarAuditoria({
   usuarioId,
@@ -30,18 +29,10 @@ export async function registrarAuditoria({
   modulo?: string;
 }) {
   try {
-    // Si no hay usuarioId proporcionado, usar el del sistema
+    // Usar directamente el usuarioId proporcionado, que puede ser null
+    // Esto ya no causará problemas de FK porque configuramos onDelete: SetNull
+    // en la relación en el schema de Prisma
     let finalUsuarioId = usuarioId;
-    
-    if (!finalUsuarioId) {
-      try {
-        finalUsuarioId = await getSystemUserId();
-      } catch (systemErr) {
-        console.error("Error obteniendo usuario del sistema:", systemErr);
-        // Continuamos con usuarioId null, lo que podría causar un error de FK
-        // pero es preferible a silenciar completamente el log de auditoría
-      }
-    }
     
     await prisma.log_auditoria.create({
       data: {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import dynamic from "next/dynamic";
-import CustomTable from "@/components/ui/CustomTable";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 
 // Importaciones selectivas de Ant Design para reducir el tamaño del bundle
 import Button from "antd/lib/button";
@@ -146,8 +146,7 @@ export default function BrandsPage() {
     {
       title: "Nombre",
       dataIndex: "nombre",
-      key: "nombre", 
-      width: "30%",
+      key: "nombre",
       sorter: (a: Marca, b: Marca) => a.nombre.localeCompare(b.nombre),
     },
     {
@@ -155,30 +154,13 @@ export default function BrandsPage() {
       dataIndex: "descripcion",
       key: "descripcion",
       ellipsis: true,
+      responsive: ['md' as const],
       render: (descripcion: string | null) => descripcion || "N/A",
-    },
-    {
-      title: "Sitio Web",
-      dataIndex: "website",
-      key: "website",
-      render: (website: string | null) =>
-        website ? (
-          <a 
-            href={website} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
-          >
-            <LinkOutlined /> {website}
-          </a>
-        ) : (
-          "N/A"
-        ),
     },
     {
       title: "Acciones",
       key: "acciones",
-      width: "15%",
+      width: 120,
       render: (text: any, record: Marca) => (
         <div className="flex gap-2">
           <Tooltip title="Editar">
@@ -197,12 +179,62 @@ export default function BrandsPage() {
             cancelText="No"
             icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
           >
-            <Button icon={<DeleteOutlined />} type="primary" size="small" danger />
+            <Button icon={<DeleteOutlined />} type="primary" size="small" danger ghost />
           </Popconfirm>
         </div>
       ),
     },
   ], [handleDelete, showModal]);
+
+  // Renderizado personalizado para móviles
+  const mobileCardRender = useCallback((item: Marca) => {
+    return (
+      <div className="mobile-card bg-gray-800 rounded-lg p-4 mb-3 border border-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-medium text-white">{item.nombre}</div>
+          <div className="flex gap-2">
+            <Tooltip title="Editar">
+              <Button
+                icon={<EditOutlined />}
+                type="text"
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showModal(item);
+                }}
+                className="text-blue-400 hover:bg-blue-900/30"
+              />
+            </Tooltip>
+            <Popconfirm
+              title="¿Estás seguro de eliminar esta marca?"
+              onConfirm={(e) => {
+                e?.stopPropagation();
+                handleDelete(item.id);
+              }}
+              onCancel={(e) => e?.stopPropagation()}
+              okText="Sí"
+              cancelText="No"
+              icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
+            >
+              <Button 
+                icon={<DeleteOutlined />}
+                type="text"
+                size="small"
+                danger
+                onClick={(e) => e.stopPropagation()}
+                className="hover:bg-red-900/30"
+              />
+            </Popconfirm>
+          </div>
+        </div>
+        {item.descripcion && (
+          <div className="text-sm text-gray-300 mt-2">
+            {item.descripcion}
+          </div>
+        )}
+      </div>
+    );
+  }, [showModal, handleDelete]);
 
   // Footer del modal memoizado para evitar re-renders
   const modalFooter = useMemo(() => [
@@ -216,32 +248,34 @@ export default function BrandsPage() {
 
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
-      <CustomTable<Marca>
-        columns={columns}
-        dataSource={brands}
-        loading={loading}
-        rowKey="id"
-        headerTitle="Gestión de Marcas"
-        showAddButton={true}
-        onAddButtonClick={() => showModal()}
-        addButtonLabel="Nueva Marca"
-        showSearch={true}
-        onSearch={setSearchText}
-        searchPlaceholder="Buscar marca..."
-        paginationConfig={{
-          current: page,
-          pageSize: pageSize,
-          total: total,
-          onChange: (newPage, newPageSize) => {
-            setPage(newPage);
-            if (newPageSize) setPageSize(newPageSize);
-          },
-          showSizeChanger: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} marcas`,
-        }}
-        tableProps={{
-        }}
-      />
+      <div className="responsive-table-container">
+        <ResponsiveTable<Marca>
+          columns={columns}
+          dataSource={brands}
+          loading={loading}
+          rowKey="id"
+          headerTitle="Gestión de Marcas"
+          showAddButton={true}
+          onAddButtonClick={() => showModal()}
+          showSearch={true}
+          onSearch={setSearchText}
+          searchPlaceholder="Buscar marca..."
+          pagination={{
+            current: page,
+            pageSize: pageSize,
+            total: total,
+            onChange: (newPage, newPageSize) => {
+              setPage(newPage);
+              if (newPageSize) setPageSize(newPageSize);
+            },
+            showSizeChanger: true,
+            showTotal: (total) => `Total: ${total} marcas`,
+            pageSizeOptions: ['5', '10', '20', '50'],
+          }}
+          className="responsive-table"
+          mobileCardRender={mobileCardRender}
+        />
+      </div>
 
       {modalVisible && (
         <Modal
@@ -273,19 +307,6 @@ export default function BrandsPage() {
                 maxLength={500}
                 showCount
               />
-            </Form.Item>
-            
-            <Form.Item
-              name="website"
-              label="Sitio Web"
-              rules={[
-                { 
-                  pattern: /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/, 
-                  message: "Por favor ingresa una URL válida" 
-                },
-              ]}
-            >
-              <Input placeholder="https://ejemplo.com" />
             </Form.Item>
           </Form>
         </Modal>

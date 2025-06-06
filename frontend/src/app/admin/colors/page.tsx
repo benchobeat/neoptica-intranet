@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { HexColorPicker } from "react-colorful";
-import CustomTable from "@/components/ui/CustomTable";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 
 // Importaciones selectivas de Ant Design para reducir el tamaño del bundle
 import Button from "antd/lib/button";
@@ -55,10 +55,11 @@ export default function ColorsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingColor, setEditingColor] = useState<Color | null>(null);
-  const [form] = Form.useForm();
   // Estado local para el color visual
+  const [form] = Form.useForm();
   const [pickerColor, setPickerColor] = useState<string>("#000000");
   const [searchText, setSearchText] = useState("");
+  const [formInitialized, setFormInitialized] = useState(false);
 
   // Cargar colores al montar el componente o cambiar la paginación
   const fetchColors = useCallback(async () => {
@@ -92,22 +93,26 @@ export default function ColorsPage() {
 
   // Mostrar modal para editar o crear
   const showModal = useCallback((color?: Color) => {
-    setEditingColor(color || null);
-    form.resetFields();
-    
-    let initialColor = "#000000";
+    // Establecer color negro por defecto si no hay color o si el código hex es nulo/indefinido
+    const defaultColor = "#000000";
+    let initialColor = defaultColor;
     
     if (color) {
-      initialColor = color.codigo_hex;
-      form.setFieldsValue({
-        nombre: color.nombre,
-        codigo_hex: color.codigo_hex,
+      // Usar el color del registro o el valor por defecto si es nulo/indefinido
+      initialColor = color.codigo_hex || defaultColor;
+      // Actualizamos el estado primero
+      setEditingColor({
+        ...color,
+        codigo_hex: initialColor
       });
+    } else {
+      setEditingColor(null);
     }
     
     setPickerColor(initialColor);
     setModalVisible(true);
-  }, [form]);
+    setFormInitialized(true);
+  }, []);
 
   // Manejar cierre del modal
   const handleCancel = useCallback(() => {
@@ -181,15 +186,15 @@ export default function ColorsPage() {
       title: "Color",
       dataIndex: "codigo_hex",
       key: "codigo_hex",
-      width: 80,
+      width: 60,
+      align: 'center' as const,
       render: (hex: string) => (
-        <div className="flex items-center">
+        <Tooltip title={hex}>
           <div 
-            className="rounded-md w-6 h-6 border border-gray-300" 
+            className="rounded-md w-6 h-6 border border-gray-300 mx-auto" 
             style={{ backgroundColor: hex }}
-          ></div>
-          <span className="ml-2 text-gray-300">{hex}</span>
-        </div>
+          />
+        </Tooltip>
       )
     },
     {
@@ -203,6 +208,7 @@ export default function ColorsPage() {
       dataIndex: "descripcion",
       key: "descripcion",
       ellipsis: true,
+      responsive: ['md' as const],
       render: (descripcion: string | null) => descripcion || "N/A",
     },
     {
@@ -235,6 +241,65 @@ export default function ColorsPage() {
       ),
     },
   ], [showModal, handleDelete]);
+
+  // Renderizado personalizado para móviles
+  const mobileCardRender = useCallback((item: Color) => {
+    return (
+      <div className="mobile-card bg-gray-800 rounded-lg p-4 mb-3 border border-gray-700">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center">
+            <div 
+              className="rounded-md w-8 h-8 border border-gray-300 mr-3"
+              style={{ backgroundColor: item.codigo_hex || '#000000' }}
+            />
+            <div>
+              <div className="font-medium text-white">{item.nombre}</div>
+              <div className="text-sm text-gray-400">{item.codigo_hex}</div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Tooltip title="Editar">
+              <Button
+                icon={<EditOutlined />}
+                type="text"
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showModal(item);
+                }}
+                className="text-blue-400 hover:bg-blue-900/30"
+              />
+            </Tooltip>
+            <Popconfirm
+              title="¿Estás seguro de eliminar este color?"
+              onConfirm={(e) => {
+                e?.stopPropagation();
+                handleDelete(item.id);
+              }}
+              onCancel={(e) => e?.stopPropagation()}
+              okText="Sí"
+              cancelText="No"
+              icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
+            >
+              <Button 
+                icon={<DeleteOutlined />}
+                type="text"
+                size="small"
+                danger
+                onClick={(e) => e.stopPropagation()}
+                className="hover:bg-red-900/30"
+              />
+            </Popconfirm>
+          </div>
+        </div>
+        {item.descripcion && (
+          <div className="text-sm text-gray-300 mt-2">
+            {item.descripcion}
+          </div>
+        )}
+      </div>
+    );
+  }, [showModal, handleDelete]);
   
   // Footer del modal memoizado para evitar re-renders
   const modalFooter = useMemo(() => [
@@ -248,42 +313,56 @@ export default function ColorsPage() {
 
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
-      <CustomTable<Color>
-        columns={columns}
-        dataSource={colors}
-        loading={loading}
-        rowKey="id"
-        headerTitle="Gestión de Colores"
-        showAddButton={true}
-        onAddButtonClick={() => showModal()}
-        addButtonLabel="Nuevo Color"
-        showSearch={true}
-        onSearch={setSearchText} // CustomTable should pass the string value directly
-        searchPlaceholder="Buscar color..."
-        paginationConfig={{
-          current: page,
-          pageSize: pageSize,
-          total: total,
-          onChange: (newPage, newPageSize) => {
-            setPage(newPage);
-            if (newPageSize) setPageSize(newPageSize);
-          },
-          showSizeChanger: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} colores`,
-        }}
-        tableProps={{
-        }}
-      />
+      <div className="responsive-table-container">
+        <ResponsiveTable<Color>
+          columns={columns}
+          dataSource={colors}
+          loading={loading}
+          rowKey="id"
+          headerTitle="Gestión de Colores"
+          showAddButton={true}
+          onAddButtonClick={() => showModal()}
+          showSearch={true}
+          onSearch={setSearchText}
+          searchPlaceholder="Buscar color..."
+          pagination={{
+            current: page,
+            pageSize: pageSize,
+            total: total,
+            onChange: (newPage, newPageSize) => {
+              setPage(newPage);
+              if (newPageSize) setPageSize(newPageSize);
+            },
+            showSizeChanger: true,
+            showTotal: (total) => `Total: ${total} colores`,
+            pageSizeOptions: ['5', '10', '20', '50'],
+          }}
+          className="responsive-table"
+          mobileCardRender={mobileCardRender}
+        />
+      </div>
 
-      {modalVisible && (
-        <Modal
-          title={editingColor ? "Editar Color" : "Nuevo Color"}
-          open={modalVisible}
-          onCancel={handleCancel}
-          footer={modalFooter}
-          width={600} // Consistent modal width
-        >
-          <Form form={form} layout="vertical">
+      <Modal
+        key={editingColor ? `edit-${editingColor.id}` : 'create'}
+        title={editingColor ? "Editar Color" : "Nuevo Color"}
+        open={modalVisible}
+        onCancel={handleCancel}
+        footer={modalFooter}
+        width={600} // Consistent modal width
+        afterClose={() => setFormInitialized(false)}
+      >
+        {formInitialized && (
+          <Form 
+            form={form} 
+            layout="vertical"
+            initialValues={editingColor ? {
+              nombre: editingColor.nombre,
+              codigo_hex: pickerColor,
+              descripcion: (editingColor as any).descripcion || undefined,
+            } : {
+              codigo_hex: pickerColor
+            }}
+          >
             <Form.Item
               name="nombre"
               label="Nombre"
@@ -327,8 +406,8 @@ export default function ColorsPage() {
               />
             </Form.Item>
           </Form>
-        </Modal>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

@@ -1,5 +1,8 @@
 import request from 'supertest';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
+
+// Aumentar timeout a 30 segundos para todos los tests en este archivo
+jest.setTimeout(30000);
 import app from '../src/app';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';

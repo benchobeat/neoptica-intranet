@@ -49,6 +49,7 @@ export interface Color {
   id: string;
   nombre: string;
   codigo_hex: string;
+  descripcion?: string | null;
   activo: boolean;
   creado_en: string;
   creado_por: string | null;

@@ -61,16 +61,19 @@ body {
 
 /* Style for pagination items for better visibility */
 .ant-table-wrapper .ant-pagination .ant-pagination-item a {
-  color: #cbd5e1; /* Tailwind slate-300 */
+  color: #a0aec0; /* Tailwind gray-400 */
 }
 
-.ant-table-wrapper .ant-pagination .ant-pagination-item-active a {
-  color: #ffffff !important; /* White text on primary active background */
-}
-
+/* Forzar el color azul en la página activa */
+.ant-pagination-item.ant-pagination-item-active,
 .ant-table-wrapper .ant-pagination .ant-pagination-item-active {
-  border-color: #00b96b !important; /* Primary color for active item border */
-  background-color: #00b96b !important; /* Primary color for active item background */
+  background: #1e214d !important;
+  border-color: #1e214d !important;
+}
+
+.ant-pagination-item.ant-pagination-item-active a,
+.ant-table-wrapper .ant-pagination .ant-pagination-item-active a {
+  color: white !important;
 }
 
 .ant-table-wrapper .ant-pagination .ant-pagination-prev .ant-pagination-item-link,
@@ -112,4 +115,122 @@ body {
 /* Ensure the main table container in CustomTable.tsx uses the full width properly */
 .custom-table-container {
   width: 100%;
+}
+
+/* Responsive Table Styles */
+@media (max-width: 768px) {
+  /* Asegurar que la tabla ocupe todo el ancho en móviles */
+  .responsive-table {
+    width: 100% !important;
+  }
+
+  /* Mejorar la legibilidad en móviles */
+  .ant-table {
+    font-size: 13px;
+  }
+
+  /* Reducir el padding en celdas para móviles */
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    padding: 8px !important;
+  }
+
+  /* Asegurar que el contenido de las celdas no se desborde */
+  .ant-table-cell {
+    white-space: normal;
+    word-break: break-word;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Mejorar la apariencia de los botones en móviles */
+  .ant-btn {
+    min-width: 32px;
+    padding: 0 8px;
+  }
+
+  /* Estilos para la vista de tarjeta en móviles */
+  .mobile-card {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+
+  .mobile-card-content {
+    padding: 12px;
+  }
+
+  .mobile-card-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .mobile-card-label {
+    font-weight: 500;
+    color: #6b7280;
+    margin-right: 8px;
+    min-width: 100px;
+  }
+
+  .mobile-card-value {
+    flex: 1;
+    text-align: right;
+  }
+
+  .mobile-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+    gap: 8px;
+  }
+
+  /* Mejorar la búsqueda en móviles */
+  .ant-input-search {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  /* Ajustar el tamaño de los botones de acción */
+  .ant-btn-icon-only {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Mejorar la paginación en móviles */
+  .ant-pagination {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .ant-pagination-prev,
+  .ant-pagination-next,
+  .ant-pagination-jump-prev,
+  .ant-pagination-jump-next,
+  .ant-pagination-item {
+    margin: 0 2px !important;
+  }
+
+  /* Ajustar el tamaño de los inputs en móviles */
+  .ant-input,
+  .ant-input-number,
+  .ant-select-selector {
+    font-size: 16px !important; /* Evitar zoom en iOS */
+  }
+
+  /* Asegurar que los menús desplegables sean accesibles en móviles */
+  .ant-dropdown-menu {
+    max-height: 60vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
