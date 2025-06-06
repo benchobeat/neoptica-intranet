@@ -4,7 +4,7 @@ Bienvenido al repositorio oficial de **Neóptica Intranet**, la plataforma de ge
 
 ## 🚀 Últimas Mejoras
 
-### Mejoras en la Experiencia de Usuario (Junio 2024)
+### Mejoras en la Experiencia de Usuario (Junio 2025)
 
 - **Formularios con Pestañas**: Reorganización de formularios complejos en pestañas lógicas para mejor usabilidad
 - **Indicadores de Carga Mejorados**: Feedback visual durante operaciones asíncronas
