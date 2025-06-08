@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { success, fail } from '@/utils/response';
-import { registrarAuditoria } from "@/utils/auditoria";
+import { registrarAuditoria } from '@/utils/auditoria';
 import { sendMail } from '@/utils/mailer';
 
 const prisma = new PrismaClient();
@@ -15,16 +15,16 @@ const prisma = new PrismaClient();
  */
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
   const { email } = req.body;
-  let mensajeError = "";
+  let mensajeError = '';
 
   if (!email) {
     await registrarAuditoria({
       usuarioId: null,
-      accion: "forgot_password_fallido",
-      descripcion: "Email es requerido",
+      accion: 'forgot_password_fallido',
+      descripcion: 'Email es requerido',
       ip: req.ip,
-      entidadTipo: "usuario",
-      modulo: "auth",
+      entidadTipo: 'usuario',
+      modulo: 'auth',
     });
     res.status(400).json(fail('Email es requerido'));
     return;
@@ -41,13 +41,13 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     if (!usuario) {
       await registrarAuditoria({
         usuarioId: null,
-        accion: "forgot_password_fallido",
+        accion: 'forgot_password_fallido',
         descripcion: `Email no encontrado: ${email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
-        modulo: "auth",
+        entidadTipo: 'usuario',
+        modulo: 'auth',
       });
-      
+
       // Mensaje genérico por seguridad
       res.json(success('Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'));
       return;
@@ -67,9 +67,9 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
         usuario_id: usuario.id,
         token: resetTokenHash,
         expires_at: expiresAt,
-        created_at: new Date()
+        created_at: new Date(),
         // Los campos creado_por y creado_en se manejan automáticamente
-      }
+      },
     });
 
     // Construir URL de restablecimiento (frontend)
@@ -98,28 +98,28 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     // Registrar en auditoría
     await registrarAuditoria({
       usuarioId: usuario.id,
-      accion: "forgot_password",
+      accion: 'forgot_password',
       descripcion: `Solicitud de restablecimiento de contraseña para ${email}`,
       ip: req.ip,
-      entidadTipo: "usuario",
+      entidadTipo: 'usuario',
       entidadId: usuario.id,
-      modulo: "auth",
+      modulo: 'auth',
     });
 
     res.json(success('Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'));
   } catch (err) {
-    mensajeError = err instanceof Error ? err.message : "Error desconocido";
-    console.error("Error en forgot password:", mensajeError);
-    
+    mensajeError = err instanceof Error ? err.message : 'Error desconocido';
+    console.error('Error en forgot password:', mensajeError);
+
     await registrarAuditoria({
       usuarioId: null,
-      accion: "forgot_password_fallido",
+      accion: 'forgot_password_fallido',
       descripcion: mensajeError,
       ip: req.ip,
-      entidadTipo: "usuario",
-      modulo: "auth",
+      entidadTipo: 'usuario',
+      modulo: 'auth',
     });
-    
+
     // Mensaje genérico por seguridad
     res.json(success('Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'));
   }
@@ -131,16 +131,16 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
  */
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   const { token, email, password } = req.body;
-  let mensajeError = "";
+  let mensajeError = '';
 
   if (!token || !email || !password) {
     await registrarAuditoria({
       usuarioId: null,
-      accion: "reset_password_fallido",
-      descripcion: "Token, email y password son requeridos",
+      accion: 'reset_password_fallido',
+      descripcion: 'Token, email y password son requeridos',
       ip: req.ip,
-      entidadTipo: "usuario",
-      modulo: "auth",
+      entidadTipo: 'usuario',
+      modulo: 'auth',
     });
     res.status(400).json(fail('Token, email y password son requeridos'));
     return;
@@ -155,11 +155,11 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     if (!usuario) {
       await registrarAuditoria({
         usuarioId: null,
-        accion: "reset_password_fallido",
+        accion: 'reset_password_fallido',
         descripcion: `Email no encontrado: ${email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
-        modulo: "auth",
+        entidadTipo: 'usuario',
+        modulo: 'auth',
       });
       res.status(404).json(fail('Usuario no encontrado'));
       return;
@@ -170,23 +170,23 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       where: {
         usuario_id: usuario.id,
         expires_at: {
-          gt: new Date() // No expirado
+          gt: new Date(), // No expirado
         },
       },
       orderBy: {
-        created_at: 'desc'
-      }
+        created_at: 'desc',
+      },
     });
 
     if (!resetTokenRecord) {
       await registrarAuditoria({
         usuarioId: usuario.id,
-        accion: "reset_password_fallido",
+        accion: 'reset_password_fallido',
         descripcion: `Token no encontrado o expirado para ${email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
+        entidadTipo: 'usuario',
         entidadId: usuario.id,
-        modulo: "auth",
+        modulo: 'auth',
       });
       res.status(400).json(fail('Token inválido o expirado'));
       return;
@@ -197,12 +197,12 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     if (!isValidToken) {
       await registrarAuditoria({
         usuarioId: usuario.id,
-        accion: "reset_password_fallido",
+        accion: 'reset_password_fallido',
         descripcion: `Token inválido para ${email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
+        entidadTipo: 'usuario',
         entidadId: usuario.id,
-        modulo: "auth",
+        modulo: 'auth',
       });
       res.status(400).json(fail('Token inválido'));
       return;
@@ -212,12 +212,12 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     if (!passwordFuerte(password)) {
       await registrarAuditoria({
         usuarioId: usuario.id,
-        accion: "reset_password_fallido",
+        accion: 'reset_password_fallido',
         descripcion: `Password débil para ${email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
+        entidadTipo: 'usuario',
         entidadId: usuario.id,
-        modulo: "auth",
+        modulo: 'auth',
       });
       res.status(400).json(fail('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número'));
       return;
@@ -227,48 +227,48 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     const passwordHash = await bcrypt.hash(password, 10);
     await prisma.usuario.update({
       where: { id: usuario.id },
-      data: { 
+      data: {
         password: passwordHash,
-        modificado_en: new Date()
+        modificado_en: new Date(),
         // No incluimos modificado_por ya que espera un UUID
-      }
+      },
     });
 
     // Invalidar todos los tokens de restablecimiento
     await prisma.reset_token.updateMany({
       where: { usuario_id: usuario.id },
-      data: { 
+      data: {
         expires_at: new Date(),  // Expira ahora
-        modificado_en: new Date()
+        modificado_en: new Date(),
         // No incluimos modificado_por ya que espera un UUID
-      }
+      },
     });
 
     // Registrar en auditoría
     await registrarAuditoria({
       usuarioId: usuario.id,
-      accion: "reset_password",
+      accion: 'reset_password',
       descripcion: `Contraseña restablecida exitosamente para ${email}`,
       ip: req.ip,
-      entidadTipo: "usuario",
+      entidadTipo: 'usuario',
       entidadId: usuario.id,
-      modulo: "auth",
+      modulo: 'auth',
     });
 
     res.json(success('Contraseña restablecida correctamente'));
   } catch (err) {
-    mensajeError = err instanceof Error ? err.message : "Error desconocido";
-    console.error("Error en reset password:", mensajeError);
-    
+    mensajeError = err instanceof Error ? err.message : 'Error desconocido';
+    console.error('Error en reset password:', mensajeError);
+
     await registrarAuditoria({
       usuarioId: null,
-      accion: "reset_password_fallido",
+      accion: 'reset_password_fallido',
       descripcion: mensajeError,
       ip: req.ip,
-      entidadTipo: "usuario",
-      modulo: "auth",
+      entidadTipo: 'usuario',
+      modulo: 'auth',
     });
-    
+
     res.status(500).json(fail('Error al restablecer la contraseña'));
   }
 }
@@ -283,16 +283,16 @@ function passwordFuerte(password: string): boolean {
 
 export async function login(req: Request, res: Response): Promise<void> {
   const { email, password } = req.body;
-  let mensajeError = "";
+  let mensajeError = '';
 
   if (!email || !password) {
     await registrarAuditoria({
       usuarioId: null,
-      accion: "login_fallido",
-      descripcion: "Email y password son requeridos",
+      accion: 'login_fallido',
+      descripcion: 'Email y password son requeridos',
       ip: req.ip,
-      entidadTipo: "usuario",
-      modulo: "auth",
+      entidadTipo: 'usuario',
+      modulo: 'auth',
     });
     res.status(400).json(fail('Email y password son requeridos'));
     return;
@@ -303,19 +303,19 @@ export async function login(req: Request, res: Response): Promise<void> {
     const usuario = await prisma.usuario.findUnique({
       where: { email },
       include: {
-        usuario_rol: { include: { rol: true } }
-      }
+        usuario_rol: { include: { rol: true } },
+      },
     });
-    
+
     if (!usuario) {
-      mensajeError = "Credenciales inválidas o usuario inactivo";
+      mensajeError = 'Credenciales inválidas o usuario inactivo';
       await registrarAuditoria({
-        usuarioId: "desconocido",
-        accion: "login_fallido",
+        usuarioId: 'desconocido',
+        accion: 'login_fallido',
         descripcion: `Intento de login fallido para email: ${email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
-        modulo: "auth",
+        entidadTipo: 'usuario',
+        modulo: 'auth',
       });
       res.status(401).json(fail(mensajeError));
       return;
@@ -324,12 +324,12 @@ export async function login(req: Request, res: Response): Promise<void> {
     if (usuario.activo === false) {
       await registrarAuditoria({
         usuarioId: usuario.id,
-        accion: "login_fallido",
+        accion: 'login_fallido',
         descripcion: `Intento de login fallido (usuario inactivo): ${usuario.email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
+        entidadTipo: 'usuario',
         entidadId: usuario.id,
-        modulo: "auth",
+        modulo: 'auth',
       });
       res.status(403).json(fail('El usuario está inactivo. Contacte al administrador.'));
       return;
@@ -338,12 +338,12 @@ export async function login(req: Request, res: Response): Promise<void> {
     if (!usuario.password) {
       await registrarAuditoria({
         usuarioId: usuario.id,
-        accion: "login_fallido",
+        accion: 'login_fallido',
         descripcion: `Intento de login fallido (sin password local): ${usuario.email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
+        entidadTipo: 'usuario',
         entidadId: usuario.id,
-        modulo: "auth",
+        modulo: 'auth',
       });
       res.status(401).json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
       return;
@@ -353,47 +353,47 @@ export async function login(req: Request, res: Response): Promise<void> {
     if (!passwordOk) {
       await registrarAuditoria({
         usuarioId: usuario.id,
-        accion: "login_fallido",
+        accion: 'login_fallido',
         descripcion: `Intento de login fallido (password incorrecto): ${usuario.email}`,
         ip: req.ip,
-        entidadTipo: "usuario",
+        entidadTipo: 'usuario',
         entidadId: usuario.id,
-        modulo: "auth",
+        modulo: 'auth',
       });
-      mensajeError = "Credenciales inválidas";
+      mensajeError = 'Credenciales inválidas';
       res.status(401).json(fail(mensajeError));
       return;
     }
 
     // Extraer todos los roles del usuario
-    const roles = usuario.usuario_rol?.map(ur => ur.rol.nombre) || ['cliente'];
-    
+    const roles = usuario.usuario_rol?.map((ur) => ur.rol.nombre) || ['cliente'];
+
     // console.log(`[DEBUG] Roles obtenidos del usuario: ${JSON.stringify(roles)}`);
 
     // Asegurar que siempre haya un JWT_SECRET
     const JWT_SECRET = process.env.JWT_SECRET || 'default-test-secret-key-only-for-testing';
-    
+
     if (!JWT_SECRET) {
       console.error('¡ADVERTENCIA! JWT_SECRET no está configurado. Usando clave predeterminada insegura.');
     }
-    
+
     // Log para debugging en tests
     if (process.env.NODE_ENV === 'test') {
       // console.log(`Generando token JWT para usuario ${usuario.email} con roles: ${JSON.stringify(roles)}`);
     }
-    
+
     // Genera JWT solo con multirol
     const token = jwt.sign(
       {
         id: usuario.id,
         email: usuario.email,
         nombre_completo: usuario.nombre_completo,
-        roles // Array con todos los roles del usuario
+        roles, // Array con todos los roles del usuario
       },
       JWT_SECRET,
-      { expiresIn: '8h' }
+      { expiresIn: '8h' },
     );
-    
+
     // Verificar que se generó el token correctamente
     if (!token) {
       // console.error('Error: No se pudo generar el token JWT');
@@ -403,12 +403,12 @@ export async function login(req: Request, res: Response): Promise<void> {
     // Registrar log de acceso exitoso
     await registrarAuditoria({
       usuarioId: usuario.id,
-      accion: "login_exitoso",
+      accion: 'login_exitoso',
       descripcion: `Usuario accedió al sistema: ${usuario.email}`,
       ip: req.ip,
-      entidadTipo: "usuario",
+      entidadTipo: 'usuario',
       entidadId: usuario.id,
-      modulo: "auth",
+      modulo: 'auth',
     });
 
     // Limpia la respuesta
@@ -420,13 +420,13 @@ export async function login(req: Request, res: Response): Promise<void> {
         id: usuario.id,
         nombre_completo: usuario.nombre_completo,
         email: usuario.email,
-        roles // Array completo de roles
+        roles, // Array completo de roles
         // otros campos públicos si los necesitas
-      }
+      },
     }));
 
   } catch (err) {
-    mensajeError = err instanceof Error ? err.message : "Error desconocido";
+    mensajeError = err instanceof Error ? err.message : 'Error desconocido';
     res.status(500).json(fail(mensajeError));
   }
 }

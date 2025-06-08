@@ -16,6 +16,19 @@ Modelo que representa producto en el sistema.
 | `categoria` | `string?` | ❌ | `null` | - |  |
 | `imagen_url` | `string?` | ❌ | `null` | - |  |
 | `modelo_3d_url` | `string?` | ❌ | `null` | - |  |
+| `tipo_producto` | `string?` | ❌ | `null` | - |  |
+| `tipo_lente` | `string?` | ❌ | `null` | - |  |
+| `material_lente` | `string?` | ❌ | `null` | - |  |
+| `tratamiento_lente` | `string?` | ❌ | `null` | - |  |
+| `graduacion_esfera` | `number?` | ❌ | `null` | - |  |
+| `graduacion_cilindro` | `number?` | ❌ | `null` | - |  |
+| `eje` | `number?` | ❌ | `null` | - |  |
+| `adicion` | `number?` | ❌ | `null` | - |  |
+| `tipo_armazon` | `string?` | ❌ | `null` | - |  |
+| `material_armazon` | `string?` | ❌ | `null` | - |  |
+| `tamano_puente` | `number?` | ❌ | `null` | - |  |
+| `tamano_aros` | `number?` | ❌ | `null` | - |  |
+| `tamano_varillas` | `number?` | ❌ | `null` | - |  |
 | `activo` | `boolean?` | ❌ | `null` | Valor por defecto |  |
 | `erp_id` | `number?` | ❌ | `null` | - |  |
 | `erp_tipo` | `string?` | ❌ | `null` | - |  |
@@ -51,6 +64,19 @@ const nuevoproducto = await prisma.producto.create({
     categoria: null,
     imagen_url: null,
     modelo_3d_url: null,
+    tipo_producto: null,
+    tipo_lente: null,
+    material_lente: null,
+    tratamiento_lente: null,
+    graduacion_esfera: null,
+    graduacion_cilindro: null,
+    eje: null,
+    adicion: null,
+    tipo_armazon: null,
+    material_armazon: null,
+    tamano_puente: null,
+    tamano_aros: null,
+    tamano_varillas: null,
     activo: null,
     erp_id: null,
     erp_tipo: null,
@@ -151,4 +177,4 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-07T21:18:20.035Z
+✅ Documentación generada automáticamente el 2025-06-08T15:35:08.553Z

@@ -12,7 +12,7 @@ Modelo que representa log_auditoria en el sistema.
 | `id` | `string` | ✅ | `uuid_generate_v4()` | Identificador único, Valor por defecto |  |
 | `usuarioId` | `string?` | ❌ | `null` | - |  |
 | `accion` | `string` | ✅ | - | - |  |
-| `descripcion` | `string?` | ❌ | `null` | - |  |
+| `descripcion` | `object?` | ❌ | `null` | - |  |
 | `fecha` | `Date` | ✅ | - | Valor por defecto |  |
 | `ip` | `string?` | ❌ | `null` | - |  |
 | `tipo_correo` | `string?` | ❌ | `null` | - |  |
@@ -114,4 +114,4 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-07T21:18:20.012Z
+✅ Documentación generada automáticamente el 2025-06-08T15:35:08.533Z

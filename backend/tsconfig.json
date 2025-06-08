@@ -3,19 +3,32 @@
     "target": "ES2022",
     "module": "commonjs",
     "outDir": "./build",
-    "rootDir": "./src",
+    "rootDir": ".",
+    "composite": true,
     "strict": true,
-    "noImplicitAny": false, // Lo puedes relajar por ahora
-    "strictNullChecks": false, // Igual, puedes relajar temporalmente
+    "noImplicitAny": false,
+    "strictNullChecks": false,
     "moduleResolution": "node",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["*"],
-    }
+      "@/*": ["src/*"],
+      "@tests/*": ["tests/*"]
+    },
+    "types": ["node", "jest"],
+    "typeRoots": [
+      "./node_modules/@types"
+    ]
   },
-  "include": ["src/**/*", "src/types/**/*"],
-  "exclude": ["node_modules", "build"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "src/types/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build"
+  ]
 }

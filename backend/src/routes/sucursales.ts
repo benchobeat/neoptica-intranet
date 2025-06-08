@@ -102,7 +102,6 @@ router.get('/paginated', authenticateJWT, listarSucursalesPaginadas);
 
 router.get('/', authenticateJWT, listarSucursales);
 
-
 /**
  * @swagger
  * /api/sucursales:
@@ -131,8 +130,7 @@ router.get('/', authenticateJWT, listarSucursales);
  *       401:
  *         description: No autorizado
  */
-router.post(  "/",  authenticateJWT,  requireRole("admin"),   crearSucursal);
-
+router.post('/',  authenticateJWT,  requireRole('admin'),   crearSucursal);
 
 /**
  * @swagger

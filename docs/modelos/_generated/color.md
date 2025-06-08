@@ -24,7 +24,6 @@ Modelo que representa color en el sistema.
 ### Relaciones
 
 - **productos**: Muchos a [producto](./producto.md) `colorToproducto`
-- **inventario**: Muchos a [inventario](./inventario.md) `colorToinventario`
 
 ## Ejemplos de Uso
 
@@ -49,8 +48,7 @@ const nuevocolor = await prisma.color.create({
 const registros = await prisma.color.findMany({
     // Incluir relaciones
     include: {
-      productos: true,
-      inventario: true
+      productos: true
     }
 });
 
@@ -59,8 +57,7 @@ const registro = await prisma.color.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
     include: {
-      productos: true,
-      inventario: true
+      productos: true
     }
 });
 ```
@@ -117,8 +114,7 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 ## Relaciones con Otros Modelos
 
 - **productos**: Muchos a [producto](./producto.md) `colorToproducto`
-- **inventario**: Muchos a [inventario](./inventario.md) `colorToinventario`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-07T21:18:20.039Z
+✅ Documentación generada automáticamente el 2025-06-08T15:35:08.560Z

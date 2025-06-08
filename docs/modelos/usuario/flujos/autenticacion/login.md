@@ -26,7 +26,6 @@ flowchart TD
     
     %% Referencias a endpoints
     B -.->|Endpoint: POST /api/auth/login| B
-    N -.->|Operación Interna: Bloqueo de cuenta| N
 ```
 
 ### 1.2. Proceso Detallado

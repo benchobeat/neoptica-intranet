@@ -142,7 +142,7 @@ router.get('/', listarProductos);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', authenticateJWT, requireRole('admin','vendedor','optometrista'), crearProducto);
+router.post('/', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista'), crearProducto);
 
 /**
  * @swagger
@@ -246,7 +246,7 @@ router.get('/:id', authenticateJWT, obtenerProductoPorId);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista'), actualizarProducto);
+router.put('/:id', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista'), actualizarProducto);
 
 /**
  * @swagger

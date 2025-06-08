@@ -25,18 +25,18 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
       throw new Error('JWT_SECRET no está configurado en variables de entorno');
     }
     const payload = jwt.verify(token, secret) as jwt.JwtPayload;
-    
+
     // Garantizar que exista el array de roles en req.user
     if (!Array.isArray(payload.roles)) {
       // Si no hay array de roles, utilizar un array vacío
       payload.roles = [];
     }
-    
+
     // console.log(`[DEBUG] Token decodificado. Roles: ${JSON.stringify(payload.roles)}`);
-    
+
     // Asignar payload al request
     (req as any).user = payload;
-    
+
     next();
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Error desconocido';

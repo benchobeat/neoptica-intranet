@@ -384,16 +384,13 @@ model inventario {
   // Campos normales
   sucursal_id  String? @db.Uuid
   producto_id  String? @db.Uuid
-  color_id     String? @db.Uuid
-  marca_id     String? @db.Uuid
   stock        Int?    @default(0)
   stock_minimo Int?    @default(3)
+  ubicacion    String?   // Para múltiples ubicaciones por sucursal
 
   // Relaciones
   producto              producto?               @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sucursal              sucursal?               @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  color                 color?                  @relation(fields: [color_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  marca                 marca?                  @relation(fields: [marca_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   movimiento_inventario movimiento_inventario[]
 
   // Campos de control
@@ -405,8 +402,7 @@ model inventario {
   anulado_por    String?   @db.Uuid
 
   // Restricción única para prevenir duplicados
-  @@unique([producto_id, sucursal_id, color_id, marca_id])
-  @@unique([producto_id, sucursal_id])
+  @@unique([producto_id, sucursal_id, ubicacion])
   @@index([producto_id, sucursal_id], map: "idx_inventario_producto_sucursal")
 }
 
@@ -417,7 +413,7 @@ model log_auditoria {
   // Campos normales
   usuarioId       String?  @db.Uuid
   accion          String
-  descripcion     String?
+  descripcion     Json?    // Cambiado a tipo Json
   fecha           DateTime @default(now())
   ip              String?
   tipo_correo     String?  @db.VarChar(40)
@@ -658,6 +654,19 @@ model producto {
   categoria     String?  @db.VarChar(50)
   imagen_url    String?
   modelo_3d_url String?
+  tipo_producto String?   @db.VarChar(30)   // LENTE, ARMAZON, ACCESORIO, SOLUCION
+  tipo_lente    String?   @db.VarChar(50)    // Monofocal, Bifocal, Progresivo
+  material_lente String?   @db.VarChar(50)    // Policarbonato, Trivex, etc.
+  tratamiento_lente String?   @db.VarChar(100)   // Antirreflejante, Blue Light, etc.
+  graduacion_esfera Decimal?  @db.Decimal(4, 2)  // -10.00 a +10.00
+  graduacion_cilindro Decimal?  @db.Decimal(4, 2)
+  eje                 Int?      // 0-180
+  adicion             Decimal?  @db.Decimal(4, 2)  // Adición para lentes progresivos
+  tipo_armazon        String?   @db.VarChar(50)
+  material_armazon    String?   @db.VarChar(50)
+  tamano_puente       Int?      // En mm
+  tamano_aros         Int?      // En mm
+  tamano_varillas     Int?      // En mm
   activo        Boolean? @default(true)
   erp_id        Int?
   erp_tipo      String?  @db.VarChar(30)
@@ -700,7 +709,6 @@ model marca {
   modificado_en  DateTime?    @db.Timestamptz(6)
   anulado_por    String?      @db.Uuid
   anulado_en     DateTime?    @db.Timestamptz(6)
-  inventario     inventario[]
 }
 
 model color {
@@ -723,7 +731,6 @@ model color {
   modificado_en  DateTime?    @db.Timestamptz(6)
   anulado_por    String?      @db.Uuid
   anulado_en     DateTime?    @db.Timestamptz(6)
-  inventario     inventario[]
 }
 
 model rol {
@@ -829,6 +836,7 @@ model usuario {
   google_uid      String?  @db.VarChar(128)
   facebook_uid    String?  @db.VarChar(128)
   activo          Boolean? @default(true)
+  email_verificado Boolean? @default(false)
   erp_id          Int?
   erp_tipo        String?  @db.VarChar(30)
   proveedor_oauth String?  @db.VarChar(30) // google, facebook, instagram, etc

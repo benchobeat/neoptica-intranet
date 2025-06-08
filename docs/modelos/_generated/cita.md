@@ -135,4 +135,4 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-07T21:18:19.975Z
+✅ Documentación generada automáticamente el 2025-06-08T15:35:08.494Z

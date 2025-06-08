@@ -19,14 +19,14 @@ const storage = multer.diskStorage({
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     cb(null, uniqueSuffix + ext);
-  }
+  },
 });
 
 // Filtro para archivos permitidos
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   // Solo permitir archivos PDF e imágenes
   const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  
+
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -35,12 +35,12 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilt
 };
 
 // Exportar configuración de multer
-export const uploadInventarioAdjunto = multer({ 
+export const uploadInventarioAdjunto = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 2 * 1024 * 1024 // Límite de 2MB
-  }
+    fileSize: 2 * 1024 * 1024, // Límite de 2MB
+  },
 });
 
 // Función para formatear errores de multer

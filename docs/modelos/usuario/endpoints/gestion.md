@@ -1,42 +1,50 @@
-# Índice de Endpoints
+# Gestión de Usuarios
 
-## Administración de Usuarios (Admin)
-- `GET /api/usuarios/paginados` - Listado paginado de usuarios con búsqueda
-- `GET /api/usuarios` - Lista todos los usuarios (sin paginación)
-- `GET /api/usuarios/:id` - Consultar usuario por ID
-- `POST /api/usuarios` - Crear nuevo usuario (solo admin)
-- `PUT /api/usuarios/:id` - Actualizar usuario existente
-- `DELETE /api/usuarios/:id` - Eliminar usuario (borrado lógico)
-- `POST /api/usuarios/:id/reset-password` - Restablecer contraseña de usuario (admin)
+## Índice de Endpoints
 
-## Gestión de Perfil de Usuario
-- `GET /api/usuarios/me` - Obtener perfil del usuario autenticado
-- `PUT /api/usuarios/me` - Actualizar perfil del usuario autenticado
-- `POST /api/usuarios/me/cambiar-password` - Cambiar contraseña del usuario autenticado
+### Administración de Usuarios (Admin)
+- `GET /api/usuarios/paginados` - ✅ Implementado (Nombre de ruta incorrecto: api/usuarios/paginated)
+- `GET /api/usuarios` - ✅ Implementado - Lista todos los usuarios (sin paginación)
+- `GET /api/usuarios/:id` - ✅ Implementado - Consultar usuario por ID
+- `POST /api/usuarios` - ✅ Implementado - Crear nuevo usuario (solo admin)
+- `PUT /api/usuarios/:id` - ✅ Implementado - Actualizar usuario existente
+- `DELETE /api/usuarios/:id` - ✅ Implementado - Eliminar usuario (borrado lógico)
+- `PUT /api/usuarios/:id/reset-password` - ✅ Implementado - Restablecer contraseña de usuario (admin)
 
-## Autoregistro
-- `POST /api/usuarios/me/autoregistro` - Registro autónomo de usuario (público)
+### Gestión de Perfil de Usuario
+- `GET /api/usuarios/me` - ❌ Pendiente - Obtener perfil del usuario autenticado
+- `PUT /api/usuarios/me` - ❌ Pendiente - Actualizar perfil del usuario autenticado
+- `POST /api/usuarios/me/cambiar-password` - ✅ Implementado (Nombre de ruta incorrecta) - Cambiar contraseña del usuario autenticado
+- `POST /api/usuarios/cambiar-password` - ⚠️ Obsoleto - Alternativa para cambiar contraseña (compatibilidad) Se debe quitar del código
+
+### Autoregistro
+- `POST /api/usuarios/autoregistro` - ✅ Implementado (Nombre de ruta incorrecta) - Registro autónomo de usuario (público)
 
 ---
 
 # Endpoints de Gestión de Usuarios
 
-## GET /api/usuarios/paginados (Listado de Usuarios paginado)
+## 🔄 `GET /api/usuarios/paginados` - Listado Paginado de Usuarios
+
+### Estado: ✅ Implementado - Nombre de ruta incorrecto api/usuarios/paginated
 
 ### Detalle de endpoint
-Lista todos los usuarios con paginación y búsqueda.
+Lista todos los usuarios con paginación, búsqueda y filtros avanzados.
 
-**Controlador**: usuarioController
-**Función**: listarUsuariosPaginados
-**Router**: /usuarios/paginados
+**Controlador**: usuarioController  
+**Función**: listarUsuariosPaginados  
+**Router**: /api/usuarios/paginados
 
 **Autenticación**: Requerida (Rol: admin)
 
 **Parámetros de consulta**:
 - `page` (opcional, number): Número de página (por defecto: 1)
 - `pageSize` (opcional, number): Tamaño de página (por defecto: 10)
-- `searchText` (opcional, string): Texto para búsqueda en nombre (case insensitive)
+- `searchText` (opcional, string): Texto para búsqueda en nombre y email (case insensitive)
 - `activo` (opcional, boolean): Filtrar por estado activo/inactivo
+- `rol` (opcional, string): Filtrar por rol específico
+- `fechaInicio` (opcional, string): Filtrar usuarios creados después de esta fecha (ISO 8601)
+- `fechaFin` (opcional, string): Filtrar usuarios creados antes de esta fecha (ISO 8601)
 
 **Respuesta exitosa (200 OK)**:
 ```json
@@ -50,26 +58,39 @@ Lista todos los usuarios con paginación y búsqueda.
         "email": "usuario@ejemplo.com",
         "telefono": "0999999999",
         "activo": true,
-        "roles": ["admin", "vendedor"]
+        "roles": ["admin", "vendedor"],
+        "fecha_creacion": "2024-01-01T00:00:00.000Z",
+        "fecha_actualizacion": "2024-01-01T00:00:00.000Z"
       }
     ],
     "total": 1,
     "page": 1,
-    "pageSize": 10
+    "pageSize": 10,
+    "totalPages": 1
   },
   "error": null
 }
 ```
 
 **Validaciones**:
-- `page` y `pageSize` deben ser números enteros positivos
-- `searchText` se aplica como búsqueda parcial en `nombre_completo` (case insensitive)
-- `activo` debe ser un booleano si se proporciona
+- [x] `page` debe ser un número entero positivo (default: 1)
+- [x] `pageSize` debe ser un número entre 1 y 100 (default: 10)
+- [x] `searchText` busca en `nombre_completo` y `email` (case insensitive, búsqueda parcial)
+- [x] `activo` debe ser un booleano si se proporciona
+- [x] `fechaInicio` y `fechaFin` deben ser fechas válidas en formato ISO 8601
+- [x] `rol` debe ser un rol válido del sistema
 
 **Códigos de error**:
 - 401: No autenticado
 - 403: No autorizado (se requiere rol admin)
+- 400: Parámetros de consulta inválidos
 - 500: Error del servidor
+
+**Notas**:
+- Los usuarios inactivos solo son visibles para administradores
+- La búsqueda es insensible a mayúsculas/minúsculas
+- Los resultados incluyen metadatos de paginación
+- Se registra la consulta en el log de auditoría
 
 ### Registro de Auditoría
 **Entrada de Auditoría**
@@ -97,13 +118,13 @@ Lista todos los usuarios con paginación y búsqueda.
     "pagina": 1,
     "tamano_pagina": 10,
     "texto_busqueda": "texto",
-    "activo": true
+    "activo": true,
+    "rol": "admin",
+    "fecha_inicio": "2024-01-01T00:00:00.000Z",
+    "fecha_fin": "2024-12-31T23:59:59.999Z"
   },
-  "total_registros": 42,
-  "usuarioId": "admin-user-id",
-  "ipOrigen": "192.168.1.100",
-  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-  "metadatos": {
+  "resultados": 1,
+  "paginas_totales": 1
     "dispositivo": {
       "tipo": "desktop",
       "navegador": "Chrome",
@@ -121,115 +142,26 @@ Lista todos los usuarios con paginación y búsqueda.
 - Solo usuarios con rol 'admin' pueden listar usuarios
 - Se registra la IP y dispositivo del administrador
 - Se limita el número máximo de resultados por página
-- Los filtros de búsqueda se registran para auditoría
 - No se registra el contenido de la lista de usuarios, solo metadatos de la consulta
 
 
 
 
-## GET /api/usuarios/ (Obtener lista de usuarios)
+## 🔄 `GET /api/usuarios/:id` - Obtener Usuario por ID
 
-### Detalle de endpoint
-Obtiene la lista de todos los usuarios.
-
-**Controlador**: usuarioController
-**Función**: listarUsuarios
-**Router**: /usuarios
-
-**Autenticación**: Requerida (Rol: admin, vendedor, optometrista)
-
-**Respuesta exitosa (200 OK)**:
-```json
-{
-  "ok": true,
-  "data": [
-    {
-      "id": "usuario-uuid",
-      "nombre_completo": "Nombre Usuario",
-      "email": "usuario@ejemplo.com",
-      "telefono": "0999999999",
-      "activo": true,
-      "roles": ["vendedor", "optometrista"]
-    }
-  ],
-  "error": null
-}
-```
-
-**Validaciones**:
-- El usuario debe tener el rol 'admin'
-
-**Códigos de error**:
-- 401: No autenticado
-- 403: No autorizado (se requiere rol admin)
-- 500: Error del servidor
-
-### Registro de Auditoría 
-**Entrada de Auditoría**
-
-| Campo | Valor |
-|-------|-------|
-| `usuarioId` | ID del usuario que realiza la consulta |
-| `accion` | `CONSULTA_USUARIOS` |
-| `descripcion` | Ver estructura JSON abajo |
-| `fecha` | Fecha y hora de la consulta (UTC) |
-| `ip` | Dirección IP del solicitante |
-| `entidad_tipo` | `Usuario` |
-| `entidad_id` | `null` (consulta múltiple) |
-| `modulo` | `usuarios` |
-| `estado_envio` | `exito` o `fallo` |
-| `mensaje_error` | Mensaje de error si la operación falla |
-
-**Estructura del campo `descripcion`:**
-
-```json
-{
-  "accion": "CONSULTA",
-  "entidad": "Usuario",
-  "filtros": {
-    "pagina": 1,
-    "tamano_pagina": 10,
-    "texto_busqueda": "texto",
-    "activo": true
-  },
-  "total_registros": 42,
-  "usuarioId": "admin-user-id",
-  "ipOrigen": "192.168.1.100",
-  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-  "metadatos": {
-    "dispositivo": {
-      "tipo": "desktop",
-      "navegador": "Chrome",
-      "sistema_operativo": "Windows 10"
-    }
-  }
-}
-```
-
-**Campos sensibles**:
-- No se registran datos sensibles en consultas de listado
-- Se registra solo el conteo total de registros, no los datos completos
-
-**Notas de seguridad**:
-- Solo usuarios con rol 'admin' pueden listar usuarios
-- Se registra la IP y dispositivo del administrador
-- Se limita el número máximo de resultados por página
-- Los filtros de búsqueda se registran para auditoría
-- No se registra el contenido de la lista de usuarios, solo metadatos de la consulta
-
-## GET /api/usuarios/:id (Consulta de usuario por ID)
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
 Obtiene un usuario por su ID.
 
-**Controlador**: usuarioController
-**Función**: obtenerUsuario
-**Router**: /usuarios/:id
+**Controlador**: usuarioController  
+**Función**: obtenerUsuario  
+**Router**: /api/usuarios/:id
 
 **Autenticación**: Requerida (Rol: admin, vendedor, optometrista)
 
 **Parámetros de ruta**:
-- `id` (string): ID del usuario a consultar (UUID)
+- `id` (requerido, string): ID del usuario a consultar (UUID)
 
 **Respuesta exitosa (200 OK)**:
 ```json
@@ -240,26 +172,36 @@ Obtiene un usuario por su ID.
     "nombre_completo": "Nombre Usuario",
     "email": "usuario@ejemplo.com",
     "telefono": "0999999999",
-    "activo": true,
-    "direccion": "Av. Siempre Viva 123",
+    "direccion": "Calle Principal 123",
     "dni": "12345678",
-    "roles": ["vendedor", "optometrista"]
+    "activo": true,
+    "email_verificado": true,
+    "roles": ["vendedor"],
+    "fecha_creacion": "2024-01-01T00:00:00.000Z",
+    "fecha_actualizacion": "2024-01-01T00:00:00.000Z"
   },
   "error": null
 }
 ```
 
 **Validaciones**:
-- El `id` debe ser un UUID válido
-- El usuario debe existir en la base de datos
-- Solo el propio usuario o un administrador pueden ver los detalles completos
+- [x] ID debe ser un UUID válido
+- [x] Usuario debe estar autenticado
+- [x] Usuario debe ser administrador o el propietario del perfil
+- [x] Solo administradores pueden ver usuarios inactivos
 
 **Códigos de error**:
-- 400: ID no proporcionado o inválido
+- 400: ID inválido o mal formado
 - 401: No autenticado
-- 403: No autorizado para ver este usuario
-- 404: Usuario no encontrado
+- 403: No autorizado para ver este perfil
+- 404: Usuario no encontrado o inactivo
 - 500: Error del servidor
+
+**Notas**:
+- Los campos sensibles como contraseñas nunca se incluyen
+- Los usuarios inactivos solo son visibles para administradores
+- La respuesta incluye metadatos de auditoría (fechas de creación/actualización)
+- Los roles se devuelven como un array de strings
 
 ### Registro de Auditoría
 
@@ -312,27 +254,30 @@ Obtiene un usuario por su ID.
 - Se incluye información del dispositivo para análisis de seguridad
 - Solo se registra el acceso exitoso, no los datos sensibles del usuario consultado
 
-## POST /api/usuarios (Creación de usuario solo admin) 
+## 🔄 `POST /api/usuarios` - Crear Usuario
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
-Crea un nuevo usuario (solo administrador).
+Crea un nuevo usuario en el sistema. Solo accesible por administradores.
 
-**Controlador**: usuarioController
-**Función**: crearUsuario
-**Router**: /usuarios
+**Controlador**: usuarioController  
+**Función**: crearUsuario  
+**Router**: /api/usuarios
 
 **Autenticación**: Requerida (Rol: admin)
 
 **Cuerpo de la solicitud**:
 ```json
 {
-  "nombre_completo": "Nuevo Usuario",
-  "email": "nuevo@ejemplo.com",
+  "nombre_completo": "Nombre Completo",
+  "email": "usuario@ejemplo.com",
   "password": "Contraseña123!",
   "telefono": "0999999999",
-  "direccion": "Av. Siempre Viva 123",
+  "direccion": "Av. Principal 123",
   "dni": "12345678",
-  "roles": ["vendedor", "optometrista"]
+  "roles": ["vendedor", "optometrista"],
+  "activo": true
 }
 ```
 
@@ -342,52 +287,56 @@ Crea un nuevo usuario (solo administrador).
   "ok": true,
   "data": {
     "id": "nuevo-usuario-uuid",
-    "nombre_completo": "Nuevo Usuario",
-    "email": "nuevo@ejemplo.com",
+    "nombre_completo": "Nombre Completo",
+    "email": "usuario@ejemplo.com",
     "telefono": "0999999999",
-    "activo": true,
-    "direccion": "Av. Siempre Viva 123",
+    "direccion": "Av. Principal 123",
     "dni": "12345678",
-    "roles": ["vendedor", "optometrista"]
+    "roles": ["vendedor", "optometrista"],
+    "activo": true
   },
   "error": null
 }
 ```
 
 **Validaciones**:
-- **nombre_completo**:
-  - Requerido
-  - Mínimo 3 caracteres, máximo 100 caracteres
-  - Solo letras, espacios y caracteres especiales básicos (.,-)
-- **email**:
-  - Requerido
-  - Formato de email válido (`usuario@dominio.com`)
+- [x] `nombre_completo` (requerido):
+  - Mínimo 3 caracteres, máximo 100
+  - Solo letras, espacios y caracteres especiales básicos
+- [x] `email` (requerido):
+  - Formato de email válido
   - Debe ser único en el sistema
-- **password**:
-  - Requerido
+- [x] `password` (requerido):
   - Mínimo 8 caracteres
-  - Debe contener al menos una mayúscula, una minúscula y un número
-  - No puede ser una contraseña común o comprometida
-- **telefono**:
-  - Opcional
-  - Formato: exactamente 10 dígitos numéricos
-- **direccion**:
-  - Opcional
-  - Máximo 255 caracteres
-- **dni**:
-  - Opcional
-  - Máximo 20 caracteres
-- **roles**:
+  - Al menos 1 mayúscula, 1 minúscula y 1 número
+  - Máximo 72 caracteres (límite de bcrypt)
+- [x] `telefono` (opcional):
+  - 10 dígitos numéricos
+  - Formato local sin prefijo internacional
+- [x] `dni` (opcional):
+  - 8-13 dígitos
+  - Debe ser único en el sistema
+- [x] `roles` (opcional, array):
   - Debe ser un array de strings
-  - Valores permitidos: 'admin', 'vendedor', 'optometrista', 'cliente'
-  - Al menos un rol debe ser proporcionado
+  - Solo roles existentes en el sistema
+  - No se puede asignar rol de administrador a usuarios nuevos
+- [x] `activo` (opcional, boolean):
+  - Por defecto: true
+  - Solo administradores pueden crear usuarios inactivos
 
 **Códigos de error**:
 - 400: Datos de entrada inválidos o faltantes
 - 401: No autenticado
 - 403: No autorizado (se requiere rol admin)
-- 409: El correo electrónico ya está registrado
+- 409: El correo electrónico o DNI ya está registrado
+- 422: Validación fallida (detalles en el mensaje de error)
 - 500: Error del servidor
+
+**Notas**:
+- La contraseña se almacena con hash bcrypt
+- Se registra la IP y el usuario que realizó la creación
+- Se genera un evento de auditoría con todos los cambios
+- Los emails siempre se guardan en minúsculas
 
 ### Registro de auditoria
 
@@ -444,19 +393,21 @@ Crea un nuevo usuario (solo administrador).
 - Se valida que el email no esté en uso
 - Se generan tokens de verificación si es necesario
 
-## PUT /api/usuarios/:id (Actualización de usuario)
+## 🔄 `PUT /api/usuarios/:id` - Actualizar Usuario
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
-Actualiza un usuario existente. Solo el administrador puede actualizar cualquier usuario, los usuarios solo pueden actualizar su propio perfil.
+Actualiza un usuario existente. Los administradores pueden actualizar cualquier campo permitido, mientras que los usuarios solo pueden actualizar su propio perfil con restricciones.
 
-**Controlador**: usuarioController
-**Función**: actualizarUsuario
-**Router**: /usuarios/:id
+**Controlador**: usuarioController  
+**Función**: actualizarUsuario  
+**Router**: /api/usuarios/:id
 
 **Autenticación**: Requerida (Rol: admin)
 
 **Parámetros de ruta**:
-- `id` (string): ID del usuario a actualizar (UUID)
+- `id` (requerido, string): ID del usuario a actualizar (UUID)
 
 **Cuerpo de la solicitud**:
 ```json
@@ -470,6 +421,8 @@ Actualiza un usuario existente. Solo el administrador puede actualizar cualquier
 }
 ```
 
+**Nota**: Solo los administradores pueden modificar los campos `activo` y `roles`.
+
 **Respuesta exitosa (200 OK)**:
 ```json
 {
@@ -482,16 +435,55 @@ Actualiza un usuario existente. Solo el administrador puede actualizar cualquier
     "direccion": "Nueva Dirección 456",
     "dni": "87654321",
     "activo": true,
-    "roles": ["vendedor", "optometrista"]
+    "email_verificado": true,
+    "roles": ["vendedor", "optometrista"],
+    "fecha_creacion": "2024-01-01T00:00:00.000Z",
+    "fecha_actualizacion": "2024-06-08T14:30:00.000Z"
   },
   "error": null
 }
 ```
 
 **Validaciones**:
-- **Solo administradores** pueden actualizar el campo `activo` y `roles`
-- **Usuarios no administradores** solo pueden actualizar su propio perfil
-- **No se puede modificar** el email después de creado el usuario
+- [x] `id` debe ser un UUID válido existente
+- [x] Usuario debe estar autenticado
+- [x] Usuario debe ser administrador o el propietario del perfil
+- [x] `nombre_completo` (opcional):
+  - Mínimo 3 caracteres, máximo 100
+  - Solo letras, espacios y caracteres especiales básicos
+- [x] `telefono` (opcional):
+  - 10 dígitos numéricos
+  - Formato local sin prefijo internacional
+- [x] `dni` (opcional, solo si no estaba previamente establecido):
+  - 8-13 dígitos
+  - Debe ser único en el sistema
+- [x] `roles` (solo admin):
+  - Debe ser un array de strings
+  - Solo roles existentes en el sistema
+  - No se puede quitar el último rol de administrador
+- [x] `activo` (solo admin):
+  - Boolean
+  - No se puede desactivar a sí mismo
+
+**Restricciones de seguridad**:
+- El email no se puede modificar (requiere flujo de verificación)
+- Solo administradores pueden modificar roles y estado activo
+- No se puede modificar la contraseña (usar endpoints específicos)
+
+**Códigos de error**:
+- 400: Datos de entrada inválidos
+- 401: No autenticado
+- 403: No autorizado para modificar este usuario
+- 404: Usuario no encontrado
+- 409: Conflicto (email o DNI ya existen)
+- 422: Validación fallida (detalles en el mensaje)
+- 500: Error del servidor
+
+**Notas**:
+- Se registra la IP y el usuario que realizó la modificación
+- Se genera un evento de auditoría con los cambios realizados
+- Los campos no proporcionados mantienen su valor actual
+- Los usuarios regulares solo pueden modificar sus datos básicos (nombre, teléfono, dirección, DNI si no estaba establecido)
 
 ### Registro de auditoría
 
@@ -557,19 +549,21 @@ Actualiza un usuario existente. Solo el administrador puede actualizar cualquier
 - Se incluye lista de campos modificados para facilitar el análisis de cambios
 - Se registra si la operación fue exitosa o fallida
 
-## DELETE /api/usuarios/:id (Eliminación de Usuario)
+## 🔄 `DELETE /api/usuarios/:id` - Eliminar Usuario (Borrado Lógico)
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
-Realiza un borrado lógico de un usuario, marcándolo como inactivo. Solo los administradores pueden realizar esta acción.
+Realiza un borrado lógico de un usuario, marcándolo como inactivo en lugar de eliminarlo físicamente. Esto permite mantener la integridad referencial de los datos históricos. Solo los administradores pueden realizar esta acción.
 
-**Controlador**: usuarioController
-**Función**: eliminarUsuario
-**Router**: /usuarios/:id
+**Controlador**: usuarioController  
+**Función**: eliminarUsuario  
+**Router**: /api/usuarios/:id
 
 **Autenticación**: Requerida (Rol: admin)
 
 **Parámetros de ruta**:
-- `id` (string): ID del usuario a eliminar (UUID)
+- `id` (requerido, string): ID del usuario a desactivar (UUID)
 
 **Respuesta exitosa (200 OK)**:
 ```json
@@ -577,26 +571,52 @@ Realiza un borrado lógico de un usuario, marcándolo como inactivo. Solo los ad
   "ok": true,
   "data": {
     "id": "usuario-uuid",
-    "mensaje": "Usuario desactivado correctamente"
+    "mensaje": "Usuario desactivado correctamente",
+    "fecha_desactivacion": "2024-06-08T15:45:30.000Z"
   },
   "error": null
 }
 ```
 
 **Validaciones**:
-- El usuario debe existir en la base de datos
-- No se puede eliminar a sí mismo
-- No se pueden eliminar usuarios del sistema (is_system = true)
-- Solo los administradores pueden realizar esta acción
+- [x] `id` debe ser un UUID válido existente
+- [x] Usuario debe estar autenticado como administrador
+- [x] No se puede desactivar a sí mismo
+- [x] No se pueden desactivar usuarios del sistema (`is_system = true`)
+- [x] No se pueden desactivar usuarios con roles de sistema críticos
+- [x] Verificación de dependencias activas antes de la desactivación
+
+**Proceso de desactivación**:
+1. Se marca el usuario como `activo = false`
+2. Se registra la fecha de desactivación
+3. Se revocan todos los tokens activos del usuario
+4. Se registra el evento en el log de auditoría
+5. Se notifica al usuario por email (opcional)
 
 **Códigos de error**:
 - 400: ID no proporcionado o inválido
 - 401: No autenticado
 - 403: No autorizado (se requiere rol admin)
+- 403: No se puede desactivar a sí mismo
+- 403: No se pueden desactivar usuarios del sistema
+- 403: Usuario tiene dependencias activas
 - 404: Usuario no encontrado
-- 403: No se puede eliminar a sí mismo
-- 403: No se pueden eliminar usuarios del sistema
+- 409: Usuario ya está inactivo
 - 500: Error del servidor
+
+**Notas**:
+- El borrado es lógico, no físico (soft delete)
+- Se mantiene el registro en la base de datos con estado inactivo
+- Se registra la IP y usuario que realizó la desactivación
+- Se genera un evento de auditoría detallado
+- Los usuarios desactivados no pueden iniciar sesión
+- Solo un administrador puede reactivar un usuario desactivado
+
+**Consideraciones de seguridad**:
+- Validación de permisos a nivel de ruta y controlador
+- Verificación de doble capa para operaciones sensibles
+- Registro detallado de la operación
+- No se permite la desactivación de cuentas críticas del sistema
 
 ### Registro de auditoría
 **Audit Log Entry**
@@ -659,19 +679,21 @@ Realiza un borrado lógico de un usuario, marcándolo como inactivo. Solo los ad
 - Se cierran todas las sesiones activas
 - Se mantiene registro de quién realizó la acción
 
-## POST /api/usuarios/:id/reset-password (Restablecimiento de contraseña solo admin)
+## 🔄 `POST /api/usuarios/:id/reset-password` - Restablecer Contraseña (Admin)
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
-Restablece la contraseña de un usuario sin necesidad de conocer la contraseña actual. Solo disponible para administradores.
+Permite a un administrador restablecer la contraseña de cualquier usuario sin necesidad de conocer la contraseña actual. Esta operación es de alto privilegio y está estrictamente limitada a administradores.
 
-**Controlador**: usuarioController
-**Función**: resetPasswordAdmin
-**Router**: /usuarios/:id/reset-password
+**Controlador**: usuarioController  
+**Función**: resetPasswordAdmin  
+**Router**: /api/usuarios/:id/reset-password
 
 **Autenticación**: Requerida (Rol: admin)
 
 **Parámetros de ruta**:
-- `id` (string): ID del usuario (UUID)
+- `id` (requerido, string): ID del usuario objetivo (UUID)
 
 **Cuerpo de la solicitud**:
 ```json
@@ -685,33 +707,61 @@ Restablece la contraseña de un usuario sin necesidad de conocer la contraseña 
 {
   "ok": true,
   "data": {
-    "mensaje": "Contraseña restablecida correctamente"
+    "mensaje": "Contraseña restablecida correctamente",
+    "usuario_id": "usuario-uuid",
+    "email_notificado": "usuario@ejemplo.com",
+    "fecha_cambio": "2024-06-08T15:30:45.000Z"
   },
   "error": null
 }
 ```
 
 **Validaciones**:
-- **nueva**:
-  - Requerido
-  - Mínimo 8 caracteres
-  - Debe contener al menos una mayúscula, una minúscula y un número
+- [x] `id` debe ser un UUID válido existente
+- [x] Usuario debe estar autenticado como administrador
+- [x] `nueva` (requerido):
+  - Mínimo 8 caracteres, máximo 72 (límite bcrypt)
+  - Al menos 1 mayúscula, 1 minúscula y 1 número
   - No puede ser una contraseña común o comprometida
-- El usuario debe existir en la base de datos
-- Solo los administradores pueden realizar esta acción
+  - No puede ser similar a información personal del usuario
+  - No puede ser una de las últimas 5 contraseñas utilizadas
+- [x] Verificación de que el usuario objetivo existe y está activo
+- [x] Validación de que el administrador no está intentando restablecer su propia contraseña (debe usar el flujo de cambio normal)
 
-**Seguridad**:
-- La contraseña se almacena con hash bcrypt
-- Se registra el cambio en el log de auditoría
-- Se cierran todas las sesiones activas del usuario
-- Se notifica al usuario por correo electrónico sobre el cambio de contraseña
+**Proceso de restablecimiento**:
+1. Validación de permisos y datos de entrada
+2. Verificación de que la nueva contraseña cumple con las políticas de seguridad
+3. Cálculo del hash de la nueva contraseña usando bcrypt
+4. Actualización del hash en la base de datos
+5. Revocación de todos los tokens activos del usuario
+6. Cierre de todas las sesiones activas
+7. Registro del evento en el log de auditoría
+8. Envío de notificación al usuario por email
+9. Retorno de confirmación
 
 **Códigos de error**:
 - 400: Datos de entrada inválidos o faltantes
 - 401: No autenticado
 - 403: No autorizado (se requiere rol admin)
 - 404: Usuario no encontrado
+- 409: La nueva contraseña no cumple con las políticas de seguridad
+- 422: Validación fallida (detalles en el mensaje)
+- 429: Demasiados intentos (rate limiting)
 - 500: Error del servidor
+
+**Notas de seguridad**:
+- La contraseña nunca se almacena en texto plano
+- Se utiliza un factor de costo alto para el hash bcrypt (12 rondas)
+- Se registra la IP y dispositivo del administrador que realiza el cambio
+- Se notifica al usuario del cambio por múltiples canales (email, notificación en el sistema)
+- Se recomienda al usuario cambiar la contraseña en el próximo inicio de sesión
+
+**Consideraciones de auditoría**:
+- Se registra el ID del administrador que realizó el cambio
+- Se registra la fecha/hora exacta del cambio
+- Se incluye el método de autenticación utilizado
+- Se registra si la notificación fue enviada exitosamente
+- Se mantiene un historial de cambios de contraseña para auditoría
 
 ### Registro de Auditoría
 
@@ -752,35 +802,53 @@ Restablece la contraseña de un usuario sin necesidad de conocer la contraseña 
       "region": "Pichincha"
     },
     "fuerza_contrasena": "fuerte",
-    "sesiones_cerradas": true,
-    "notificacion_enviada": true
+    "requiere_cambio": true,
+    "sesiones_cerradas": 3,
+    "tokens_revocados": 2,
+    "notificacion_enviada": true,
+    "metodo_notificacion": ["email"],
+    "politicas_cumplidas": {
+      "longitud_minima": true,
+      "complejidad": true,
+      "no_es_repetida": true,
+      "no_es_comun": true
+    }
   },
   "resultado": {
     "estado": "exito",
-    "fecha_operacion": "2025-06-08T10:18:28.000Z",
-    "codigo_estado": 200
+    "fecha_operacion": "2024-06-08T15:30:45.000Z",
+    "codigo_estado": 200,
+    "mensaje": "Contraseña restablecida exitosamente"
   }
 }
 ```
 
 **Campos sensibles**:
-- No se registra la nueva contraseña
-- No se almacena el hash de la contraseña
-- Solo se registra la fortaleza de la nueva contraseña
+- Nunca se registra la contraseña en texto plano
+- No se almacena el hash de la contraseña en los logs
+- Se registra solo un indicador de fortaleza de la contraseña
 - Se registra el ID del administrador que realizó el cambio
+- Se registra si la operación fue exitosa o fallida
 
 **Notas de seguridad**:
-- Se registra tanto el éxito como el fallo del restablecimiento
+- Se registran todos los intentos, exitosos o fallidos
 - Se incluye información del dispositivo y ubicación del administrador
-- Se registra si la nueva contraseña cumple con los requisitos de seguridad
-- Se registra si se cerraron las sesiones activas del usuario
-- Se registra si se envió la notificación al usuario
-- Se puede usar para auditar cambios de contraseña realizados por administradores
+- Se registra el cumplimiento de las políticas de contraseña
+- Se registra el cierre de sesiones y revocación de tokens
+- Se registra el envío de notificaciones al usuario
+- Se mantiene un historial de auditoría para cumplimiento normativo
+- Los registros se retienen según la política de retención de la organización
+- Se pueden generar alertas para cambios sospechosos o inusuales
 - Se recomienda notificar al usuario por correo electrónico sobre el cambio de contraseña
 - Se debe incluir la dirección IP desde donde se realizó el cambio
 - Se registra el ID del usuario afectado para trazabilidad
 
-## POST /api/usuarios/me/autoregistro (Registro autónomo de usuario)
+
+# Autoregistro
+
+## 🔄 `POST /api/usuarios/me/autoregistro` - Registro autónomo de usuario
+
+### Estado: ✅ Implementado (Nombre de ruta incorrecta)
 
 ### Detalle de endpoint
 Permite a un nuevo usuario registrarse en el sistema. Este endpoint es de acceso público y no requiere autenticación.
@@ -819,27 +887,27 @@ Permite a un nuevo usuario registrarse en el sistema. Este endpoint es de acceso
 ```
 
 **Validaciones**:
-- **nombre_completo**:
+- [x] **nombre_completo**:
   - Requerido
   - Mínimo 3 caracteres, máximo 100 caracteres
   - Solo letras, espacios y caracteres especiales básicos (.,-)
-- **email**:
+- [x] **email**:
   - Requerido
   - Formato de email válido (`usuario@dominio.com`)
   - Mínimo 5 caracteres, máximo 255 caracteres
   - No puede estar registrado previamente
-- **password**:
+- [x] **password**:
   - Requerido
   - Mínimo 8 caracteres
   - Debe contener al menos una mayúscula, una minúscula y un número
   - No puede ser una contraseña común o comprometida
-- **telefono**:
+- [X] **telefono**:
   - Opcional
   - Formato: exactamente 10 dígitos numéricos
-- **direccion**:
+- [X] **direccion**:
   - Opcional
   - Máximo 255 caracteres
-- **dni**:
+- [X] **dni**:
   - Opcional
   - Máximo 20 caracteres
 
@@ -933,7 +1001,11 @@ Permite a un nuevo usuario registrarse en el sistema. Este endpoint es de acceso
 }
 ```
 
-## GET /api/usuarios/me (Obtener perfil del usuario autenticado)
+# Gestión de Perfil de Usuario Autenticado
+
+## 🔄 `GET /api/usuarios/me` - Obtener perfil del usuario autenticado
+
+### Estado: ❌ Pendiente
 
 ### Detalle de endpoint
 Obtiene el perfil del usuario autenticado actualmente. Este endpoint devuelve la información completa del perfil del usuario basado en el token JWT proporcionado.
@@ -1071,16 +1143,18 @@ Authorization: Bearer <token>
 - La información de ubicación se obtiene de forma aproximada basada en la IP
 
 
-## PUT /api/usuarios/me (Actualización de Perfil del usuario autenticado)
+## 🔄 `PUT /api/usuarios/me` - Actualizar Perfil de Usuario
 
-### Actualización de Perfil
-Actualiza el perfil del usuario autenticado actualmente. Este endpoint permite a los usuarios actualizar su propia información de perfil.
+### Estado: ❌ Pendiente
 
-**Controlador**: usuarioController
+### Detalle de endpoint
+Permite a un usuario autenticado actualizar su propia información de perfil. Este endpoint está restringido para modificar solo ciertos campos y no permite cambios en información sensible como correo electrónico o roles.
+
+**Controlador**: usuarioController  
 **Función**: actualizarPerfilAutenticado
 **Router**: /usuarios/me
 
-**Autenticación**: Requerida (JWT en el header de autorización)
+**Autenticación**: Requerida (Cualquier rol autenticado)
 
 **Headers requeridos**:
 ```
@@ -1112,31 +1186,33 @@ Content-Type: application/json
     "activo": true,
     "roles": ["vendedor", "optometrista"],
     "fecha_creacion": "2023-01-01T00:00:00.000Z",
-    "ultima_actualizacion": "2023-06-07T12:30:00.000Z"
+    "fecha_actualizacion": "2023-06-08T10:30:00.000Z"
   },
   "error": null
 }
 ```
 
 **Validaciones**:
-- **nombre_completo** (opcional):
+- [ ] Usuario debe estar autenticado
+- [ ] `nombre_completo` (opcional):
   - Mínimo 3 caracteres, máximo 100 caracteres
   - Solo letras, espacios y caracteres especiales básicos (.,-)
-- **telefono** (opcional):
+- [ ] `telefono` (opcional):
   - Exactamente 10 dígitos numéricos
-  - Único en el sistema (opcional, si se proporciona)
-- **direccion** (opcional):
+- [ ] `direccion` (opcional):
   - Máximo 255 caracteres
-- **dni** (opcional):
+- [ ] `dni` (opcional):
   - Máximo 20 caracteres
-  - Único en el sistema (opcional, si se proporciona)
+  - Solo se puede establecer una vez (si es null)
+  - Único en el sistema (si se proporciona)
 
 **Restricciones de seguridad**:
 - Solo el usuario autenticado puede actualizar su propio perfil
-- No se permite actualizar el campo `email` a través de este endpoint
-- No se permite actualizar los `roles` a través de este endpoint
-- No se permite actualizar el estado `activo` a través de este endpoint
-- Se registra la actualización en el log de auditoría con el ID del usuario
+- No se permite actualizar el campo `email`
+- No se permite actualizar los `roles`
+- No se permite actualizar el estado `activo`
+- El campo `dni` solo se puede establecer una vez (si es null)
+- Se registra la actualización en el log de auditoría
 - Se actualiza automáticamente el campo `modificado_por` y `modificado_en`
 
 **Códigos de error**:
@@ -1144,7 +1220,7 @@ Content-Type: application/json
 - 401: No autenticado o token inválido
 - 403: No autorizado para actualizar este perfil
 - 404: Usuario no encontrado
-- 409: Conflicto (email, teléfono o DNI ya registrados)
+- 409: Conflicto (teléfono o DNI ya registrados)
 - 422: Error de validación de datos
 - 500: Error del servidor
 
@@ -1162,27 +1238,29 @@ Content-Type: application/json
 - Los campos no proporcionados en la solicitud permanecerán sin cambios
 - Solo se pueden actualizar los campos permitidos (nombre_completo, telefono, direccion, dni)
 - Se recomienda solicitar solo los campos que necesitan ser actualizados
+- El campo `dni` solo se puede establecer una vez y no se puede modificar después
 
-### Actualización de Perfil
-**Audit Log Entry**
+### Registro de Auditoría
+**Entrada de Auditoría**
 
 | Campo | Valor |
 |-------|-------|
-| `usuarioId` | ID del usuario que actualiza |
-| `accion` | `ACTUALIZACION_PERFIL` |
+| `usuarioId` | ID del usuario que realiza la acción |
+| `accion` | `ACTUALIZAR_PERFIL` |
 | `descripcion` | Ver estructura JSON abajo |
-| `fecha` | Fecha y hora de actualización (UTC) |
+| `fecha` | Fecha y hora de la actualización (UTC) |
 | `ip` | Dirección IP del solicitante |
 | `entidad_tipo` | `Usuario` |
 | `entidad_id` | ID del usuario actualizado |
-| `modulo` | `usuarios` |
+| `modulo` | `perfil` |
 | `estado_envio` | `exito` o `fallo` |
+| `mensaje_error` | Mensaje de error si la operación falla |
 
 **Estructura del campo `descripcion`:**
 
 ```json
 {
-  "accion": "ACTUALIZAR",
+  "accion": "ACTUALIZAR_PERFIL",
   "entidad": "Usuario",
   "entidadId": "usuario-actualizado-id",
   "usuarioId": "usuario-actualizado-id",
@@ -1190,42 +1268,56 @@ Content-Type: application/json
   "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
   "datosAnteriores": {
     "nombre_completo": "Nombre Anterior",
-    "telefono": "0999999999"
+    "telefono": "0999999999",
+    "direccion": "Dirección Anterior",
+    "dni": null
   },
   "nuevosDatos": {
-    "nombre_completo": "Nuevo Nombre",
-    "telefono": "0987654321"
+    "nombre_completo": "Juan Pérez Actualizado",
+    "telefono": "0999999998",
+    "direccion": "Nueva Dirección 456",
+    "dni": "87654321"
   },
   "metadatos": {
     "dispositivo": {
-      "tipo": "mobile",
-      "navegador": "Safari",
-      "sistema_operativo": "iOS 15"
+      "tipo": "desktop",
+      "navegador": "Chrome",
+      "sistema_operativo": "Windows 10"
     },
-    "campos_modificados": ["nombre_completo", "telefono"]
+    "ubicacion_aproximada": {
+      "pais": "Ecuador",
+      "ciudad": "Quito"
+    },
+    "campos_modificados": ["nombre_completo", "telefono", "direccion", "dni"],
+    "tipo_operacion": "actualizacion_perfil"
   }
 }
 ```
 
 **Campos sensibles**:
-- No se registran contraseñas
-- Se enmascaran datos sensibles si es necesario
+- No se registran datos sensibles como contraseñas
+- Se registran los cambios realizados en los campos del perfil
+- Se incluye información del dispositivo y ubicación
 
 **Notas de seguridad**:
-- Solo el propietario puede actualizar su perfil
-- Validación de formato de datos actualizados
-- Registro de campos modificados
+- Se valida que el usuario solo pueda actualizar su propio perfil
+- Se registra el historial de cambios para auditoría
+- Se recomienda implementar validación de datos en el frontend
+- Se debe notificar al usuario por correo electrónico sobre cambios importantes
+- Se recomienda implementar autenticación de dos factores para cambios sensibles
 
-## POST /api/usuarios/me/cambiar-password (Cambio de contraseña del usuario autenticado)
+## 🔄 `POST /api/usuarios/me/cambiar-password` - Cambio de Contraseña de Usuario autenticado
+
+### Estado: ✅ Implementado (Nombre de ruta incorrecta)
 
 ### Detalle de endpoint
 Permite a un usuario autenticado cambiar su propia contraseña. Requiere la contraseña actual para verificar la identidad. Este endpoint es compatible con dos formatos de solicitud para facilitar la migración de clientes antiguos.
 
-**Controlador**: usuarioController
+**Controlador**: usuarioController  
 **Función**: cambiarPasswordAutenticado
 **Router**: /usuarios/me/cambiar-password
 
-**Autenticación**: Requerida (JWT en el header de autorización)
+**Autenticación**: Requerida (Cualquier rol autenticado)
 
 **Headers requeridos**:
 ```
@@ -1233,19 +1325,11 @@ Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
-**Cuerpo de la solicitud** (formato preferido):
+**Cuerpo de la solicitud**:
 ```json
 {
-  "actual": "ContraseñaActual123!",
-  "nueva": "NuevaContraseña123!"
-}
-```
-
-**Cuerpo de la solicitud** (formato alternativo para compatibilidad):
-```json
-{
-  "password_actual": "ContraseñaActual123!",
-  "password_nuevo": "NuevaContraseña123!"
+  "password_actual": "MiContraseñaActual123",
+  "password_nuevo": "MiNuevaContraseñaSegura456"
 }
 ```
 
@@ -1259,29 +1343,31 @@ Content-Type: application/json
 ```
 
 **Validaciones**:
-- **actual** (o **password_actual**):
-  - Requerido
-  - Debe coincidir con la contraseña actual del usuario
+- [x] Usuario debe estar autenticado
+- [x] `password_actual` (requerido):
   - No puede estar vacío
-- **nueva** (o **password_nuevo**):
-  - Requerido
+  - Debe coincidir con la contraseña actual del usuario
+- [x] `password_nuevo` (requerido):
   - Mínimo 8 caracteres
-  - Debe contener al menos una mayúscula, una minúscula y un número
-  - Se valida la fortaleza antes de verificar el usuario actual (por seguridad)
+  - Debe contener al menos una letra mayúscula
+  - Debe contener al menos una letra minúscula
+  - Debe contener al menos un número
+  - No puede ser igual a la contraseña actual
+  - Se valida antes de verificar el usuario para evitar ataques de tiempo
 
 **Restricciones de seguridad**:
 - Solo el usuario autenticado puede cambiar su propia contraseña
-- La contraseña se almacena con hash bcrypt (10 rondas de sal)
 - Se registra el cambio en el log de auditoría
-- No se permite el cambio si el usuario no tiene contraseña local configurada
-- Las contraseñas débiles son rechazadas antes de verificar la identidad del usuario
+- La contraseña se hashea con bcrypt antes de almacenarse
+- No se almacena ni registra la contraseña en texto plano
+- Se recomienda invalidar tokens JWT existentes después del cambio
 
 **Códigos de error**:
 - 400: Datos de entrada inválidos o faltantes
-- 400: La nueva contraseña no cumple con los requisitos de seguridad
 - 401: No autenticado o contraseña actual incorrecta
-- 403: No autorizado para cambiar la contraseña de otro usuario
+- 403: No autorizado para cambiar esta contraseña
 - 404: Usuario no encontrado
+- 422: Error de validación de datos (contraseña débil, igual a la actual, etc.)
 - 500: Error del servidor
 
 **Ejemplo de error**:
@@ -1289,17 +1375,11 @@ Content-Type: application/json
 {
   "ok": false,
   "data": null,
-  "error": "El password actual es incorrecto"
+  "error": "El password nuevo debe ser fuerte: mínimo 8 caracteres, incluir mayúsculas, minúsculas y números"
 }
 ```
 
-**Notas**:
-- Se recomienda usar el formato `{ "actual": "...", "nueva": "..." }` para nuevas implementaciones
-- El formato `{ "password_actual": "...", "password_nuevo": "..." }` se mantiene por compatibilidad
-- La validación de fortaleza de contraseña ocurre antes de verificar la identidad del usuario por seguridad
-
 ### Registro de Auditoría
-
 **Entrada de Auditoría**
 
 | Campo | Valor |
@@ -1360,4 +1440,3 @@ Content-Type: application/json
 - Se recomienda notificar al usuario por correo electrónico del cambio
 - Se debe registrar si el cambio fue forzado (ej. por expiración de contraseña)
 - Se debe incluir la dirección IP desde donde se realizó el cambio
-

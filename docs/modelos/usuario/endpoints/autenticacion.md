@@ -2,39 +2,60 @@
 
 ## Índice de Endpoints
 
-### Autenticación Local
-- `POST /api/auth/login` - Iniciar sesión con email y contraseña
+### Autenticación Local (Todas ✅ Implementadas)
+- `POST /api/auth/login` - ✅ Implementado - Iniciar sesión con email y contraseña
 
-### Autenticación Social
-- `GET /api/auth/google` - Iniciar sesión con Google
-- `GET /api/auth/facebook` - Iniciar sesión con Facebook
-- `GET /api/auth/instagram` - Iniciar sesión con Instagram
+### Autenticación Social (Todas ✅ Implementadas)
+- `GET /api/auth/google` - ✅ Implementado - Iniciar sesión con Google
+- `GET /api/auth/facebook` - ✅ Implementado - Iniciar sesión con Facebook
+- `GET /api/auth/instagram` - ✅ Implementado - Iniciar sesión con Instagram
 
-### Recuperación de Contraseña
-- `POST /api/auth/forgot-password` - Solicitar recuperación de contraseña
-- `POST /api/auth/reset-password` - Restablecer contraseña con token
+### Recuperación de Contraseña (Todas ✅ Implementadas)
+- `POST /api/auth/forgot-password` - ✅ Implementado - Solicitar recuperación de contraseña
+- `POST /api/auth/reset-password` - ✅ Implementado - Restablecer contraseña con token
 
-### Gestión de Sesiones
-- `POST /api/auth/refresh-token` - Renovar token de autenticación
-- `POST /api/auth/logout` - Cerrar sesión
+### Gestión de Sesiones (Todas ❌ Pendientes)
+- `POST /api/auth/refresh-token` - ❌ Pendiente - Renovar token de autenticación
+- `POST /api/auth/logout` - ❌ Pendiente - Cerrar sesión
 
-### Verificación de Email
-- `POST /api/auth/send-verification-email` - Enviar correo de verificación
-- `GET /api/auth/verify-email/:token` - Verificar correo electrónico
+### Verificación de Email (Todas ❌ Pendientes)
+- `POST /api/auth/send-verification-email` - ❌ Pendiente - Enviar correo de verificación
+- `GET /api/auth/verify-email/:token` - ❌ Pendiente - Verificar correo electrónico
 
 ---
 # Autenticación Local
 
-## POST /api/auth/login (Iniciar Sesión)
+## 🔄 `POST /api/auth/login` - Iniciar Sesión
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
 Iniciar sesión en el sistema con email y contraseña.
 
-**Controlador**: authController
-**Función**: login
+**Controlador**: authController  
+**Función**: login  
 **Router**: /auth/login
 
 **Autenticación**: No requerida
+
+**Validaciones**:
+- **Email**:
+  - [x] Requerido
+  - [x] Formato de email válido
+- **Contraseña**:
+  - [x] Requerida
+  - [x] Mínimo 8 caracteres
+  - [x] Máximo 72 caracteres (límite de bcrypt)
+  - [x] Verificación con bcrypt
+- **Usuario**:
+  - [x] Debe existir un usuario con el email proporcionado
+  - [x] La cuenta debe estar activa (activo = true)
+  - [x] El usuario debe tener un password configurado
+
+**Notas**:
+- Genera un JWT con expiración de 7 días
+- Incluye roles del usuario en el token
+- Registra el inicio de sesión exitoso en auditoría
 
 **Cuerpo de la solicitud**:
 ```json
@@ -60,18 +81,7 @@ Iniciar sesión en el sistema con email y contraseña.
 }
 ```
 
-**Validaciones**:
-- **email**:
-  - Requerido
-  - Formato de email válido
-- **password**:
-  - Requerido
-  - Mínimo 8 caracteres
-  - Máximo 72 caracteres (límite de bcrypt)
-- **Usuario**:
-  - Debe existir un usuario con el email proporcionado
-  - La cuenta debe estar activa (activo = true)
-  - El usuario debe tener un password configurado
+
 
 **Códigos de error**:
 - 400: Email o password faltantes
@@ -157,21 +167,42 @@ Iniciar sesión en el sistema con email y contraseña.
 
 # Autenticación Social
 
-## GET /api/auth/google (Iniciar Sesión con Google)
+## 🔄 `GET /api/auth/google` - Iniciar Sesión con Google
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
-Iniciar sesión con Google OAuth2.
+Iniciar sesión en el sistema usando Google OAuth2.
 
-**Controlador**: passportController
+**Controlador**: auth.ts (manejador de rutas)  
+**Función**: Google OAuth2  
 **Router**: /auth/google
 
 **Autenticación**: No requerida
 
 **Flujo**:
-1. El cliente redirige al usuario a esta URL
-2. El usuario se autentica con Google
+1. Cliente redirige al usuario a esta URL
+2. Usuario se autentica con Google
 3. Google redirige a `/api/auth/google/callback`
-4. Se genera un token JWT y se redirige al frontend
+4. Se genera un JWT y se redirige al frontend con el token
+
+**Parámetros de consulta**:
+- `redirect_uri` (opcional): URL de redirección personalizada
+
+**Respuesta exitosa (302 Redirect)**:
+Redirige al frontend con el JWT en la URL:
+`{FRONTEND_URL}/oauth-success?token=eyJhbGciOiJ...`
+
+**Códigos de error**:
+- 400: Error en los parámetros de la solicitud
+- 401: Autenticación fallida con Google
+- 500: Error del servidor
+
+**Notas**:
+- Crea automáticamente el usuario si no existe
+- El token JWT tiene una validez de 7 días
+- Incluye los roles del usuario en el token
+- Registra el inicio de sesión en auditoría
 
 ### Registro de Auditoría
 
@@ -232,21 +263,43 @@ Iniciar sesión con Google OAuth2.
 - Se registra si el usuario es nuevo en el sistema
 - Se recomienda implementar límites de tasa para prevenir abuso
 
-## GET /api/auth/facebook (Iniciar Sesión con Facebook)
+## 🔄 `GET /api/auth/facebook` - Iniciar Sesión con Facebook
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
-Iniciar sesión con Facebook OAuth2.
+Iniciar sesión en el sistema usando Facebook OAuth2.
 
-**Controlador**: passportController
+**Controlador**: auth.ts (manejador de rutas)  
+**Función**: Facebook OAuth2  
 **Router**: /auth/facebook
 
 **Autenticación**: No requerida
 
 **Flujo**:
-1. El cliente redirige al usuario a esta URL
-2. El usuario se autentica con Facebook
+1. Cliente redirige al usuario a esta URL
+2. Usuario se autentica con Facebook
 3. Facebook redirige a `/api/auth/facebook/callback`
-4. Se genera un token JWT y se redirige al frontend
+4. Se genera un JWT y se redirige al frontend con el token
+
+**Parámetros de consulta**:
+- `redirect_uri` (opcional): URL de redirección personalizada
+- `scope` (opcional): Permisos solicitados (por defecto: `email,public_profile`)
+
+**Respuesta exitosa (302 Redirect)**:
+Redirige al frontend con el JWT en la URL:
+`{FRONTEND_URL}/oauth-success?token=eyJhbGciOiJ...`
+
+**Códigos de error**:
+- 400: Error en los parámetros de la solicitud
+- 401: Autenticación fallida con Facebook
+- 500: Error del servidor
+
+**Notas**:
+- Crea automáticamente el usuario si no existe
+- El token JWT tiene una validez de 7 días
+- Incluye los roles del usuario en el token
+- Registra el inicio de sesión en auditoría
 
 ### Registro de Auditoría
 
@@ -307,21 +360,43 @@ Iniciar sesión con Facebook OAuth2.
 - Se registra si el usuario es nuevo en el sistema
 - Se recomienda implementar límites de tasa para prevenir abuso
 
-## GET /api/auth/instagram (Iniciar Sesión con Instagram)
+## 🔄 `GET /api/auth/instagram` - Iniciar Sesión con Instagram
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
-Iniciar sesión con Instagram OAuth2.
+Iniciar sesión en el sistema usando Instagram OAuth2.
 
-**Controlador**: passportController
+**Controlador**: auth.ts (manejador de rutas)  
+**Función**: Instagram OAuth2  
 **Router**: /auth/instagram
 
 **Autenticación**: No requerida
 
 **Flujo**:
-1. El cliente redirige al usuario a esta URL
-2. El usuario se autentica con Instagram
+1. Cliente redirige al usuario a esta URL
+2. Usuario se autentica con Instagram
 3. Instagram redirige a `/api/auth/instagram/callback`
-4. Se genera un token JWT y se redirige al frontend
+4. Se genera un JWT y se redirige al frontend con el token
+
+**Parámetros de consulta**:
+- `redirect_uri` (opcional): URL de redirección personalizada
+- `scope` (opcional): Permisos solicitados (por defecto: `user_profile,user_media`)
+
+**Respuesta exitosa (302 Redirect)**:
+Redirige al frontend con el JWT en la URL:
+`{FRONTEND_URL}/oauth-success?token=eyJhbGciOiJ...`
+
+**Códigos de error**:
+- 400: Error en los parámetros de la solicitud
+- 401: Autenticación fallida con Instagram
+- 500: Error del servidor
+
+**Notas**:
+- Crea automáticamente el usuario si no existe
+- El token JWT tiene una validez de 7 días
+- Incluye los roles del usuario en el token
+- Registra el inicio de sesión en auditoría
 
 ### Registro de Auditoría
 
@@ -386,16 +461,23 @@ Iniciar sesión con Instagram OAuth2.
 
 # Recuperación de Contraseña
 
-## POST /api/auth/forgot-password (Recuperar Contraseña)
+## 🔄 `POST /api/auth/forgot-password` - Solicitar Recuperación de Contraseña
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
-Solicitar restablecimiento de contraseña. Envía un correo con un enlace para restablecer la contraseña.
+Solicitar un correo electrónico con instrucciones para restablecer la contraseña.
 
-**Controlador**: authController
-**Función**: forgotPassword
+**Controlador**: authController  
+**Función**: forgotPassword  
 **Router**: /auth/forgot-password
 
 **Autenticación**: No requerida
+
+**Validaciones**:
+- **email**:
+  - [x] Requerido
+  - [x] Formato de email válido
 
 **Cuerpo de la solicitud**:
 ```json
@@ -487,16 +569,32 @@ Solicitar restablecimiento de contraseña. Envía un correo con un enlace para r
 - Se recomienda monitorear intentos frecuentes para el mismo email
 - Se debe implementar rate limiting para prevenir abuso
 
-## POST /api/auth/reset-password (Restablecimiento de Contraseña)
+## 🔄 `POST /api/auth/reset-password` - Restablecer Contraseña
+
+### Estado: ✅ Implementado
 
 ### Detalle de endpoint
 Restablecer la contraseña con un token válido recibido por correo.
 
-**Controlador**: authController
-**Función**: resetPassword
+**Controlador**: authController  
+**Función**: resetPassword  
 **Router**: /auth/reset-password
 
 **Autenticación**: No requerida
+
+**Validaciones**:
+- **token**:
+  - [x] Requerido
+  - [x] Debe ser un token válido y no expirado
+- **email**:
+  - [x] Requerido
+  - [x] Formato de email válido
+  - [x] Debe corresponder a un usuario existente
+- **password**:
+  - [x] Requerido
+  - [x] Mínimo 8 caracteres
+  - [x] Máximo 72 caracteres (límite de bcrypt)
+  - [x] Debe contener al menos una mayúscula, una minúscula y un número
 
 **Cuerpo de la solicitud**:
 ```json
@@ -613,18 +711,57 @@ Restablecer la contraseña con un token válido recibido por correo.
 ```
 
 
-# Renovación de Token
+# Gestión de Sesiones
 
-## POST /api/auth/refresh-token (Renovar Token)
+## 🔄 `POST /api/auth/refresh-token` - Renovar Token de Acceso
+
+### Estado: ❌ Pendiente
 
 ### Detalle de endpoint
 Renueva el token de autenticación utilizando un refresh token válido.
 
-**Controlador**: authController
-**Función**: refreshToken
+**Controlador**: authController  
+**Función**: refreshToken  
 **Router**: /auth/refresh-token
 
 **Autenticación**: Requerido (Refresh token en cookie)
+
+**Validaciones**:
+- [ ] Refresh token debe ser válido y no expirado
+- [ ] Token debe estar en una cookie HTTP-only
+- [ ] Usuario asociado debe existir y estar activo
+
+**Headers requeridos**:
+```
+Cookie: refreshToken=<refresh-token>
+```
+
+**Respuesta exitosa (200 OK)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "token": "nuevo-jwt-token",
+    "usuario": {
+      "id": "usuario-uuid",
+      "nombre_completo": "Nombre Usuario",
+      "email": "usuario@ejemplo.com",
+      "roles": ["usuario"]
+    }
+  }
+}
+```
+
+**Códigos de error**:
+- 401: Token no proporcionado o inválido
+- 403: Token expirado o revocado
+- 404: Usuario no encontrado
+- 500: Error del servidor
+
+**Notas de seguridad**:
+- El refresh token debe tener un tiempo de expiración (ej. 7 días)
+- Después de usar un refresh token, se debe generar uno nuevo
+- Los tokens comprometidos deben ser revocados
 
 **Headers requeridos**:
 - `Cookie`: Debe contener el refresh token como `refreshToken`
@@ -756,37 +893,6 @@ Content-Type: application/json
 **Notas de seguridad**:
 - Solo administradores pueden revocar tokens de otros usuarios
 - Los usuarios solo pueden revocar sus propios tokens
-- Se registra el motivo de la revocación
-- Se mantiene registro de todas las revocaciones
-- Se notifica al usuario por correo electrónico
-
-
-# Gestión de Sesiones
-
-## POST /api/auth/logout (Cerrar Sesión)
-
-### Detalle de endpoint
-Cierra la sesión del usuario actual invalidando el token JWT.
-
-**Controlador**: authController
-**Función**: logout
-**Router**: /auth/logout
-
-**Autenticación**: Requerida
-
-**Respuesta exitosa (200 OK)**:
-```json
-{
-  "status": "success",
-  "message": "Sesión cerrada correctamente"
-}
-```
-
-**Códigos de error**:
-- 401: No autenticado
-- 500: Error del servidor
-
-### Registro de auditoría
 **Entrada de Auditoría**
 
 | Campo | Valor |
@@ -839,35 +945,47 @@ Cierra la sesión del usuario actual invalidando el token JWT.
 - Se recomienda implementar token blacklist para invalidación forzada
 
 
-# Verificación de Email (Envío de correo de verificación)
+# Verificación de Email
 
-## POST /api/auth/send-verification-email (Envío de correo de verificación)
+## 🔄 `POST /api/auth/send-verification-email` - Enviar Correo de Verificación
+
+### Estado: ❌ Pendiente
 
 ### Detalle de endpoint
-Envía un correo de verificación al email del usuario autenticado.
+Envía un correo electrónico con un enlace para verificar la dirección de correo electrónico del usuario.
 
-**Controlador**: authController
-**Función**: sendVerificationEmail
+**Controlador**: authController  
+**Función**: sendVerificationEmail  
 **Router**: /auth/send-verification-email
 
-**Autenticación**: Requerida
+**Autenticación**: Requerido (JWT en header)
+
+**Headers requeridos**:
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
 
 **Respuesta exitosa (200 OK)**:
 ```json
 {
   "status": "success",
-  "message": "Correo de verificación enviado"
+  "message": "Correo de verificación enviado exitosamente"
 }
 ```
 
 **Códigos de error**:
 - 400: El correo ya está verificado
-- 401: No autenticado
-- 429: Demasiados intentos
-- 500: Error al enviar el correo
+- 401: No autenticado o token inválido
+- 429: Demasiadas solicitudes (rate limiting)
+- 500: Error al enviar el correo de verificación
+
+**Notas**:
+- El enlace de verificación expira en 24 horas
+- Se debe implementar rate limiting para prevenir abuso
+- Se recomienda un tiempo mínimo entre solicitudes (ej. 1 minuto)
 
 ### Registro de Auditoría
-
 **Entrada de Auditoría**
 
 | Campo | Valor |
@@ -928,24 +1046,25 @@ Envía un correo de verificación al email del usuario autenticado.
 - Se recomienda implementar rate limiting para prevenir abuso
 - Se debe registrar si el correo ya estaba verificado
 
-## GET /api/auth/verify-email/:token (Verificación de correo)
+## 🔄 `GET /api/auth/verify-email/:token` - Verificar Correo Electrónico
+
+### Estado: ❌ Pendiente
 
 ### Detalle de endpoint
-Verifica el email del usuario usando un token de verificación.
+Verifica la dirección de correo electrónico del usuario utilizando un token de verificación.
 
-**Controlador**: authController
-**Función**: verifyEmail
+**Controlador**: authController  
+**Función**: verifyEmail  
 **Router**: /auth/verify-email/:token
 
 **Autenticación**: No requerida
 
 **Parámetros de ruta**:
-- `token` (string): Token de verificación enviado por email
+- `token` (requerido): Token de verificación enviado por correo electrónico
 
 **Respuesta exitosa (200 OK)**:
-```json
-{
-  "status": "success",
+Redirige a la página de éxito en el frontend:
+`{FRONTEND_URL}/email-verified`
   "message": "Email verificado correctamente"
 }
 ```

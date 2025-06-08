@@ -70,4 +70,4 @@ Este modelo no tiene relaciones definidas.
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-07T21:18:19.984Z
+✅ Documentación generada automáticamente el 2025-06-08T15:35:08.502Z

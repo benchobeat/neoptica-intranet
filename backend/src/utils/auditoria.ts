@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 function safeUUID(value: string | null | undefined): string | null {
   // Regex para UUID v4
-  return typeof value === "string" && /^[0-9a-fA-F-]{36}$/.test(value) ? value : null;
+  return typeof value === 'string' && /^[0-9a-fA-F-]{36}$/.test(value) ? value : null;
 }
 
 /**
@@ -32,8 +32,8 @@ export async function registrarAuditoria({
     // Usar directamente el usuarioId proporcionado, que puede ser null
     // Esto ya no causará problemas de FK porque configuramos onDelete: SetNull
     // en la relación en el schema de Prisma
-    let finalUsuarioId = usuarioId;
-    
+    const finalUsuarioId = usuarioId;
+
     await prisma.log_auditoria.create({
       data: {
         usuarioId: safeUUID(finalUsuarioId),
@@ -46,6 +46,6 @@ export async function registrarAuditoria({
       },
     });
   } catch (err) {
-    console.error("Error registrando auditoría:", err);
+    console.error('Error registrando auditoría:', err);
   }
 }

@@ -35,7 +35,7 @@ passport.use(new FacebookStrategy({
   clientID: process.env.FACEBOOK_CLIENT_ID!,
   clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
   callbackURL: process.env.FACEBOOK_CALLBACK_URL!,
-  profileFields: ['id', 'displayName', 'emails']
+  profileFields: ['id', 'displayName', 'emails'],
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     let user = await prisma.usuario.findUnique({ where: { proveedor_oauth_oauth_id: { proveedor_oauth: 'facebook', oauth_id: profile.id } } });

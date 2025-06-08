@@ -23,7 +23,6 @@ Modelo que representa marca en el sistema.
 ### Relaciones
 
 - **productos**: Muchos a [producto](./producto.md) `marcaToproducto`
-- **inventario**: Muchos a [inventario](./inventario.md) `inventarioTomarca`
 
 ## Ejemplos de Uso
 
@@ -47,8 +46,7 @@ const nuevomarca = await prisma.marca.create({
 const registros = await prisma.marca.findMany({
     // Incluir relaciones
     include: {
-      productos: true,
-      inventario: true
+      productos: true
     }
 });
 
@@ -57,8 +55,7 @@ const registro = await prisma.marca.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
     include: {
-      productos: true,
-      inventario: true
+      productos: true
     }
 });
 ```
@@ -115,8 +112,7 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 ## Relaciones con Otros Modelos
 
 - **productos**: Muchos a [producto](./producto.md) `marcaToproducto`
-- **inventario**: Muchos a [inventario](./inventario.md) `inventarioTomarca`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-07T21:18:20.037Z
+✅ Documentación generada automáticamente el 2025-06-08T15:35:08.556Z

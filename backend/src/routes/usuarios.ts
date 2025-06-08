@@ -195,7 +195,7 @@ router.post('/autoregistro', autoregistroCliente);
  *       500:
  *         description: Error interno del servidor
  */
-router.put("/perfil", authenticateJWT, actualizarPerfilUsuario);
+router.put('/perfil', authenticateJWT, actualizarPerfilUsuario);
 
 /**
  * @swagger
@@ -290,7 +290,7 @@ router.get('/paginated', authenticateJWT, listarUsuariosPaginados);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista','cliente'), usuarioController.obtenerUsuario);
+router.get('/:id', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista', 'cliente'), usuarioController.obtenerUsuario);
 
 /**
  * @swagger
@@ -315,7 +315,7 @@ router.get('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista
  *                     $ref: '#/components/schemas/Usuario'
  *                 error: { type: string, example: null }
  */
-router.get('/', authenticateJWT,requireRole('admin','vendedor','optometrista'), usuarioController.listarUsuarios);
+router.get('/', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista'), usuarioController.listarUsuarios);
 
 /**
  * @swagger
@@ -350,7 +350,7 @@ router.get('/', authenticateJWT,requireRole('admin','vendedor','optometrista'), 
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', authenticateJWT, requireRole('admin','vendedor'), usuarioController.crearUsuario);
+router.post('/', authenticateJWT, requireRole('admin'), usuarioController.crearUsuario);
 
 /**
  * @swagger
@@ -397,7 +397,7 @@ router.post('/', authenticateJWT, requireRole('admin','vendedor'), usuarioContro
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', authenticateJWT, requireRole('admin','vendedor','optometrista','cliente'), usuarioController.actualizarUsuario);
+router.put('/:id', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista', 'cliente'), usuarioController.actualizarUsuario);
 
 /**
  * @swagger

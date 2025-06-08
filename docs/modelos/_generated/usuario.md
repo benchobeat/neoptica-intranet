@@ -22,6 +22,7 @@ Modelo que representa usuario en el sistema.
 | `google_uid` | `string?` | ❌ | `null` | - |  |
 | `facebook_uid` | `string?` | ❌ | `null` | - |  |
 | `activo` | `boolean?` | ❌ | `null` | Valor por defecto |  |
+| `email_verificado` | `boolean?` | ❌ | `null` | Valor por defecto |  |
 | `erp_id` | `number?` | ❌ | `null` | - |  |
 | `erp_tipo` | `string?` | ❌ | `null` | - |  |
 | `proveedor_oauth` | `string?` | ❌ | `null` | - |  |
@@ -76,6 +77,7 @@ const nuevousuario = await prisma.usuario.create({
     google_uid: null,
     facebook_uid: null,
     activo: null,
+    email_verificado: null,
     erp_id: null,
     erp_tipo: null,
     proveedor_oauth: null,
@@ -217,4 +219,4 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-07T21:18:20.051Z
+✅ Documentación generada automáticamente el 2025-06-08T15:35:08.571Z

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listarRoles} from '@/controllers/rolesController';
+import { listarRoles } from '@/controllers/rolesController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 

@@ -6,11 +6,11 @@ import { login, forgotPassword, resetPassword } from '@/controllers/authControll
 const router = Router();
 
 function issueJWT(user: any) {
-  const roles = user.usuario_rol?.map(ur => ur.rol.nombre) || ['cliente'];
+  const roles = user.usuario_rol?.map((ur) => ur.rol.nombre) || ['cliente'];
   return jwt.sign(
     { id: user.id, email: user.email, roles },
     process.env.JWT_SECRET!,
-    { expiresIn: '7d' }
+    { expiresIn: '7d' },
   );
 }
 
@@ -21,7 +21,7 @@ router.get('/google/callback',
   (req: Request, res: Response) => {
     const token = issueJWT((req as any).user);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
-  }
+  },
 );
 
 // --- Facebook OAuth ---
@@ -31,7 +31,7 @@ router.get('/facebook/callback',
   (req: Request, res: Response) => {
     const token = issueJWT((req as any).user);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
-  }
+  },
 );
 
 // --- Instagram OAuth ---
@@ -41,7 +41,7 @@ router.get('/instagram/callback',
   (req: Request, res: Response) => {
     const token = issueJWT((req as any).user);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
-  }
+  },
 );
 
 /**
