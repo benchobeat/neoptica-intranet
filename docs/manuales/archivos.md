@@ -1,8 +1,132 @@
-# ADJUNTOS Y GESTIÓN POLIMÓRFICA – INTRANET NEÓPTICA
+# Módulo de Gestión de Archivos Adjuntos
 
-## **A. Concepto y Modelo**
-- El sistema implementa un modelo de **adjuntos polimórficos**, donde cualquier archivo (imagen, PDF, documento clínico, justificativo, XML de factura, etc.) puede asociarse a cualquier entidad relevante del sistema: pedidos, movimientos, citas, historiales clínicos, facturas, descansos, cuentas contables, etc.
-- Se utiliza la combinación de tablas `archivo_adjunto` (metadatos y URL de archivo) y `archivo_entidad` (asociación polimórfica a entidad, tipo y fecha).
+## **1. Modelo de Datos**
+
+### 1.1 Archivo Adjunto (`archivo_adjunto`)
+Almacena los metadatos de los archivos subidos al sistema.
+
+**Campos:**
+- **id**: Identificador único (UUID)
+- **nombre_archivo**: Nombre original del archivo
+- **url**: Ruta o URL donde se almacena el archivo
+- **tipo**: Tipo MIME del archivo (opcional)
+- **tamanio**: Tamaño del archivo en bytes (opcional)
+- **extension**: Extensión del archivo (ej: pdf, jpg, png)
+- **subido_por**: ID del usuario que subió el archivo
+- **creado_en**: Fecha de creación del registro
+- **creado_por**: ID del usuario que creó el registro
+- **modificado_en**: Fecha de última modificación
+- **modificado_por**: ID del usuario que modificó por última vez
+- **anulado_en**: Fecha de anulación (soft delete)
+- **anulado_por**: ID del usuario que anuló el registro
+
+**Relaciones:**
+- `usuario`: Relación con el usuario que subió el archivo
+- `archivo_entidad`: Relación con las entidades asociadas al archivo
+- `descanso_empleado`: Relación con los descansos de empleado
+- `factura`: Relación con facturas (PDF y XML)
+
+### 1.2 Archivo Entidad (`archivo_entidad`)
+Tabla de unión polimórfica que relaciona archivos con entidades del sistema.
+
+**Campos:**
+- **id**: Identificador único (UUID)
+- **archivo_id**: ID del archivo adjunto
+- **entidad_tipo**: Tipo de entidad relacionada (ej: 'USUARIO', 'FACTURA')
+- **entidad_id**: ID de la entidad relacionada (UUID)
+- **fecha_vinculo**: Fecha de vinculación del archivo a la entidad
+- **creado_en**: Fecha de creación del registro
+- **creado_por**: ID del usuario que creó el registro
+- **modificado_en**: Fecha de última modificación
+- **modificado_por**: ID del usuario que modificó por última vez
+- **anulado_en**: Fecha de anulación (soft delete)
+- **anulado_por**: ID del usuario que anuló el registro
+
+**Índices:**
+- Índice único compuesto: (archivo_id, entidad_tipo, entidad_id)
+- Índice para búsquedas: (entidad_tipo, entidad_id)
+
+**Relaciones:**
+- `archivo_adjunto`: Relación con el archivo adjunto
+
+## **2. Flujos de Trabajo**
+
+### 2.1 Carga de Archivos
+1. El usuario selecciona uno o más archivos para adjuntar
+2. El sistema valida el tipo y tamaño del archivo según políticas configuradas
+3. Se guarda el archivo en el almacenamiento designado (local, S3, etc.)
+4. Se crea un registro en `archivo_adjunto` con los metadatos
+5. Se crea un registro en `archivo_entidad` vinculando el archivo a la entidad destino
+6. Se registra la acción en el log de auditoría
+
+### 2.2 Visualización de Archivos
+1. El sistema verifica los permisos del usuario para acceder a la entidad relacionada
+2. Se consultan los archivos asociados a través de `archivo_entidad`
+3. Se muestran los metadatos de los archivos disponibles
+4. El usuario puede visualizar o descargar los archivos según sus permisos
+
+## **3. Seguridad y Permisos**
+
+- **Control de Acceso**: Solo usuarios autenticados pueden subir archivos
+- **Validación de Tipo**: Se aplican restricciones según el tipo de archivo
+- **Registro de Auditoría**: Todas las operaciones quedan registradas
+- **Eliminación Segura**: Los archivos no se eliminan físicamente, se marcan como anulados
+
+## **4. Integración con Otros Módulos**
+
+### 4.1 Facturación
+- Almacenamiento de facturas electrónicas (XML)
+- Generación de PDF de facturas
+- Documentos adjuntos a facturas
+
+### 4.2 Recursos Humanos
+- Documentación de empleados
+- Justificantes de incidencias
+- Documentos legales
+
+### 4.3 Clínica
+- Historiales clínicos
+- Recetas médicas
+- Estudios de laboratorio
+
+## **5. API y Endpoints**
+
+### 5.1 Subir Archivo
+```
+POST /api/archivos/subir
+```
+
+**Parámetros:**
+- `archivo`: Archivo a subir (multipart/form-data)
+- `entidad_tipo`: Tipo de entidad destino
+- `entidad_id`: ID de la entidad destino
+- `descripcion`: Descripción opcional
+
+### 5.2 Listar Archivos de una Entidad
+```
+GET /api/archivos/entidad/{tipo}/{id}
+```
+
+**Parámetros de ruta:**
+- `tipo`: Tipo de entidad
+- `id`: ID de la entidad
+
+### 5.3 Descargar Archivo
+```
+GET /api/archivos/descargar/{id}
+```
+
+**Parámetros de ruta:**
+- `id`: ID del archivo a descargar
+
+## **6. Mejoras Futuras**
+
+- Compresión automática de imágenes
+- Procesamiento por lotes de archivos
+- Integración con servicios de reconocimiento de texto (OCR)
+- Búsqueda semántica en documentos
+- Versiones de documentos
+- Firma electrónica avanzada
 
 ## **B. Flujos de Usuario**
 

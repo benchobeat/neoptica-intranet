@@ -34,88 +34,6 @@
 ---
 
 
-## Módulos recientes: Color, Marca y Sucursal
-
-Se han agregado los módulos **Color**, **Marca** y **Sucursal** al backend para una gestión más granular de productos ópticos y puntos de venta:
-- **Color**: Permite registrar, listar y administrar los colores disponibles para productos (lentes, armazones, etc.).
-- **Marca**: Permite registrar, listar y administrar las marcas comerciales de productos.
-- **Sucursal**: Permite registrar, listar y administrar las sucursales o puntos de venta de la empresa.
-
-Todos estos módulos siguen la arquitectura, validación, seguridad y convenciones del proyecto (Express + Prisma + JWT + roles). Sus endpoints son RESTful y están alineados a la convención `{ ok, data, error }`.
-
-**Endpoints disponibles:**
-- `/api/colores`: CRUD de colores
-- `/api/marcas`: CRUD de marcas
-- `/api/sucursales`: CRUD de sucursales
-
-## Recuperación de Contraseña Implementada
-
-Se ha implementado un flujo completo y seguro de recuperación de contraseña que sigue las mejores prácticas de seguridad:
-
-### Características de la recuperación de contraseña:
-
-1. **Solicitud de recuperación segura:**
-   - Endpoint `/api/auth/forgot-password` para solicitar el restablecimiento
-   - Generación de tokens seguros con crypto
-   - Tokens encriptados con bcrypt antes de almacenarse
-   - Tokens con expiración de 24 horas
-   - Integración con sistema de correo electrónico
-
-2. **Restablecimiento seguro:**
-   - Endpoint `/api/auth/reset-password` para restablecer la contraseña
-   - Validación de token, email y fuerza de la nueva contraseña
-   - Invalidación automática de tokens después de su uso
-   - Validación de contraseñas seguras (mayúsculas, minúsculas, números)
-
-3. **Protección contra ataques:**
-   - Ocultamiento de la existencia de emails en la base de datos
-   - Respuesta genérica para solicitudes de emails válidos e inválidos
-   - Auditoría detallada de todas las solicitudes y resultados
-   - Control de campos temporales (creado_por, modificado_por)
-
-4. **Auditoría completa:**
-   - Registro de cada intento de recuperación
-   - Registro de restablecimientos exitosos y fallidos
-   - Trazabilidad del proceso completo
-
-## Sistema de Auditoría Implementado
-
-Se ha implementado un sistema completo de auditoría para todos los módulos CRUD (marcas, colores y sucursales) que registra cada acción en la tabla `log_auditoria`, garantizando la trazabilidad y seguridad de todas las operaciones:
-
-### Características del sistema de auditoría:
-
-1. **Registro detallado de cada operación:**
-   - Usuario que realizó la acción
-   - Tipo de acción (crear, listar, obtener, actualizar, eliminar)
-   - Descripción detallada de la acción
-   - IP desde donde se realizó
-   - Entidad afectada y su ID
-   - Módulo al que pertenece
-
-2. **Campos de control temporal:**
-   - `creado_por` y `creado_en` al crear registros
-   - `modificado_por` y `modificado_en` al actualizar registros
-   - `anulado_por` y `anulado_en` al realizar soft delete
-
-3. **Registro de operaciones fallidas:**
-   - Cada intento fallido también se registra
-   - Se captura el tipo de error para facilitar solución de problemas
-
-4. **Seguridad integral:**
-   - No se permite eliminar registros de auditoría bajo ningún concepto
-   - Garantiza completa trazabilidad de todas las operaciones
-
-### Endpoints de Auditoría (Nuevos)
-
-Se ha implementado un nuevo controlador y rutas específicas para la consulta y filtrado de los registros de auditoría:
-
-- **GET** `/api/auditoria` — Lista todos los registros de auditoría con paginación y filtros (solo admin)
-- **GET** `/api/auditoria/:id` — Obtiene un registro de auditoría por su ID (solo admin)
-- **GET** `/api/auditoria/modulo/:modulo` — Filtra registros de auditoría por módulo (solo admin)
-- **GET** `/api/auditoria/usuario/:id` — Filtra registros de auditoría por usuario (solo admin)
-
-Estos endpoints permiten una completa trazabilidad de todas las operaciones realizadas en el sistema, con capacidades avanzadas de filtrado por módulo, usuario, acción, rango de fechas y más.
-
 ## Repositorio oficial del backend de la plataforma Neóptica Intranet.
 Desarrollado en Node.js + Express + TypeScript + Prisma ORM + PostgreSQL, seguro y escalable, con autenticación JWT y arquitectura modular.
 
@@ -263,6 +181,140 @@ export function fail(error: string, data: any = null): ApiResponse {
   };
 }
 ```
+
+## Manejo de Errores
+
+El sistema implementa un manejo estandarizado de errores a través de códigos de estado HTTP y respuestas consistentes. A continuación se detallan los estádigos y patrones utilizados:
+
+### Códigos de Estado HTTP
+
+#### 2xx - Éxito
+- **200 OK**: Petición exitosa (GET, PUT, PATCH, DELETE)
+- **201 Created**: Recurso creado exitosamente (POST)
+
+#### 4xx - Errores del Cliente
+- **400 Bad Request**: Datos de entrada inválidos o faltantes
+- **401 Unauthorized**: Autenticación fallida o token inválido
+- **403 Forbidden**: Usuario autenticado pero sin permisos suficientes
+- **404 Not Found**: Recurso no encontrado
+- **409 Conflict**: Conflicto con el estado actual (ej: registro duplicado)
+
+#### 5xx - Errores del Servidor
+- **500 Internal Server Error**: Error inesperado en el servidor
+
+### Estructura de Respuesta de Error
+
+Todas las respuestas de error siguen el formato:
+
+```typescript
+{
+  ok: false,
+  data: null,
+  error: {
+    message: "Mensaje descriptivo del error",
+    code: "CODIGO_DE_ERROR_OPCIONAL",
+    details: {} // Detalles adicionales opcionales
+  }
+}
+```
+
+### Convenciones de Mensajes de Error
+
+#### Validación de Datos (400)
+- Usar mensajes descriptivos que indiquen el campo problemático
+- Ejemplo: "El campo 'email' es requerido"
+- Ejemplo: "La contraseña debe tener al menos 8 caracteres"
+
+#### Autenticación (401/403)
+- No revelar información sensible
+- Ejemplo: "Credenciales inválidas"
+- Ejemplo: "No tiene permisos para acceder a este recurso"
+
+#### Recursos no encontrados (404)
+- Identificar claramente el recurso faltante
+- Ejemplo: "Usuario no encontrado"
+- Ejemplo: "El producto solicitado no existe"
+
+### Implementación en Controladores
+
+Los controladores deben seguir este patrón para manejar errores:
+
+```typescript
+try {
+  // Lógica del controlador
+  return res.status(200).json({
+    ok: true,
+    data: resultado,
+    error: null
+  });
+} catch (error) {
+  console.error('Error en el controlador:', error);
+  
+  // Registrar en auditoría si es necesario
+  await registrarAuditoria({
+    usuarioId: req.user?.id,
+    accion: 'NOMBRE_ACCION_ERROR',
+    descripcion: `Error: ${error.message}`,
+    ip: req.ip,
+    entidadTipo: 'entidad_afectada',
+    entidadId: id,
+    modulo: 'nombre_modulo'
+  });
+
+  // Devolver error apropiado
+  if (error instanceof AppError) {
+    return error.send(res);
+  }
+  
+  // Error inesperado
+  return res.status(500).json({
+    ok: false,
+    data: null,
+    error: {
+      message: 'Error interno del servidor',
+      code: 'INTERNAL_SERVER_ERROR'
+    }
+  });
+}
+```
+
+### Clase AppError Personalizada
+
+Se recomienda extender la clase `AppError` para errores personalizados:
+
+```typescript
+export class AppError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    message: string
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+    Error.captureStackTrace(this, this.constructor);
+  }
+
+  send(res: Response): Response {
+    return res.status(this.statusCode).json({
+      ok: false,
+      data: null,
+      error: {
+        message: this.message,
+        code: this.name
+      }
+    });
+  }
+}
+```
+
+### Buenas Prácticas
+
+1. **Siempre** usar códigos de estado HTTP apropiados
+2. **Nunca** exponer información sensible en mensajes de error
+3. **Siempre** registrar errores inesperados
+4. **Validar** la entrada antes de procesar
+5. **Documentar** los posibles códigos de error en la documentación de la API
+6. **Usar** códigos de error específicos para casos conocidos
+7. **Mantener** consistencia en los mensajes de error
 
 ## Convenciones de respuesta API
 Todas las respuestas siguen este formato uniforme:
@@ -497,6 +549,7 @@ Las pruebas automáticas limpian la base de datos eliminando todos los usuarios 
 await prisma.usuario_rol.deleteMany({ ... });
 await prisma.usuario.deleteMany({ ... });
 ```
+
 ## Advertencia: Los roles del sistema no pueden ser modificados vía API
 ### Roles predefinidos y protegidos
 En Neóptica Intranet, los roles de usuario (admin, optometrista, vendedor, cliente) están predefinidos y son parte de la lógica central del sistema. Por motivos de seguridad y coherencia:

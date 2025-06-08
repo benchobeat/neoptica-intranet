@@ -1,0 +1,52 @@
+{
+  "name": "neoptica-intranet",
+  "version": "1.0.0",
+  "description": "Sistema de gestión para Neóptica - Intranet administrativa",
+  "scripts": {
+    "docs:generate": "node scripts/generate-docs.js",
+    "docs:validate-links": "node scripts/check-links.js",
+    "docs:generate-mermaid": "mmdc -i docs/diagrams/ -o docs/assets/diagrams/ -t neutral -c mermaid-config.json",
+    "docs:watch-mermaid": "nodemon --watch 'docs/diagrams/**/*.mmd' --exec 'npm run docs:generate-mermaid'",
+    "docs:lint": "markdownlint '**/*.md' --ignore node_modules",
+    "docs:check": "npm run docs:lint && npm run docs:validate-links",
+    "docs:build": "npm run docs:generate && npm run docs:generate-mermaid",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.4.2",
+    "husky": "^9.1.2",
+    "lint-staged": "^15.2.2",
+    "markdown-link-check": "^3.13.7",
+    "markdownlint-cli": "^0.38.0",
+    "mermaid": "^11.6.0",
+    "nodemon": "^3.1.0",
+    "prettier": "^3.2.5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md}": [
+      "prettier --write",
+      "git add"
+    ],
+    "*.md": [
+      "markdownlint --fix",
+      "git add"
+    ]
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benchobeat/neoptica-intranet.git"
+  },
+  "keywords": [
+    "neoptica",
+    "intranet",
+    "gestion",
+    "documentation"
+  ],
+  "author": "Equipo de Desarrollo Neóptica",
+  "license": "UNLICENSED",
+  "private": true
+}

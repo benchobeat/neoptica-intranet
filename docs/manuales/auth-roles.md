@@ -1,54 +1,410 @@
-# Sistema de Autenticación y Gestión Multi-Rol - Intranet Neóptica
+# Módulo de Usuarios y Seguridad
 
-> **Versión:** 1.1 (Junio 2025)  
-> **Autor:** Equipo de Desarrollo Neóptica  
-> **Estado:** Implementado - Documentación actualizada
+## Modelos de Datos
 
-## 1. Visión General
+### 1. Usuario (`usuario`)
+Modelo que gestiona las cuentas de usuario del sistema.
 
-La Intranet Neóptica implementa un sistema avanzado de gestión de usuarios con capacidades multi-rol, permitiendo que un mismo usuario pueda tener asignados múltiples roles simultáneamente (por ejemplo, ser tanto vendedor como optometrista). Este documento detalla la arquitectura, implementación y consideraciones de seguridad del sistema.
+#### Campos:
+- **id**: Identificador único del usuario (UUID)
+- **email**: Correo electrónico del usuario (único)
+- **password_hash**: Hash de la contraseña (bcrypt)
+- **nombre_completo**: Nombre completo del usuario
+- **telefono**: Número de teléfono (opcional)
+- **foto_url**: URL de la foto de perfil (opcional)
+- **activo**: Indica si la cuenta está activa (booleano)
+- **ultimo_inicio_sesion**: Fecha y hora del último inicio de sesión
+- **intentos_fallidos**: Número de intentos fallidos de inicio de sesión
+- **bloqueado_hasta**: Fecha hasta la que está bloqueada la cuenta (si aplica)
+- **reset_token**: Token para restablecer contraseña (opcional)
+- **reset_token_expiracion**: Fecha de expiración del token (opcional)
+- **erp_id**: ID del usuario en el sistema ERP (opcional)
+- **erp_tipo**: Tipo de entidad en el ERP (opcional)
 
-## 2. Usuarios del Sistema
+#### Relaciones:
+- `roles`: Roles asignados al usuario (a través de la tabla usuario_rol)
+- `usuario_rol`: Relación muchos a muchos con roles
+- `citas_como_cliente`: Citas donde el usuario es el cliente
+- `citas_como_optometrista`: Citas donde el usuario es el optometrista
+- `historiales_clinicos_como_cliente`: Historiales clínicos donde el usuario es el paciente
+- `historiales_clinicos_como_optometrista`: Historiales clínicos donde el usuario es el profesional
+- `pedidos`: Pedidos realizados por el usuario
+- `facturas`: Facturas generadas por el usuario
+- `reset_tokens`: Tokens de restablecimiento de contraseña
+- `logs_auditoria`: Registros de auditoría generados por el usuario
 
-### 2.1. Usuario System
+### 2. Rol (`rol`)
+Modelo que define los roles disponibles en el sistema.
 
-El sistema cuenta con un usuario especial denominado "usuario system" (o usuario del sistema), el cual se utiliza específicamente para operaciones automáticas y registros de auditoría generados por el propio sistema cuando no hay un usuario humano asociado a la acción.
+#### Campos:
+- **id**: Identificador único del rol (UUID)
+- **nombre**: Nombre del rol (ej: "admin", "optometrista", "vendedor")
+- **descripcion**: Descripción detallada del rol
+- **nivel_permisos**: Nivel jerárquico del rol (para herencia de permisos)
+- **activo**: Indica si el rol está activo
 
-**Características del usuario system:**
+#### Relaciones:
+- `usuarios`: Usuarios que tienen asignado este rol (a través de la tabla usuario_rol)
+- `usuario_rol`: Relación muchos a muchos con usuarios
+- `permisos`: Permisos asociados al rol
 
-- **Email reservado:** `system@internal.neoptica.com`
-- **Inactivo por diseño:** Este usuario está siempre configurado como inactivo (`activo: false`)
-- **Sin roles asignados:** Para evitar que aparezca en listados normales de usuarios
-- **Protegido contra modificaciones:** El sistema impide que este usuario sea modificado o eliminado
-- **Generación automática:** Creado en el script de seed con contraseña aleatoria segura
-- **Uso en auditoría:** Utilizado automáticamente por el sistema de auditoría cuando no se proporciona un ID de usuario válido
+### 3. Reset Token (`reset_token`)
+Modelo que gestiona los tokens de restablecimiento de contraseña.
 
-**Seguridad:**
+#### Campos:
+- **id**: Identificador único (UUID)
+- **token**: Token único para restablecer la contraseña (encriptado)
+- **usuario_id**: Referencia al usuario que solicitó el restablecimiento
+- **email**: Correo electrónico al que se envió el token
+- **fecha_expiracion**: Fecha y hora de expiración del token
+- **usado**: Indica si el token ya fue utilizado
+- **fecha_uso**: Fecha y hora en que se utilizó el token (opcional)
+- **ip_solicitud**: Dirección IP desde donde se solicitó el restablecimiento
+- **user_agent**: Información del navegador/dispositivo que realizó la solicitud
+- **creado_en**: Fecha de creación del registro
 
-El usuario system está protegido contra:
-- Eliminación accidental o maliciosa
-- Modificación de sus propiedades
-- Cambio de contraseña
+#### Reglas de Negocio:
+- Los tokens expiran después de 24 horas
+- Cada token solo puede usarse una vez
+- Se puede tener solo un token activo por usuario a la vez
+- Los tokens usados o expirados no pueden ser reutilizados
+- Se registra la IP y user agent para auditoría de seguridad
 
-No debe confundirse este usuario con la cuenta de administrador. El usuario system nunca debe utilizarse para iniciar sesión y solo sirve como actor para los registros de auditoría generados automáticamente.
+### 4. UsuarioRol (`usuario_rol`)
+Tabla de unión para la relación muchos a muchos entre usuarios y roles.
 
-## 3. Arquitectura de la Solución Multi-Rol
+#### Campos:
+- **usuario_id**: ID del usuario (clave foránea)
+- **rol_id**: ID del rol (clave foránea)
+- **asignado_por**: ID del usuario que realizó la asignación
+- **fecha_asignacion**: Fecha y hora de la asignación
+- **activo**: Indica si la asignación está activa
 
-### 3.1. Modelo de datos
+#### Relaciones:
+- `usuario`: Usuario asociado
+- `rol`: Rol asociado
 
-El sistema utiliza una relación many-to-many entre usuarios y roles implementada a través de la tabla asociativa `usuario_rol`:
+## Gestión de Autenticación y Autorización
 
+### 1. Autenticación
+
+#### Flujo de Inicio de Sesión
+1. El usuario proporciona email y contraseña
+2. El sistema verifica las credenciales
+3. Se generan tokens de acceso y refresco
+4. Se registra el inicio de sesión exitoso
+5. Se devuelven los tokens al cliente
+
+#### Seguridad
+- Límite de intentos fallidos (bloqueo temporal)
+- Contraseñas con requisitos de complejidad
+- Almacenamiento seguro de contraseñas (bcrypt)
+- Tokens JWT con tiempo de expiración
+- Renovación automática de tokens
+
+### 2. Autorización
+
+#### Asignación de Roles
+1. Los administradores pueden asignar múltiples roles a un usuario
+2. Cada rol tiene permisos específicos
+3. Los permisos se heredan jerárquicamente
+
+#### Verificación de Permisos
+- Middleware para verificar roles y permisos
+- Control de acceso a nivel de ruta
+- Validación de permisos en tiempo de ejecución
+
+## Endpoints API
+
+### 1. Autenticación
+
+#### POST /api/auth/login
+- **Descripción**: Iniciar sesión en el sistema
+- **Autenticación**: No requerida
+- **Cuerpo**:
+  ```json
+  {
+    "email": "usuario@ejemplo.com",
+    "password": "TuContraseña123"
+  }
+  ```
+- **Respuesta exitosa (200 OK)**:
+  ```json
+  {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "usuario": {
+      "id": "uuid-usuario",
+      "nombre_completo": "Nombre Usuario",
+      "email": "usuario@ejemplo.com",
+      "roles": ["admin", "vendedor"]
+    }
+  }
+  ```
+- **Errores comunes**:
+  - 400: Faltan credenciales
+  - 401: Credenciales inválidas
+  - 403: Usuario inactivo
+
+#### POST /api/auth/forgot-password
+- **Descripción**: Solicitar restablecimiento de contraseña
+- **Autenticación**: No requerida
+- **Cuerpo**:
+  ```json
+  {
+    "email": "usuario@ejemplo.com"
+  }
+  ```
+- **Respuesta exitosa (200 OK)**:
+  ```json
+  {
+    "message": "Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña."
+  }
+  ```
+- **Notas**:
+  - Siempre devuelve éxito para no revelar si el email existe
+  - Envía un correo con un enlace de restablecimiento
+
+#### POST /api/auth/reset-password
+- **Descripción**: Restablecer contraseña con token
+- **Autenticación**: No requerida
+- **Cuerpo**:
+  ```json
+  {
+    "token": "token-de-restablecimiento",
+    "email": "usuario@ejemplo.com",
+    "password": "NuevaContraseña123"
+  }
+  ```
+- **Respuesta exitosa (200 OK)**:
+  ```json
+  {
+    "message": "Contraseña restablecida correctamente"
+  }
+  ```
+- **Requisitos de contraseña**:
+  - Mínimo 8 caracteres
+  - Al menos una mayúscula
+  - Al menos una minúscula
+  - Al menos un número
+
+## Recuperación de Contraseña
+
+El sistema implementa un flujo completo y seguro de recuperación de contraseña que sigue las mejores prácticas de seguridad:
+
+### Características de la recuperación de contraseña:
+
+1. **Solicitud de recuperación segura:**
+   - Endpoint `/api/auth/forgot-password` para solicitar el restablecimiento
+   - Generación de tokens seguros con crypto
+   - Tokens encriptados con bcrypt antes de almacenarse
+   - Tokens con expiración de 24 horas
+   - Integración con sistema de correo electrónico
+
+2. **Restablecimiento seguro:**
+   - Endpoint `/api/auth/reset-password` para restablecer la contraseña
+   - Validación de token, email y fuerza de la nueva contraseña
+   - Invalidación automática de tokens después de su uso
+   - Validación de contraseñas seguras (mayúsculas, minúsculas, números)
+
+3. **Protección contra ataques:**
+   - Ocultamiento de la existencia de emails en la base de datos
+   - Respuesta genérica para solicitudes de emails válidos e inválidos
+   - Auditoría detallada de todas las solicitudes y resultados
+   - Control de campos temporales (creado_por, modificado_por)
+
+4. **Auditoría completa:**
+   - Registro de cada intento de recuperación
+   - Registro de restablecimientos exitosos y fallidos
+   - Trazabilidad del proceso completo
+
+#### GET /api/auth/google
+- **Descripción**: Iniciar autenticación con Google
+- **Autenticación**: No requerida
+- **Redirige a**: Google para autenticación
+- **Respuesta exitosa**: Redirección a `/oauth-success` con token JWT
+
+#### GET /api/auth/facebook
+- **Descripción**: Iniciar autenticación con Facebook
+- **Autenticación**: No requerida
+- **Redirige a**: Facebook para autenticación
+- **Respuesta exitosa**: Redirección a `/oauth-success` con token JWT
+
+#### GET /api/auth/instagram
+- **Descripción**: Iniciar autenticación con Instagram
+- **Autenticación**: No requerida
+- **Redirige a**: Instagram para autenticación
+- **Respuesta exitosa**: Redirección a `/oauth-success` con token JWT
+
+**Cuerpo de la solicitud:**
+```json
+{
+  "email": "usuario@ejemplo.com",
+  "password": "contraseñaSegura123"
+}
 ```
-Usuario (1) ------ (*) usuario_rol (*) ------ (1) Rol
+
+**Respuesta exitosa (200 OK):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 3600,
+  "user": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "email": "usuario@ejemplo.com",
+    "nombre_completo": "Nombre del Usuario",
+    "roles": ["admin", "vendedor"]
+  }
+}
 ```
 
-**Estructura de la tabla `usuario_rol`:**
-- `usuario_id`: Clave externa referenciando al usuario
-- `rol_id`: Clave externa referenciando al rol
-- `creado_en`: Timestamp de creación
-- `creado_por`: ID del usuario que creó la asignación
-- `modificado_en`: Timestamp de modificación (si aplica)
-- `modificado_por`: ID del usuario que modificó la asignación (si aplica)
+### 2. Gestión de Usuarios
+
+#### Obtener todos los usuarios
+```
+GET /api/usuarios
+```
+
+**Parámetros de consulta:**
+- `activo`: Filtrar por estado activo/inactivo
+- `rol`: Filtrar por rol
+- `buscar`: Búsqueda por nombre o email
+
+**Respuesta exitosa (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "email": "usuario@ejemplo.com",
+      "nombre_completo": "Nombre del Usuario",
+      "telefono": "+1234567890",
+      "activo": true,
+      "roles": ["admin", "vendedor"],
+      "ultimo_inicio_sesion": "2023-05-10T10:30:00.000Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "pagina": 1,
+    "por_pagina": 10
+  }
+}
+```
+
+#### Crear un nuevo usuario
+```
+POST /api/usuarios
+```
+
+**Cuerpo de la solicitud:**
+```json
+{
+  "email": "nuevo@ejemplo.com",
+  "password": "contraseñaSegura123",
+  "nombre_completo": "Nuevo Usuario",
+  "telefono": "+1234567890",
+  "roles": ["vendedor"]
+}
+```
+
+**Respuesta exitosa (201 Created):**
+```json
+{
+  "id": "223e4567-e89b-12d3-a456-426614174001",
+  "email": "nuevo@ejemplo.com",
+  "nombre_completo": "Nuevo Usuario",
+  "telefono": "+1234567890",
+  "activo": true,
+  "roles": ["vendedor"]
+}
+```
+
+### 3. Gestión de Roles
+
+#### Obtener todos los roles
+```
+GET /api/roles
+```
+
+**Respuesta exitosa (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "323e4567-e89b-12d3-a456-426614174002",
+      "nombre": "admin",
+      "descripcion": "Administrador del sistema con acceso completo",
+      "nivel_permisos": 1000,
+      "activo": true
+    },
+    {
+      "id": "423e4567-e89b-12d3-a456-426614174003",
+      "nombre": "optometrista",
+      "descripcion": "Personal médico encargado de exámenes de la vista",
+      "nivel_permisos": 500,
+      "activo": true
+    }
+  ]
+}
+```
+
+## Flujos de Trabajo
+
+### 1. Registro de Usuario
+1. El administrador crea un nuevo usuario
+2. Se asigna al menos un rol
+3. El sistema envía un correo de bienvenida con instrucciones
+4. El usuario recibe un enlace para establecer su contraseña
+5. El usuario inicia sesión con sus credenciales
+
+### 2. Recuperación de Contraseña
+1. El usuario solicita restablecer su contraseña
+2. El sistema genera un token de un solo uso
+3. Se envía un correo con enlace de restablecimiento
+4. El usuario establece una nueva contraseña
+5. Se invalida el token después de su uso
+
+### 3. Gestión de Sesiones
+1. El usuario inicia sesión con sus credenciales
+2. Se generan tokens de acceso y refresco
+3. El token de acceso expira después de un tiempo corto
+4. El token de refresco permite obtener un nuevo token de acceso
+5. La sesión se cierra automáticamente después de inactividad prolongada
+
+## Seguridad
+
+### 1. Contraseñas
+- Mínimo 12 caracteres
+- Requiere mayúsculas, minúsculas, números y caracteres especiales
+- No se permite el uso de contraseñas comunes
+- Se verifica contra bases de datos de contraseñas comprometidas
+
+### 2. Tokens
+- Firmados con clave secreta segura
+- Tiempo de expiración corto para tokens de acceso (15-60 minutos)
+- Tiempo de expiración moderado para tokens de refresco (7-30 días)
+- Revocación de tokens en caso de compromiso
+
+### 3. Auditoría
+- Registro de todos los inicios de sesión exitosos y fallidos
+- Historial de cambios en roles y permisos
+- Alertas por actividad sospechosa
+
+## Integraciones
+
+### 1. Directorio Activo/LDAP
+- Autenticación contra directorios corporativos
+- Sincronización de usuarios y grupos
+
+### 2. Proveedores de Identidad (OAuth/OpenID)
+- Google Workspace
+- Microsoft 365
+- Otros proveedores empresariales
+
+### 3. Sistemas de Monitoreo
+- Integración con SIEM para análisis de seguridad
+- Alertas en tiempo real de actividades sospechosas
 - `anulado_en`: Timestamp de anulación (si aplica)
 - `anulado_por`: ID del usuario que anuló la asignación (si aplica)
 

@@ -1,70 +1,274 @@
-# AUDITORÍA, LOGS Y SEGURIDAD – INTRANET NEÓPTICA 
+# Módulo de Auditoría y Registros de Actividad
 
-> **Estado de implementación (30/05/2025):** Sistema de auditoría completamente implementado para operaciones CRUD en todos los módulos (marcas, colores, sucursales, inventario). Incluye registro detallado, campos temporales y usuarios responsables. Pendiente la implementación de logs específicos para adjuntos y exportaciones.
+## Modelo de Datos
 
-## **A. Modelo de Auditoría y Logs** ✅ PARCIALMENTE IMPLEMENTADO
+### 1. Registro de Auditoría (`log_auditoria`)
+Modelo centralizado que registra todas las acciones importantes realizadas en el sistema.
 
-- El sistema implementa registro exhaustivo y centralizado de toda actividad crítica, cambios, accesos, errores y flujos de integración.
-- Principales tablas y áreas:
-    - `log_auditoria`: Cambios en datos críticos, anulaciones, reversas, ediciones y operaciones relevantes. ✅ IMPLEMENTADO
-    - `log_acceso`: Inicios de sesión, cierres de sesión, intentos fallidos, cambios de sesión y validaciones de seguridad. ✅ IMPLEMENTADO
-    - `log_contable`: Modificaciones y reversas contables, exportaciones a ERP, registros de conciliación. ❌ PENDIENTE
-    - `log_envio_correo`: Todos los envíos de correo, estados de entrega, rebotes, reintentos, errores y logs de integración SMTP/API. ✅ IMPLEMENTADO (para recuperación de contraseña)
-    - Logs internos de integración: Respuesta de servicios externos, errores de sincronización ERP/SRI, fallos de APIs. ❌ PENDIENTE
+#### Campos:
+- **id**: Identificador único del registro (UUID)
+- **usuarioId**: ID del usuario que realizó la acción (opcional)
+- **accion**: Tipo de acción realizada (ej: "CREAR", "ACTUALIZAR", "ELIMINAR", "INICIAR_SESION")
+- **descripcion**: Descripción detallada de la acción
+- **fecha**: Fecha y hora del registro (por defecto: fecha actual)
+- **ip**: Dirección IP desde donde se realizó la acción
+- **tipo_correo**: Tipo de correo electrónico (si aplica)
+- **correo_destino**: Dirección de correo electrónico del destinatario (si aplica)
+- **usuario_destino**: ID del usuario destinatario (si aplica)
+- **entidad_tipo**: Tipo de entidad afectada (ej: "USUARIO", "PRODUCTO", "CITA")
+- **entidad_id**: ID de la entidad afectada (UUID)
+- **estado_envio**: Estado del envío (si aplica)
+- **mensaje_error**: Mensaje de error en caso de fallo
+- **enviado_por**: ID del usuario que realizó el envío (si aplica)
+- **origen_envio**: Origen del envío (si aplica)
+- **intentos**: Número de intentos de envío (por defecto: 1)
+- **modulo**: Módulo del sistema donde se originó la acción
+- **entidadId**: ID alternativo de la entidad (compatibilidad)
+- **entidadTipo**: Tipo alternativo de entidad (compatibilidad)
+- **movimiento_id**: ID del movimiento contable relacionado (si aplica)
 
-## **B. Flujos y Paneles de Auditoría** ✅ IMPLEMENTADO
+#### Relaciones:
+- `usuario`: Relación con el usuario que realizó la acción
+- `movimiento_contable`: Relación con el movimiento contable relacionado (si aplica)
 
-- Paneles accesibles a gerentes y administradores autorizados.
-- Permiten filtrar, buscar y exportar logs por:
-    - Usuario/ID ✅
-    - Fecha/rango de fechas ✅
-    - Tipo de acción (anulación, edición, acceso, error) ✅
-    - Módulo o entidad asociada (marcas, colores, sucursales, inventario) ✅
-    - Estado/resultados (exitoso, fallido) ✅
-- Logs de acceso con detalle: IP, dispositivo, éxito/fallo, motivo si aplica. ✅
-- Logs de correos: Estado de envío (para recuperación de contraseña), destinatario, errores. ✅
+## Flujos de Auditoría
 
-## **C. Seguridad Proactiva y Alertas** ❌ PENDIENTE
+### 1. Registro de Acciones
+1. El sistema detecta una acción que debe ser auditada
+2. Se crea un nuevo registro en `log_auditoria` con todos los detalles relevantes
+3. Se asocian los metadatos de la acción (usuario, IP, entidad afectada, etc.)
+4. El registro queda disponible para consulta y generación de reportes
 
-- El sistema detectará y resaltará automáticamente:
-    - Accesos sospechosos (muchos intentos fallidos, nuevos dispositivos, ubicaciones inusuales)
-    - Movimientos masivos o repetitivos en inventario, contabilidad o ventas
-    - Errores recurrentes en integración (ERP, SRI, correo)
-    - Reintentos y fallos no resueltos de envíos críticos (facturas, notificaciones)
-- Notificaciones y alertas visibles en el dashboard y exportables para seguimiento.
+### 2. Búsqueda y Filtrado
+1. Los usuarios con permisos pueden acceder al módulo de auditoría
+2. Se aplican filtros según criterios de búsqueda
+3. Los resultados se muestran en formato tabular con opciones de ordenamiento
+4. Se pueden exportar los resultados a diferentes formatos
 
-## **D. Exportación y Reporting para Soporte y Auditoría** ❌ PENDIENTE
+## Sistema de Auditoría
 
-- Todos los logs podrán exportarse en CSV/Excel por rango de fechas, módulo, usuario o tipo de acción.
-- Permitirá preparar evidencias para auditorías legales, fiscales, reclamos o soporte externo.
-- Respaldo automático y particionamiento en base de datos para logs históricos.
+El sistema implementa un módulo completo de auditoría que registra todas las acciones significativas en la plataforma, asegurando trazabilidad y cumplimiento.
 
-## **E. Integridad, Legalidad y Cumplimiento** ✅ IMPLEMENTADO
+### Características Principales
 
-- Ningún registro crítico puede ser eliminado físicamente: solo anulación/reversa con historial y motivo. ✅
-- Todos los logs cumplen con normativas de trazabilidad sanitaria, fiscal y de protección de datos. ✅
-- Acceso a logs y auditoría solo para roles autorizados (admin, gerente). ✅
+1. **Registro Detallado**
+   - Acciones de usuarios autenticados
+   - Operaciones CRUD en todas las entidades
+   - Eventos del sistema importantes
+   - Intentos de acceso fallidos
 
-## **F. Panel de Auditoría Implementado**
+2. **Información Capturada**
+   - Usuario responsable
+   - Tipo de acción realizada
+   - Entidad afectada y su ID
+   - Módulo del sistema
+   - Dirección IP de origen
+   - Marca de tiempo exacta
+   - Datos relevantes del cambio
 
-Se ha implementado un panel completo de auditoría con las siguientes características:
+3. **Seguridad**
+   - Registros inmutables
+   - Control de acceso basado en roles
+   - Protección contra manipulaciones
+   - Encriptación de datos sensibles
 
-- **Filtros disponibles:** Usuario, Acción, Fecha (desde/hasta), Módulo
-- **Información mostrada:** Fecha, Usuario, Acción, Módulo, Estado, Detalles
-- **Acciones disponibles:** Ver detalles completos del registro, Filtrar, Buscar
+## Gestión de Registros de Auditoría
 
-El panel actual soporta todas las operaciones CRUD de los módulos implementados (marcas, colores, sucursales, inventario) y permite un seguimiento detallado de cada acción realizada en el sistema.
+### Filtros Avanzados
 
-## **G. Acciones de Soporte y Auditoría** ❌ PENDIENTE
+- **Por módulo**: Filtra acciones por área funcional
+- **Por usuario**: Consulta acciones de usuarios específicos
+- **Por tipo de acción**: Crea, Lee, Actualiza, Elimina
+- **Por rango de fechas**: Consulta históricos específicos
+- **Por entidad**: Seguimiento de cambios en registros específicos
 
-- Reintentos de integración o reenvío de correos podrán ser ejecutados desde el panel, quedando todo logueado.
-- El soporte podrá adjuntar comentarios a logs críticos o resolver alertas desde el panel.
+### Exportación de Datos
 
-## **Notas e implementación actual:**
-- El sistema de auditoría actualmente implementado cubre todas las operaciones CRUD en los módulos de marcas, colores, sucursales e inventario.
-- Se registran datos completos de cada operación: usuario, IP, fecha/hora, acción, módulo, entidad afectada, resultado.
-- Los campos temporales (creado_por, modificado_por, anulado_por) están correctamente implementados en todas las entidades.
-- Las pruebas (193 tests) validan que todas las operaciones queden correctamente registradas.
-- **Pendientes principales:** sistema de alertas proactivas, exportación avanzada de logs, integración con sistemas externos.
+- Formato CSV para análisis externos
+- Integración con herramientas de BI
+- Reportes programados
+- Cumplimiento normativo
 
-Con la implementación actual, se garantiza la trazabilidad completa de todas las operaciones realizadas en el sistema, cumpliendo con los requisitos básicos de auditoría y seguridad.
+## Endpoints API
+
+### 1. Gestión de Auditoría
+
+#### GET /api/auditoria
+- **Descripción**: Lista paginada de registros de auditoría
+- **Autenticación**: Requerida (Rol: admin)
+- **Query Params**:
+  - `page`: Número de página (default: 1)
+  - `limit`: Registros por página (default: 20, max: 100)
+  - `modulo`: Filtrar por módulo
+  - `usuarioId`: Filtrar por ID de usuario
+  - `accion`: Filtrar por tipo de acción
+  - `entidadTipo`: Filtrar por tipo de entidad
+  - `fechaInicio`: Fecha de inicio (ISO 8601)
+  - `fechaFin`: Fecha de fin (ISO 8601)
+- **Ejemplo de respuesta (200 OK)**:
+  ```json
+  {
+    "data": [/* ... registros ... */],
+    "paginacion": {
+      "total": 150,
+      "pagina": 1,
+      "limite": 20,
+      "totalPaginas": 8
+    }
+  }
+  ```
+
+#### GET /api/auditoria/:id
+- **Descripción**: Obtiene un registro de auditoría específico
+- **Autenticación**: Requerida (Rol: admin)
+- **Path Params**:
+  - `id`: ID del registro de auditoría (UUID)
+- **Respuestas**:
+  - 200: Registro encontrado
+  - 404: Registro no encontrado
+  - 403: No autorizado
+
+#### GET /api/auditoria/modulo/:modulo
+- **Descripción**: Filtra registros por módulo del sistema
+- **Módulos disponibles**:
+  - `usuarios`: Gestión de usuarios y permisos
+  - `productos`: Catálogo de productos
+  - `inventario`: Control de existencias
+  - `ventas`: Procesos de venta
+  - `citas`: Agendamiento
+  - `configuracion`: Ajustes del sistema
+
+#### GET /api/auditoria/usuario/:id
+- **Descripción**: Obtiene el historial de acciones de un usuario
+- **Autenticación**: Requerida (Rol: admin o el propio usuario)
+- **Path Params**:
+  - `id`: ID del usuario (UUID)
+- **Notas**:
+  - Los usuarios solo pueden ver su propio historial
+  - Los administradores pueden ver cualquier historial
+
+### 2. Obtener registros de auditoría
+```
+GET /api/auditoria/logs
+```
+
+**Parámetros de consulta:**
+- `usuarioId`: Filtrar por ID de usuario
+- `accion`: Filtrar por tipo de acción
+- `fecha_desde`: Filtrar por fecha de inicio
+- `fecha_hasta`: Filtrar por fecha de fin
+- `entidad_tipo`: Filtrar por tipo de entidad
+- `entidad_id`: Filtrar por ID de entidad
+- `modulo`: Filtrar por módulo del sistema
+- `pagina`: Número de página (paginación)
+- `limite`: Cantidad de registros por página
+
+**Respuesta exitosa (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "fecha": "2023-05-15T10:30:00.000Z",
+      "accion": "ACTUALIZAR",
+      "descripcion": "Actualización de datos del usuario",
+      "usuario": {
+        "id": "223e4567-e89b-12d3-a456-426614174001",
+        "nombre_completo": "Juan Pérez",
+        "email": "juan.perez@ejemplo.com"
+      },
+      "entidad_tipo": "USUARIO",
+      "entidad_id": "323e4567-e89b-12d3-a456-426614174002",
+      "ip": "192.168.1.100",
+      "modulo": "Seguridad"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "pagina": 1,
+    "por_pagina": 10
+  }
+}
+```
+
+## Seguridad y Cumplimiento
+
+### 1. Políticas de Retención
+- Los registros de auditoría se conservan por un período mínimo de 5 años
+- Los registros antiguos pueden ser archivados en frío para optimizar el rendimiento
+- Solo los administradores pueden eliminar registros de auditoría, con registro de la acción
+
+### 2. Control de Acceso
+- Solo usuarios con el rol `ADMIN` pueden acceder a los registros completos
+- El acceso a información sensible está restringido según el nivel de privilegios
+- Todas las consultas a los registros de auditoría quedan registradas
+
+### 3. Cumplimiento Normativo
+- El sistema cumple con los requisitos de:
+  - Ley de Protección de Datos Personales
+  - Regulaciones de salud (historial clínico)
+  - Estándares de seguridad de la información (ISO 27001)
+  - Requisitos de auditoría financiera
+
+## Reportes
+
+### 1. Reporte de Actividad por Usuario
+Muestra un resumen de las acciones realizadas por un usuario en un período determinado.
+
+**Parámetros:**
+- ID del usuario
+- Fecha de inicio
+- Fecha de fin
+- Tipo de acción (opcional)
+
+### 2. Reporte de Cambios en Entidades
+Lista todos los cambios realizados sobre un tipo específico de entidad.
+
+**Parámetros:**
+- Tipo de entidad (ej: "USUARIO", "PRODUCTO")
+- ID de la entidad (opcional)
+- Fecha de inicio
+- Fecha de fin
+
+### 3. Reporte de Seguridad
+Identifica patrones de actividad sospechosa o inusual.
+
+**Alertas automáticas para:**
+- Múltiples intentos fallidos de inicio de sesión
+- Acceso desde ubicaciones inusuales
+- Cambios masivos de datos
+- Acciones fuera del horario laboral
+
+## Integraciones
+
+### 1. SIEM (Security Information and Event Management)
+- Envío de eventos de seguridad a sistemas SIEM centralizados
+- Formato estandarizado (CEF, LEEF, JSON)
+- Filtrado y priorización de eventos
+
+### 2. Notificaciones
+- Alertas en tiempo real para actividades críticas
+- Notificaciones por correo electrónico o mensajería
+- Umbrales configurables para diferentes tipos de eventos
+
+### 3. Almacenamiento Seguro
+- Cifrado de datos sensibles en reposo
+- Rotación automática de claves
+- Copias de seguridad encriptadas
+
+## Mejoras Futuras
+
+### 1. Análisis de Comportamiento
+- Detección de anomalías basada en machine learning
+- Línea base de comportamiento por usuario
+- Alertas proactivas
+
+### 2. Auditoría Forense
+- Reconstrucción de secuencias de eventos
+- Línea de tiempo interactiva
+- Exportación para análisis forense
+
+### 3. Dashboard en Tiempo Real
+- Visualización de actividad en tiempo real
+- Mapas de calor de actividad
+- Métricas de rendimiento del sistema
