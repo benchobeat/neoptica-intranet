@@ -1,12 +1,16 @@
 import { Router } from 'express';
+
+import { autoregistroCliente } from '@/controllers/autoregistroController';
 import * as usuarioController from '@/controllers/usuarioController';
+import {
+  actualizarPerfilUsuario,
+  cambiarPassword,
+  resetPasswordAdmin,
+  eliminarUsuario,
+  listarUsuariosPaginados,
+} from '@/controllers/usuarioController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
-import { actualizarPerfilUsuario, cambiarPassword } from '@/controllers/usuarioController';
-import { resetPasswordAdmin } from '@/controllers/usuarioController';
-import { eliminarUsuario } from '../controllers/usuarioController';
-import { listarUsuariosPaginados } from '../controllers/usuarioController';
-const router = Router();
 
 /**
  * @swagger
@@ -126,7 +130,8 @@ const router = Router();
  *       409:
  *         description: Ya existe un usuario con ese email
  */
-import { autoregistroCliente } from '@/controllers/autoregistroController';
+
+const router = Router();
 router.post('/autoregistro', autoregistroCliente);
 
 /**
@@ -290,7 +295,12 @@ router.get('/paginated', authenticateJWT, listarUsuariosPaginados);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista', 'cliente'), usuarioController.obtenerUsuario);
+router.get(
+  '/:id',
+  authenticateJWT,
+  requireRole('admin', 'vendedor', 'optometrista', 'cliente'),
+  usuarioController.obtenerUsuario
+);
 
 /**
  * @swagger
@@ -315,7 +325,12 @@ router.get('/:id', authenticateJWT, requireRole('admin', 'vendedor', 'optometris
  *                     $ref: '#/components/schemas/Usuario'
  *                 error: { type: string, example: null }
  */
-router.get('/', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista'), usuarioController.listarUsuarios);
+router.get(
+  '/',
+  authenticateJWT,
+  requireRole('admin', 'vendedor', 'optometrista'),
+  usuarioController.listarUsuarios
+);
 
 /**
  * @swagger
@@ -397,7 +412,12 @@ router.post('/', authenticateJWT, requireRole('admin'), usuarioController.crearU
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista', 'cliente'), usuarioController.actualizarUsuario);
+router.put(
+  '/:id',
+  authenticateJWT,
+  requireRole('admin', 'vendedor', 'optometrista', 'cliente'),
+  usuarioController.actualizarUsuario
+);
 
 /**
  * @swagger

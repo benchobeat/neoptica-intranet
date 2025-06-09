@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
+
 import { registrarAuditoria } from '../utils/auditoria';
 
 /**
@@ -236,7 +237,13 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
     });
 
     // Manejo detallado de errores
-    if (error instanceof Error && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2023') {
+    if (
+      error instanceof Error &&
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2023'
+    ) {
       return res.status(400).json({
         ok: false,
         data: null,
@@ -263,10 +270,7 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
   try {
     const { modulo } = req.params;
     const userId = (req as any).usuario?.id || (req as any).user?.id;
-    const {
-      page = '1',
-      limit = '10',
-    } = req.query;
+    const { page = '1', limit = '10' } = req.query;
 
     // Convertir parámetros de paginación a números
     const pageNum = parseInt(page as string, 10);
@@ -376,10 +380,7 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
   try {
     const { id } = req.params;
     const userId = (req as any).usuario?.id || (req as any).user?.id;
-    const {
-      page = '1',
-      limit = '10',
-    } = req.query;
+    const { page = '1', limit = '10' } = req.query;
 
     // Convertir parámetros de paginación a números
     const pageNum = parseInt(page as string, 10);
@@ -488,7 +489,13 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
     });
 
     // Manejo detallado de errores
-    if (error instanceof Error && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2023') {
+    if (
+      error instanceof Error &&
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2023'
+    ) {
       return res.status(400).json({
         ok: false,
         data: null,

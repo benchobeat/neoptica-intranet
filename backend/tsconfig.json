@@ -19,13 +19,17 @@
     },
     "types": ["node", "jest"],
     "typeRoots": [
-      "./node_modules/@types"
+      "./node_modules/@types",
+      "./src/types"
     ]
   },
   "include": [
     "src/**/*",
     "tests/**/*",
-    "src/types/**/*"
+    "src/types/**/*",
+    "prisma/seed.ts",
+    "marca_backup.ts",
+    "marca_controller_fixed.ts"
   ],
   "exclude": [
     "node_modules",

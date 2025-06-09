@@ -26,7 +26,7 @@ export async function getSystemUserId(): Promise<string> {
   if (!systemUser) {
     throw new Error(
       'Usuario de sistema no encontrado. Ejecuta el seed primero.' +
-      ' Este usuario es necesario para registrar eventos del sistema.',
+        ' Este usuario es necesario para registrar eventos del sistema.'
     );
   }
 
@@ -45,7 +45,7 @@ export async function isSystemUser(userId: string): Promise<boolean> {
   try {
     const sysUserId = await getSystemUserId();
     return userId === sysUserId;
-  } catch (error) {
+  } catch {
     // Si no se puede determinar el ID del usuario system (entorno de pruebas),
     // asumimos que NO es el usuario system, para que las operaciones sigan funcionando
     console.log('TESTS: No se pudo validar si es usuario system, asumiendo que no lo es');

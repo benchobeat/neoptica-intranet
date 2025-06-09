@@ -1,5 +1,13 @@
 import { Router } from 'express';
-import { listarSucursales, listarSucursalesPaginadas, crearSucursal, obtenerSucursalPorId, actualizarSucursal, eliminarSucursal } from '@/controllers/sucursalController';
+
+import {
+  listarSucursales,
+  listarSucursalesPaginadas,
+  crearSucursal,
+  obtenerSucursalPorId,
+  actualizarSucursal,
+  eliminarSucursal,
+} from '@/controllers/sucursalController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 
@@ -130,7 +138,7 @@ router.get('/', authenticateJWT, listarSucursales);
  *       401:
  *         description: No autorizado
  */
-router.post('/',  authenticateJWT,  requireRole('admin'),   crearSucursal);
+router.post('/', authenticateJWT, requireRole('admin'), crearSucursal);
 
 /**
  * @swagger

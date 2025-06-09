@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { listarRoles } from '@/controllers/rolesController';
+
+import { listarRoles, metodoNoPermitido } from '@/controllers/rolesController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 
@@ -42,8 +43,6 @@ const router = Router();
  *         description: Token inválido o no enviado
  */
 router.get('/', authenticateJWT, requireRole('admin'), listarRoles);
-
-import { metodoNoPermitido } from '@/controllers/rolesController';
 
 // Solo permite GET, el resto responde 405
 router.all('/', metodoNoPermitido);

@@ -1,5 +1,13 @@
 import { Router } from 'express';
-import { crearColor, listarColores, obtenerColorPorId, actualizarColor, eliminarColor, listarColoresPaginados } from '@/controllers/colorController';
+
+import {
+  crearColor,
+  listarColores,
+  obtenerColorPorId,
+  actualizarColor,
+  eliminarColor,
+  listarColoresPaginados,
+} from '@/controllers/colorController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 

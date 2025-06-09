@@ -1,10 +1,2 @@
-import { usuario } from '@prisma/client';
-
-declare global {
-  namespace Express {
-    interface User extends usuario {}
-    interface Request {
-      user?: usuario;
-    }
-  }
-}
+// Este archivo ya no es necesario ya que los tipos están definidos en express.d.ts
+// Se mantiene vacío para evitar conflictos

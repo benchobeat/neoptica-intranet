@@ -1,5 +1,13 @@
 import { Router } from 'express';
-import { crearMarca, listarMarcas, listarMarcasPaginadas, obtenerMarcaPorId, actualizarMarca, eliminarMarca } from '@/controllers/marcaController';
+
+import {
+  crearMarca,
+  listarMarcas,
+  listarMarcasPaginadas,
+  obtenerMarcaPorId,
+  actualizarMarca,
+  eliminarMarca,
+} from '@/controllers/marcaController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 

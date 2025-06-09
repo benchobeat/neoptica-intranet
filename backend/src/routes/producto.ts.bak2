@@ -1,42 +1,22 @@
 import { Router } from 'express';
-import type { Request, Response, RequestHandler } from 'express';
-
-// Extender el tipo RequestHandler para incluir posibles propiedades personalizadas
-interface CustomRequestHandler extends RequestHandler {
-  (req: Request, res: Response, next: () => void): void;
-}
-import { body, param, query } from 'express-validator';
-
+import type { Request, Response } from 'express';
 import {
   crearProducto,
   listarProductos,
   obtenerProductoPorId,
   actualizarProducto,
   eliminarProducto,
-} from '../controllers/productoController';
-import { authenticateJWT } from '../middlewares/auth';
-import { requireRole } from '../middlewares/roles';
-import { validateRequest } from '../middlewares/validate';
+} from '@/controllers/productoController';
+import { authenticateJWT } from '@/middlewares/auth';
+import { requireRole } from '@/middlewares/roles';
+import { validateRequest } from '@/middlewares/validate';
+import { body, param, query } from 'express-validator';
 
 const router = Router();
 
-// Tipos para las peticiones
-interface ProductoInput {
-  nombre: string;
-  descripcion?: string;
-  precio: number;
-  categoria: string;
-  imagen_url?: string;
-  modelo_3d_url?: string;
-  activo?: boolean;
-}
-
 // Validaciones
 const validarCrearProducto = [
-  body('nombre')
-    .trim()
-    .isLength({ min: 3 })
-    .withMessage('El nombre debe tener al menos 3 caracteres'),
+  body('nombre').trim().isLength({ min: 3 }).withMessage('El nombre debe tener al menos 3 caracteres'),
   body('precio').isFloat({ gt: 0 }).withMessage('El precio debe ser mayor a 0'),
   body('categoria').trim().notEmpty().withMessage('La categoría es requerida'),
   body('descripcion').optional().trim(),
@@ -47,11 +27,7 @@ const validarCrearProducto = [
 
 const validarActualizarProducto = [
   param('id').isString().isLength({ min: 10 }).withMessage('ID de producto inválido'),
-  body('nombre')
-    .optional()
-    .trim()
-    .isLength({ min: 3 })
-    .withMessage('El nombre debe tener al menos 3 caracteres'),
+  body('nombre').optional().trim().isLength({ min: 3 }).withMessage('El nombre debe tener al menos 3 caracteres'),
   body('precio').optional().isFloat({ gt: 0 }).withMessage('El precio debe ser mayor a 0'),
   body('categoria').optional().trim().notEmpty().withMessage('La categoría no puede estar vacía'),
   body('descripcion').optional().trim(),
@@ -61,11 +37,11 @@ const validarActualizarProducto = [
 ];
 
 const validarObtenerProducto = [
-  param('id').isString().isLength({ min: 10 }).withMessage('ID de producto inválido'),
+  param('id').isString().isLength({ min: 10 }).withMessage('ID de producto inválido')
 ];
 
 const validarEliminarProducto = [
-  param('id').isString().isLength({ min: 10 }).withMessage('ID de producto inválido'),
+  param('id').isString().isLength({ min: 10 }).withMessage('ID de producto inválido')
 ];
 
 // Tipos para documentación Swagger
@@ -112,7 +88,7 @@ const validarEliminarProducto = [
  *           type: string
  *           format: date-time
  *           example: "2023-05-16T15:45:00Z"
- *
+ * 
  *     ErrorResponse:
  *       type: object
  *       properties:
@@ -122,7 +98,7 @@ const validarEliminarProducto = [
  *         error:
  *           type: string
  *           example: "Mensaje de error descriptivo"
- *
+ * 
  *     PaginatedResponse:
  *       type: object
  *       properties:
@@ -148,7 +124,7 @@ const validarEliminarProducto = [
  *             totalPaginas:
  *               type: integer
  *               example: 1
- *
+ * 
  *     ProductoInput:
  *       type: object
  *       required:
@@ -313,16 +289,7 @@ router.use(authenticateJWT);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-// Ruta para crear un nuevo producto
-router.post<{}, {}, ProductoInput>(
-  '/',
-  authenticateJWT as unknown as CustomRequestHandler,
-  ((req, res, next) =>
-    requireRole('admin', 'inventario')(req, res, next)) as unknown as CustomRequestHandler,
-  ...validarCrearProducto,
-  validateRequest,
-  crearProducto as unknown as CustomRequestHandler
-);
+router.post('/', requireRole(['admin', 'inventario']), validarCrearProducto, validateRequest, crearProducto);
 
 /**
  * @swagger
@@ -408,16 +375,10 @@ router.get('/:id', validarObtenerProducto, validateRequest, obtenerProductoPorId
  *       500:
  *         description: Error interno del servidor
  */
-// Ruta para actualizar un producto existente
-router.put<{ id: string }, any, ProductoInput>(
-  '/:id',
-  authenticateJWT as unknown as CustomRequestHandler,
-  ((req, res, next) =>
-    requireRole('admin', 'inventario')(req, res, next)) as unknown as CustomRequestHandler,
-  ...validarActualizarProducto,
-  validateRequest,
-  actualizarProducto as unknown as CustomRequestHandler
-);
+import { validarActualizarProducto } from './productos.validators';
+import { actualizarProducto } from './productos.controller';
+
+router.put('/:id', requireRole(['admin', 'inventario']), validarActualizarProducto, validateRequest, actualizarProducto);
 
 /**
  * @swagger
@@ -458,12 +419,11 @@ router.put<{ id: string }, any, ProductoInput>(
  *       500:
  *         description: Error interno del servidor
  */
-router.delete(
-  '/:id',
-  (req, res, next) => requireRole('admin', 'inventario')(req, res, next),
-  validarEliminarProducto,
-  validateRequest,
-  eliminarProducto
+router.delete('/:id', 
+  requireRole(['admin', 'inventario']), 
+  validarEliminarProducto, 
+  validateRequest, 
+  (req: Request<{id: string}>, res: Response) => eliminarProducto(req as Request<{id: string}>, res)
 );
 
 /**
@@ -687,14 +647,6 @@ router.put(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-// Ruta para eliminar un producto (soft delete)
-router.delete<{ id: string }>(
-  '/:id',
-  authenticateJWT as unknown as CustomRequestHandler,
-  ((req, res, next) => requireRole('admin')(req, res, next)) as unknown as CustomRequestHandler,
-  ...validarEliminarProducto,
-  validateRequest,
-  eliminarProducto as unknown as CustomRequestHandler
-);
+router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarProducto);
 
 export default router;

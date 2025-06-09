@@ -850,7 +850,7 @@ describe("Usuarios API", () => {
         expect(res.status).toBe(403);
         expect(res.body.ok).toBe(false);
         expect(res.body.error).toMatch(
-          /Acceso denegado: se requiere rol adecuado/i
+          /Acceso denegado: se requiere uno de los siguientes roles: admin/i
         );
       });
       it("El usuario eliminado queda inactivo y con campos de anulación", async () => {

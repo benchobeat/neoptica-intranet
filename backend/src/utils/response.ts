@@ -1,12 +1,23 @@
-// backend/src/utils/response.ts
+/**
+ * Utilidades para manejar respuestas de la API de manera consistente
+ */
 
-export interface ApiResponse<T = any> {
+/**
+ * Interfaz para respuestas de la API
+ * @template T Tipo de los datos de la respuesta
+ */
+export interface ApiResponse<T = unknown> {
   ok: boolean;
   data: T | null;
   error: string | null;
 }
 
-export function success<T = any>(data: T): ApiResponse<T> {
+/**
+ * Función para crear una respuesta exitosa
+ * @param data Datos a incluir en la respuesta
+ * @returns Objeto de respuesta exitosa
+ */
+export function success<T = unknown>(data: T | null = null): ApiResponse<T> {
   return {
     ok: true,
     data,
@@ -14,7 +25,13 @@ export function success<T = any>(data: T): ApiResponse<T> {
   };
 }
 
-export function fail(error: string, data: any = null): ApiResponse {
+/**
+ * Función para crear una respuesta de error
+ * @param error Mensaje de error
+ * @param data Datos adicionales opcionales
+ * @returns Objeto de respuesta de error
+ */
+export function fail<T = unknown>(error: string, data: T | null = null): ApiResponse<T> {
   return {
     ok: false,
     data,

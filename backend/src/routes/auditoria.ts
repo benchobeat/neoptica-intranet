@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import * as auditoriaController from '../controllers/auditoriaController';
 import { authenticateJWT } from '../middlewares/auth';
 import { requireRole } from '../middlewares/roles';
@@ -160,7 +161,12 @@ router.get('/', authenticateJWT, requireRole('admin'), auditoriaController.lista
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/:id', authenticateJWT, requireRole('admin'), auditoriaController.obtenerAuditoriaPorId);
+router.get(
+  '/:id',
+  authenticateJWT,
+  requireRole('admin'),
+  auditoriaController.obtenerAuditoriaPorId
+);
 
 /**
  * @swagger
@@ -236,7 +242,12 @@ router.get('/:id', authenticateJWT, requireRole('admin'), auditoriaController.ob
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/modulo/:modulo', authenticateJWT, requireRole('admin'), auditoriaController.filtrarAuditoriaPorModulo);
+router.get(
+  '/modulo/:modulo',
+  authenticateJWT,
+  requireRole('admin'),
+  auditoriaController.filtrarAuditoriaPorModulo
+);
 
 /**
  * @swagger
@@ -320,7 +331,12 @@ router.get('/modulo/:modulo', authenticateJWT, requireRole('admin'), auditoriaCo
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/usuario/:id', authenticateJWT, requireRole('admin'), auditoriaController.filtrarAuditoriaPorUsuario);
+router.get(
+  '/usuario/:id',
+  authenticateJWT,
+  requireRole('admin'),
+  auditoriaController.filtrarAuditoriaPorUsuario
+);
 
 /**
  * @swagger

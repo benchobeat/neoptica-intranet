@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
+
 import { success, fail } from '@/utils/response';
 
 const prisma = new PrismaClient();
@@ -26,6 +27,11 @@ export async function listarRoles(req: Request, res: Response): Promise<void> {
  * Siempre responde 405 y mensaje claro.
  */
 export function metodoNoPermitido(_req: Request, res: Response): void {
-  res.status(405).json(fail('Operación no permitida: los roles del sistema solo pueden ser consultados (solo lectura). Método no permitido.'));
+  res
+    .status(405)
+    .json(
+      fail(
+        'Operación no permitida: los roles del sistema solo pueden ser consultados (solo lectura). Método no permitido.'
+      )
+    );
 }
-

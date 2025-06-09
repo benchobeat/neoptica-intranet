@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
+
 import { registrarAuditoria } from '../utils/auditoria';
 
 const prisma = new PrismaClient();
@@ -235,7 +236,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
     // Obtener parámetros de paginación y búsqueda
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 10;
-    const searchTerm = req.query.search as string || '';
+    const searchTerm = (req.query.search as string) || '';
 
     // Validar parámetros
     if (page < 1 || pageSize < 1 || pageSize > 100) {
@@ -303,7 +304,6 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
       },
       error: null,
     });
-
   } catch (error) {
     console.error('Error al listar colores paginados:', error);
 
@@ -649,7 +649,6 @@ export const eliminarColor = async (req: Request, res: Response) => {
   const userId = (req as any).usuario?.id || (req as any).user?.id;
   const { id } = req.params;
   try {
-
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {

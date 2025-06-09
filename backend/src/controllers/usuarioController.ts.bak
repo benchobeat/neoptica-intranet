@@ -1,10 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import type { Request, Response } from 'express';
 
 import { registrarAuditoria } from '@/utils/auditoria';
 import { success, fail } from '@/utils/response';
 import { isSystemUser } from '@/utils/system';
+
+import type { Request, Response } from 'express';
 
 const prisma = new PrismaClient();
 
@@ -42,8 +43,8 @@ export async function listarUsuarios(req: Request, res: Response): Promise<void>
     });
 
     res.json(success(data));
-  } catch (error: any) {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
     res.status(500).json(fail(errorMessage));
   }
 }
@@ -121,13 +122,14 @@ export const listarUsuariosPaginados = async (req: Request, res: Response) => {
       },
       error: null,
     });
-  } catch (error) {
+  } catch (_error: any) {
+    // console.error('Error al listar usuarios paginados:', error);
+
     // Registrar auditoría de error
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'listar_usuarios_paginados_fallido',
-      descripcion: errorMessage,
+      descripcion: error.message || 'Error desconocido',
       ip: req.ip,
       entidadTipo: 'usuario',
       modulo: 'usuarios',
@@ -182,8 +184,8 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
     });
 
     res.json(success(data));
-  } catch (_error: any) {
-    const errorMessage = _error instanceof Error ? _error.message : 'Error desconocido';
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
     res.status(500).json(fail(errorMessage));
   }
 }
@@ -383,13 +385,13 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
         roles: usuario.usuario_rol.map((ur) => ur.rol.nombre),
       })
     );
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-    res.status(500).json(fail(errorMessage));
+  } catch (err) {
+    mensajeError = err instanceof Error ? err.message : 'Error desconocido';
+    res.status(500).json(fail(mensajeError));
     await registrarAuditoria({
       usuarioId,
       accion: 'crear_usuario_fallido',
-      descripcion: errorMessage,
+      descripcion: mensajeError,
       ip: req.ip,
       entidadTipo: 'usuario',
       modulo: 'usuarios',
@@ -449,7 +451,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
         });
         return;
       }
-    } catch (_error: any) {
+    } catch (err) {
       // Si no podemos verificar si es usuario system, continuamos normalmente
       // Esto es importante para que los tests sigan funcionando
     }
@@ -905,7 +907,7 @@ export async function eliminarUsuario(req: Request, res: Response): Promise<void
           );
         return;
       }
-    } catch (_error: any) {
+    } catch (err) {
       // Si no podemos verificar si es usuario system, continuamos normalmente
       // Esto es importante para que los tests sigan funcionando
     }
@@ -1028,8 +1030,8 @@ export async function cambiarPassword(req: Request, res: Response): Promise<void
     });
 
     res.json(success('Contraseña actualizada correctamente'));
-  } catch (_error: any) {
-    const errorMessage = _error instanceof Error ? _error.message : 'Error desconocido';
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
     res.status(500).json(fail(errorMessage));
   }
 }
@@ -1094,7 +1096,7 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
           );
         return;
       }
-    } catch (_error: any) {
+    } catch (err) {
       // Si no podemos verificar si es usuario system, continuamos normalmente
       // Esto es importante para que los tests sigan funcionando
     }
@@ -1117,8 +1119,8 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
     });
 
     res.json(success('Contraseña restablecida correctamente'));
-  } catch (_error: any) {
-    const errorMessage = _error instanceof Error ? _error.message : 'Error desconocido';
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
     res.status(500).json(fail(errorMessage));
   }
 }

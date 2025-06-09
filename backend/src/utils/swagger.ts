@@ -5,8 +5,7 @@ const swaggerDefinition = {
   info: {
     title: 'API Neoptica',
     version: '1.0.0',
-    description:
-      'Documentación de la API REST del backend de Neóptica Intranet.',
+    description: 'Documentación de la API REST del backend de Neóptica Intranet.',
     contact: {
       name: 'Soporte Neóptica',
       email: 'ruben_mosquerav@hotmail.com',

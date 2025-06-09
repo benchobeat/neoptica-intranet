@@ -1,47 +1,50 @@
-import { Router, Request, Response } from 'express';
-import passport from '@/config/passport';
+import { Router } from 'express';
+import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+
+import passport from '@/config/passport';
 import { login, forgotPassword, resetPassword } from '@/controllers/authController';
 
 const router = Router();
 
 function issueJWT(user: any) {
   const roles = user.usuario_rol?.map((ur) => ur.rol.nombre) || ['cliente'];
-  return jwt.sign(
-    { id: user.id, email: user.email, roles },
-    process.env.JWT_SECRET!,
-    { expiresIn: '7d' },
-  );
+  return jwt.sign({ id: user.id, email: user.email, roles }, process.env.JWT_SECRET!, {
+    expiresIn: '7d',
+  });
 }
 
 // --- Google OAuth ---
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/google/callback',
+router.get(
+  '/google/callback',
   passport.authenticate('google', { failureRedirect: '/login', session: false }),
   (req: Request, res: Response) => {
     const token = issueJWT((req as any).user);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
-  },
+  }
 );
 
 // --- Facebook OAuth ---
 router.get('/facebook', passport.authenticate('facebook', { scope: ['email'] }));
-router.get('/facebook/callback',
+router.get(
+  '/facebook/callback',
   passport.authenticate('facebook', { failureRedirect: '/login', session: false }),
   (req: Request, res: Response) => {
     const token = issueJWT((req as any).user);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
-  },
+  }
 );
 
 // --- Instagram OAuth ---
 router.get('/instagram', passport.authenticate('instagram'));
-router.get('/instagram/callback',
+router.get(
+  '/instagram/callback',
   passport.authenticate('instagram', { failureRedirect: '/login', session: false }),
   (req: Request, res: Response) => {
     const token = issueJWT((req as any).user);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
-  },
+  }
 );
 
 /**

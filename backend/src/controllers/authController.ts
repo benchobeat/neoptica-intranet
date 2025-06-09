@@ -1,11 +1,13 @@
-import { Request, Response } from 'express';
+import crypto from 'crypto';
+
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { success, fail } from '@/utils/response';
+
 import { registrarAuditoria } from '@/utils/auditoria';
 import { sendMail } from '@/utils/mailer';
+import { success, fail } from '@/utils/response';
 
 const prisma = new PrismaClient();
 
@@ -49,7 +51,11 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       });
 
       // Mensaje genérico por seguridad
-      res.json(success('Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'));
+      res.json(
+        success(
+          'Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'
+        )
+      );
       return;
     }
 
@@ -106,7 +112,11 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       modulo: 'auth',
     });
 
-    res.json(success('Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'));
+    res.json(
+      success(
+        'Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'
+      )
+    );
   } catch (err) {
     mensajeError = err instanceof Error ? err.message : 'Error desconocido';
     console.error('Error en forgot password:', mensajeError);
@@ -121,7 +131,11 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     });
 
     // Mensaje genérico por seguridad
-    res.json(success('Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'));
+    res.json(
+      success(
+        'Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'
+      )
+    );
   }
 }
 
@@ -219,7 +233,13 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         entidadId: usuario.id,
         modulo: 'auth',
       });
-      res.status(400).json(fail('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número'));
+      res
+        .status(400)
+        .json(
+          fail(
+            'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número'
+          )
+        );
       return;
     }
 
@@ -238,7 +258,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     await prisma.reset_token.updateMany({
       where: { usuario_id: usuario.id },
       data: {
-        expires_at: new Date(),  // Expira ahora
+        expires_at: new Date(), // Expira ahora
         modificado_en: new Date(),
         // No incluimos modificado_por ya que espera un UUID
       },
@@ -345,7 +365,9 @@ export async function login(req: Request, res: Response): Promise<void> {
         entidadId: usuario.id,
         modulo: 'auth',
       });
-      res.status(401).json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
+      res
+        .status(401)
+        .json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
       return;
     }
 
@@ -374,7 +396,9 @@ export async function login(req: Request, res: Response): Promise<void> {
     const JWT_SECRET = process.env.JWT_SECRET || 'default-test-secret-key-only-for-testing';
 
     if (!JWT_SECRET) {
-      console.error('¡ADVERTENCIA! JWT_SECRET no está configurado. Usando clave predeterminada insegura.');
+      console.error(
+        '¡ADVERTENCIA! JWT_SECRET no está configurado. Usando clave predeterminada insegura.'
+      );
     }
 
     // Log para debugging en tests
@@ -391,7 +415,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         roles, // Array con todos los roles del usuario
       },
       JWT_SECRET,
-      { expiresIn: '8h' },
+      { expiresIn: '8h' }
     );
 
     // Verificar que se generó el token correctamente
@@ -411,20 +435,20 @@ export async function login(req: Request, res: Response): Promise<void> {
       modulo: 'auth',
     });
 
-    // Limpia la respuesta
-    const { password: _, ...usuarioSafe } = usuario;
+    // La respuesta ya está siendo limpiada en el objeto de retorno
 
-    res.json(success({
-      token,
-      usuario: {
-        id: usuario.id,
-        nombre_completo: usuario.nombre_completo,
-        email: usuario.email,
-        roles, // Array completo de roles
-        // otros campos públicos si los necesitas
-      },
-    }));
-
+    res.json(
+      success({
+        token,
+        usuario: {
+          id: usuario.id,
+          nombre_completo: usuario.nombre_completo,
+          email: usuario.email,
+          roles, // Array completo de roles
+          // otros campos públicos si los necesitas
+        },
+      })
+    );
   } catch (err) {
     mensajeError = err instanceof Error ? err.message : 'Error desconocido';
     res.status(500).json(fail(mensajeError));

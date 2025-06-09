@@ -1,7 +1,8 @@
-import multer from 'multer';
-import path from 'path';
 import fs from 'fs';
-import { Request } from 'express';
+import path from 'path';
+
+import type { Request } from 'express';
+import multer from 'multer';
 
 // Asegurar que existe el directorio de destino
 const uploadDir = path.join(process.cwd(), 'uploads/adjuntos_inventario');
@@ -11,12 +12,12 @@ if (!fs.existsSync(uploadDir)) {
 
 // Configuración de almacenamiento
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination(req, file, cb) {
     cb(null, uploadDir);
   },
-  filename: function (req, file, cb) {
+  filename(req, file, cb) {
     // Generar un nombre único con timestamp para evitar colisiones
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     cb(null, uniqueSuffix + ext);
   },
@@ -25,19 +26,29 @@ const storage = multer.diskStorage({
 // Filtro para archivos permitidos
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   // Solo permitir archivos PDF e imágenes
-  const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const allowedMimeTypes = [
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+  ];
 
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Tipo de archivo no permitido. Solo se aceptan PDF e imágenes (jpeg, png, gif, webp).'));
+    cb(
+      new Error(
+        'Tipo de archivo no permitido. Solo se aceptan PDF e imágenes (jpeg, png, gif, webp).'
+      )
+    );
   }
 };
 
 // Exportar configuración de multer
 export const uploadInventarioAdjunto = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+  storage,
+  fileFilter,
   limits: {
     fileSize: 2 * 1024 * 1024, // Límite de 2MB
   },

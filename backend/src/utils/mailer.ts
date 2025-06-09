@@ -17,7 +17,7 @@ interface SendMailOptions {
 }
 
 export async function sendMail({ to, subject, text, html }: SendMailOptions) {
-  return transporter.sendMail({
+  return await transporter.sendMail({
     from: '"Neóptica Intranet" <no-reply@neoptica.com>',
     to,
     subject,

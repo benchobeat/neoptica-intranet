@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { success, fail } from '@/utils/response';
+import type { Request, Response } from 'express';
+
 import { registrarAuditoria } from '@/utils/auditoria';
+import { success, fail } from '@/utils/response';
 
 const prisma = new PrismaClient();
 
@@ -81,15 +82,17 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
     });
     // console.log("[autoregistroCliente] AUDITORIA REGISTRADA", usuario.id);
 
-    res.status(201).json(success({
-      id: usuario.id,
-      nombre_completo: usuario.nombre_completo,
-      email: usuario.email,
-      telefono: usuario.telefono,
-      activo: usuario.activo,
-      roles: ['cliente'],
-      proveedor_oauth: usuario.proveedor_oauth,
-    }));
+    res.status(201).json(
+      success({
+        id: usuario.id,
+        nombre_completo: usuario.nombre_completo,
+        email: usuario.email,
+        telefono: usuario.telefono,
+        activo: usuario.activo,
+        roles: ['cliente'],
+        proveedor_oauth: usuario.proveedor_oauth,
+      })
+    );
     // console.log("[autoregistroCliente] FIN OK", usuario.id);
   } catch (err) {
     mensajeError = err instanceof Error ? err.message : 'Error desconocido';

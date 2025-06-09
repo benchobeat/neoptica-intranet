@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
+
 import { registrarAuditoria } from '../utils/auditoria';
 
 /**
@@ -610,7 +611,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
 
     // Realizar soft delete (actualizando el campo anulado_en)
     const fechaActual = new Date();
-    const marcaAnulada = await prisma.marca.update({
+    await prisma.marca.update({
       where: { id },
       data: {
         anulado_en: fechaActual,

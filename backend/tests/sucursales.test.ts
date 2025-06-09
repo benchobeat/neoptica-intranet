@@ -31,7 +31,12 @@ let secondSucursalId: string;
 // Función auxiliar para generar token JWT para pruebas
 const generateAuthToken = (userId: string, role: string) => {
   return jwt.sign(
-    { id: userId, roles: [role] },
+    { 
+      id: userId, 
+      email: 'admin.test.sucursales@neoptica.com',
+      nombre_completo: 'Admin Test Sucursales',
+      roles: [role] 
+    },
     process.env.JWT_SECRET || 'secret-de-prueba',
     { expiresIn: '1h' }
   );

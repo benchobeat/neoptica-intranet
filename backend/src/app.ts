@@ -1,34 +1,36 @@
 // src/app.ts
 
 import 'module-alias/register';
-import dotenv from 'dotenv';
-import express from 'express';
 import cors from 'cors';
-import passport from '@/config/passport';
+import dotenv from 'dotenv';
+import type { Request, Response, RequestHandler } from 'express';
+import express from 'express';
+import swaggerUi from 'swagger-ui-express';
 
+import passport from '@/config/passport';
+import { authenticateJWT } from '@/middlewares/auth';
+import auditoriaRoutes from '@/routes/auditoria'; // Importamos la ruta de auditoría
 import authRoutes from '@/routes/auth';
-import usuariosRoutes from '@/routes/usuarios';
+import colorRoutes from '@/routes/color'; // Importamos la ruta de colores
+import marcaRoutes from '@/routes/marca'; // Importamos la ruta de marcas
+import productoRoutes from '@/routes/producto';
 import rolesRoutes from '@/routes/roles';
 import sucursalesRoutes from '@/routes/sucursales';
-import productoRoutes from '@/routes/producto';
-import marcaRoutes from '@/routes/marca'; // Importamos la ruta de marcas
-import colorRoutes from '@/routes/color'; // Importamos la ruta de colores
-import auditoriaRoutes from '@/routes/auditoria'; // Importamos la ruta de auditoría
-import { authenticateJWT } from '@/middlewares/auth';
-import { success } from '@/utils/response';
+import usuariosRoutes from '@/routes/usuarios';
 import { sendMail } from '@/utils/mailer';
-
-import swaggerUi from 'swagger-ui-express';
+import { success } from '@/utils/response';
 import { swaggerSpec } from '@/utils/swagger';
 
 dotenv.config();
 
 const app = express();
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL, // Usar variable de entorno para el frontend
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL, // Usar variable de entorno para el frontend
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(passport.initialize());
@@ -65,8 +67,11 @@ app.get('/test-email', async (req, res) => {
   }
 });
 
-app.get('/api/protegido', authenticateJWT, (req, res) => {
-  res.json(success((req as any).user));
-});
+// Usamos una aserción de tipo para el request
+app.get('/api/protegido', authenticateJWT, ((req: Request, res: Response) => {
+  // Usamos una aserción de tipo para acceder a req.user
+  const user = (req as any).user;
+  res.json(success(user));
+}) as RequestHandler);
 
 export default app;

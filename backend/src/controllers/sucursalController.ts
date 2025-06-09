@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
+
 import { registrarAuditoria } from '../utils/auditoria';
 
 /**
@@ -407,7 +408,13 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
     });
 
     // Manejo detallado de errores
-    if (error instanceof Error && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2023') {
+    if (
+      error instanceof Error &&
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2023'
+    ) {
       return res.status(400).json({
         ok: false,
         data: null,
@@ -660,7 +667,13 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     });
 
     // Manejo detallado de errores de Prisma
-    if (error instanceof Error && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2023') {
+    if (
+      error instanceof Error &&
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2023'
+    ) {
       return res.status(400).json({
         ok: false,
         data: null,
@@ -736,7 +749,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
 
     // Realizar soft delete (actualizando el campo anulado_en)
     const fechaActual = new Date();
-    const sucursalAnulada = await prisma.sucursal.update({
+    await prisma.sucursal.update({
       where: { id },
       data: {
         anulado_en: fechaActual,
@@ -776,7 +789,13 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     });
 
     // Manejo detallado de errores de Prisma
-    if (error instanceof Error && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2023') {
+    if (
+      error instanceof Error &&
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2023'
+    ) {
       return res.status(400).json({
         ok: false,
         data: null,
@@ -791,4 +810,3 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     });
   }
 };
-

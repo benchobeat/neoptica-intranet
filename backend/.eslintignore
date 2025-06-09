@@ -1,0 +1,69 @@
+# Dependencias
+node_modules/
+
+# Directorios de compilación/build
+dist/
+build/
+coverage/
+
+# Archivos de configuración
+*.config.js
+*.config.ts
+
+# Archivos de entorno
+.env
+.env.*
+!.env.example
+
+# Archivos de Prisma
+prisma/generated/
+prisma/migrations/
+
+# Archivos de prueba
+tests/**/*.test.ts
+tests/**/*.spec.ts
+
+# Archivos de respaldo y temporales
+*.bak
+*.tmp
+*.swp
+*~
+
+# Archivos específicos del proyecto
+/marca_backup.ts
+/marca_controller_fixed.ts
+/prisma/seed.ts
+
+# Directorios de documentación
+docs/
+
+# Directorios de IDE
+.vscode/
+.idea/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de cobertura
+coverage/
+**/*.test.ts
+**/__tests__/
+
+# Otros
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Archivos de documentación
+docs/
+
+# Archivos de migración de Prisma
+prisma/migrations/
