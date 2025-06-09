@@ -31,6 +31,9 @@ const router = Router();
  *         descripcion:
  *           type: string
  *           example: "Color rojo brillante para marcos de gafas"
+ *         codigoHex:
+ *           type: string
+ *           example: "#FF0000"
  *         activo:
  *           type: boolean
  *           example: true
@@ -44,6 +47,8 @@ const router = Router();
  *         nombre:
  *           type: string
  *         descripcion:
+ *           type: string
+ *         codigoHex:
  *           type: string
  *         activo:
  *           type: boolean
@@ -106,7 +111,7 @@ const router = Router();
  *       500:
  *         description: Error interno del servidor
  */
-router.post('/', authenticateJWT, requireRole('admin', 'supervisor'), crearColor);
+router.post('/', authenticateJWT, requireRole('admin'), crearColor);
 
 /**
  * @swagger
@@ -148,7 +153,7 @@ router.post('/', authenticateJWT, requireRole('admin', 'supervisor'), crearColor
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/', authenticateJWT, listarColores);
+router.get('/', requireRole('admin', 'optometristsa', 'vendedor'), authenticateJWT, listarColores);
 
 /**
  * @swagger
@@ -226,7 +231,7 @@ router.get('/', authenticateJWT, listarColores);
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/paginated', authenticateJWT, listarColoresPaginados);
+router.get('/paginado', requireRole('admin', 'optometristsa', 'vendedor'), authenticateJWT, listarColoresPaginados);
 
 /**
  * @swagger
@@ -270,7 +275,7 @@ router.get('/paginated', authenticateJWT, listarColoresPaginados);
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/:id', authenticateJWT, obtenerColorPorId);
+router.get('/:id', requireRole('admin', 'vendedor'), authenticateJWT, obtenerColorPorId);
 
 /**
  * @swagger
@@ -322,7 +327,7 @@ router.get('/:id', authenticateJWT, obtenerColorPorId);
  *       500:
  *         description: Error interno del servidor
  */
-router.put('/:id', authenticateJWT, requireRole('admin', 'supervisor'), actualizarColor);
+router.put('/:id', requireRole('admin', 'optometristsa', 'vendedor'), authenticateJWT, actualizarColor);
 
 /**
  * @swagger
@@ -369,6 +374,6 @@ router.put('/:id', authenticateJWT, requireRole('admin', 'supervisor'), actualiz
  *       500:
  *         description: Error interno del servidor
  */
-router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarColor);
+router.delete('/:id', requireRole('admin'), authenticateJWT, eliminarColor);
 
 export default router;

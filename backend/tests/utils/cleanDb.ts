@@ -28,13 +28,13 @@ export async function cleanDatabase(): Promise<void> {
     // Eliminar registros de todas las tablas en orden para manejar dependencias
     // 1. Primero las tablas más dependientes
     try {
-      await prisma.reset_token.deleteMany({});
+      await prisma.resetToken.deleteMany({});
       console.log('Tabla reset_token limpiada');
     } catch (e) {
       console.error('Error limpiando reset_token', e);
     }
     try {
-      await prisma.detalle_pedido.deleteMany({});
+      await prisma.detallePedido.deleteMany({});
       console.log('Tabla detalle_pedido limpiada');
     } catch (e) {
       console.error('Error limpiando detalle_pedido', e);
@@ -46,7 +46,7 @@ export async function cleanDatabase(): Promise<void> {
       console.error('Error limpiando pedido', e);
     }
     try {
-      await prisma.movimiento_inventario.deleteMany({});
+      await prisma.movimientoInventario.deleteMany({});
       console.log('Tabla movimiento_inventario limpiada');
     } catch (e) {
       console.error('Error limpiando movimiento_inventario', e);
@@ -58,13 +58,13 @@ export async function cleanDatabase(): Promise<void> {
       console.error('Error limpiando inventario', e);
     }
     try {
-      await prisma.log_auditoria.deleteMany({});
+      await prisma.logAuditoria.deleteMany({});
       console.log('Tabla log_auditoria limpiada');
     } catch (e) {
       console.error('Error limpiando log_auditoria', e);
     }
     try {
-      await prisma.usuario_rol.deleteMany({});
+      await prisma.usuarioRol.deleteMany({});
       console.log('Tabla usuario_rol limpiada');
     } catch (e) {
       console.error('Error limpiando usuario_rol', e);
@@ -100,7 +100,7 @@ export async function cleanDatabase(): Promise<void> {
     // Eliminar todos los usuarios excepto el admin
     // Primero limpiamos archivo_entidad que tiene FK a archivo_adjunto
     try {
-      await prisma.archivo_entidad.deleteMany({});
+      await prisma.archivoEntidad.deleteMany({});
       console.log('Tabla archivo_entidad limpiada');
     } catch (e) {
       console.error('Error limpiando archivo_entidad', e);
@@ -108,7 +108,7 @@ export async function cleanDatabase(): Promise<void> {
 
     // Luego limpiamos archivo_adjunto que tiene FK a usuario
     try {
-      await prisma.archivo_adjunto.deleteMany({});
+      await prisma.archivoAdjunto.deleteMany({});
       console.log('Tabla archivo_adjunto limpiada');
     } catch (e) {
       console.error('Error limpiando archivo_adjunto', e);
@@ -155,7 +155,7 @@ export async function cleanDatabase(): Promise<void> {
             nombre: rolNombre,
             descripcion: `Rol de ${rolNombre}`,
             // No asignamos creado_por ya que requiere un UUID válido
-            creado_en: new Date(),
+            creadoEn: new Date(),
           },
         });
         console.log(`Rol '${rolNombre}' creado.`);
@@ -166,7 +166,7 @@ export async function cleanDatabase(): Promise<void> {
     let admin = await prisma.usuario.findUnique({
       where: { email: 'admin@neoptica.com' },
       include: {
-        usuario_rol: {
+        roles: {
           include: { rol: true },
         },
       },
@@ -189,12 +189,12 @@ export async function cleanDatabase(): Promise<void> {
       // Crear usuario admin
       const newAdmin = await prisma.usuario.create({
         data: {
-          nombre_completo: 'Administrador',
+          nombreCompleto: 'Administrador',
           email: 'admin@neoptica.com',
           password: hashedPassword,
           activo: true,
           // No asignamos creado_por ya que requiere un UUID válido
-          creado_en: new Date(),
+          creadoEn: new Date(),
         },
       });
 
@@ -202,7 +202,7 @@ export async function cleanDatabase(): Promise<void> {
       admin = await prisma.usuario.findUnique({
         where: { id: newAdmin.id },
         include: {
-          usuario_rol: {
+          roles: {
             include: { rol: true },
           },
         },
@@ -215,17 +215,17 @@ export async function cleanDatabase(): Promise<void> {
 
     // Eliminar todos los roles existentes del admin (para evitar duplicados)
     if (admin) {
-      await prisma.usuario_rol.deleteMany({
-        where: { usuario_id: admin.id },
+      await prisma.usuarioRol.deleteMany({
+        where: { usuarioId: admin.id },
       });
 
       // Asignar rol admin (siempre, exista o no el usuario previamente)
-      await prisma.usuario_rol.create({
+      await prisma.usuarioRol.create({
         data: {
-          usuario_id: admin.id,
-          rol_id: rolAdmin.id,
+          usuarioId: admin.id,
+          rolId: rolAdmin.id,
           // No asignamos creado_por ya que requiere un UUID válido y no un string
-          creado_en: new Date(),
+          creadoEn: new Date(),
         },
       });
 
@@ -278,7 +278,7 @@ export async function cleanTestData(): Promise<void> {
     console.log('Limpiando datos de prueba...');
 
     // Eliminar solo registros creados para pruebas
-    await prisma.movimiento_inventario.deleteMany({
+    await prisma.movimientoInventario.deleteMany({
       where: {
         OR: [{ motivo: { contains: 'Test' } }, { motivo: { contains: 'Prueba' } }],
       },

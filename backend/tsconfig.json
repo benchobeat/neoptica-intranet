@@ -27,9 +27,7 @@
     "src/**/*",
     "tests/**/*",
     "src/types/**/*",
-    "prisma/seed.ts",
-    "marca_backup.ts",
-    "marca_controller_fixed.ts"
+    "prisma/seed.ts"
   ],
   "exclude": [
     "node_modules",

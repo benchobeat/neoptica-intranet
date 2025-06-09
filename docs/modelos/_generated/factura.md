@@ -1,7 +1,7 @@
-# factura
+# Factura
 
 ## Descripción
-Modelo que representa factura en el sistema.
+Modelo que representa Factura en el sistema.
 
 ## Estructura
 
@@ -10,53 +10,59 @@ Modelo que representa factura en el sistema.
 | Nombre | Tipo | Requerido | Valor por Defecto | Validaciones | Descripción |
 |--------|------|-----------|-------------------|--------------|-------------|
 | `id` | `string` | ✅ | `uuid_generate_v4()` | Identificador único, Valor por defecto |  |
-| `pedido_id` | `string?` | ❌ | `null` | - |  |
-| `cliente_id` | `string?` | ❌ | `null` | - |  |
-| `fecha_emision` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `pedidoId` | `string?` | ❌ | `null` | - |  |
+| `clienteId` | `string?` | ❌ | `null` | - |  |
+| `fechaEmision` | `Date?` | ❌ | `null` | Valor por defecto |  |
 | `estado` | `string` | ✅ | - | - |  |
-| `archivo_xml_id` | `string?` | ❌ | `null` | - |  |
-| `archivo_pdf_id` | `string?` | ❌ | `null` | - |  |
+| `archivoXmlId` | `string?` | ❌ | `null` | - |  |
+| `archivoPdfId` | `string?` | ❌ | `null` | - |  |
 | `moneda` | `string?` | ❌ | `null` | Valor por defecto |  |
-| `erp_id` | `number?` | ❌ | `null` | - |  |
-| `erp_tipo` | `string?` | ❌ | `null` | - |  |
-| `erp_estado` | `string?` | ❌ | `null` | - |  |
-| `erp_payload` | `object?` | ❌ | `null` | - |  |
-| `asiento_contable_id` | `string?` | ❌ | `null` | - |  |
-| `creado_en` | `Date?` | ❌ | `now()` | Valor por defecto, Marca de tiempo automática |  |
-| `creado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `modificado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `modificado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `anulado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `anulado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
+| `erpId` | `number?` | ❌ | `null` | - |  |
+| `erpTipo` | `string?` | ❌ | `null` | - |  |
+| `erpEstado` | `string?` | ❌ | `null` | - |  |
+| `erpPayload` | `object?` | ❌ | `null` | - |  |
+| `asientoContableId` | `string?` | ❌ | `null` | - |  |
+| `creadoEn` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `creadoPor` | `string?` | ❌ | `null` | - |  |
+| `modificadoEn` | `Date?` | ❌ | `null` | - |  |
+| `modificadoPor` | `string?` | ❌ | `null` | - |  |
+| `anuladoEn` | `Date?` | ❌ | `null` | - |  |
+| `anuladoPor` | `string?` | ❌ | `null` | - |  |
 
 ### Relaciones
 
-- **archivo_adjunto_factura_archivo_pdf_idToarchivo_adjunto**: Uno a [archivo_adjunto](./archivo_adjunto.md) `factura_archivo_pdf_idToarchivo_adjunto`
-- **archivo_adjunto_factura_archivo_xml_idToarchivo_adjunto**: Uno a [archivo_adjunto](./archivo_adjunto.md) `factura_archivo_xml_idToarchivo_adjunto`
-- **usuario**: Uno a [usuario](./usuario.md) `facturaTousuario`
-- **pedido**: Uno a [pedido](./pedido.md) `facturaTopedido`
-- **asiento_contable**: Uno a [asiento_contable](./asiento_contable.md) `asiento_contableTofactura`
+- **archivoPdf**: Uno a [ArchivoAdjunto](./archivoadjunto.md) `FacturaArchivoPdf`
+- **archivoXml**: Uno a [ArchivoAdjunto](./archivoadjunto.md) `FacturaArchivoXml`
+- **cliente**: Uno a [Usuario](./usuario.md) `FacturaToUsuario`
+- **pedido**: Uno a [Pedido](./pedido.md) `FacturaToPedido`
+- **asientoContable**: Uno a [AsientoContable](./asientocontable.md) `AsientoContableToFactura`
 
 ## Ejemplos de Uso
 
 ### Creación
 
 ```typescript
-// Crear un nuevo factura
-const nuevofactura = await prisma.factura.create({
+// Crear un nuevo Factura
+const nuevoFactura = await prisma.factura.create({
   data: {
-    pedido_id: null,
-    cliente_id: null,
-    fecha_emision: null,
+    pedidoId: null,
+    clienteId: null,
+    fechaEmision: null,
     estado: "valor",
-    archivo_xml_id: null,
-    archivo_pdf_id: null,
+    archivoXmlId: null,
+    archivoPdfId: null,
     moneda: null,
-    erp_id: null,
-    erp_tipo: null,
-    erp_estado: null,
-    erp_payload: null,
-    asiento_contable_id: null,
+    erpId: null,
+    erpTipo: null,
+    erpEstado: null,
+    erpPayload: null,
+    asientoContableId: null,
+    creadoEn: null,
+    creadoPor: null,
+    modificadoEn: null,
+    modificadoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
   }
 });
 ```
@@ -64,28 +70,28 @@ const nuevofactura = await prisma.factura.create({
 ### Consulta Básica
 
 ```typescript
-// Obtener todos los registros de factura
+// Obtener todos los registros de Factura
 const registros = await prisma.factura.findMany({
     // Incluir relaciones
     include: {
-      archivo_adjunto_factura_archivo_pdf_idToarchivo_adjunto: true,
-      archivo_adjunto_factura_archivo_xml_idToarchivo_adjunto: true,
-      usuario: true,
+      archivoPdf: true,
+      archivoXml: true,
+      cliente: true,
       pedido: true,
-      asiento_contable: true
+      asientoContable: true
     }
 });
 
-// Obtener un factura por ID
+// Obtener un Factura por ID
 const registro = await prisma.factura.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
     include: {
-      archivo_adjunto_factura_archivo_pdf_idToarchivo_adjunto: true,
-      archivo_adjunto_factura_archivo_xml_idToarchivo_adjunto: true,
-      usuario: true,
+      archivoPdf: true,
+      archivoXml: true,
+      cliente: true,
       pedido: true,
-      asiento_contable: true
+      asientoContable: true
     }
 });
 ```
@@ -94,41 +100,11 @@ const registro = await prisma.factura.findUnique({
 
 - **Tabla en BD**: `factura`
 - **Clave primaria**: `id`
-- **Campos de auditoría**: ✅ Sí
+- **Campos de auditoría**: ❌ No
 
 ## Auditoría
 
-### ✅ Auditoría Habilitada
-
-Este modelo incluye soporte completo de auditoría con los siguientes campos de seguimiento:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `creado_en` | `DateTime` | Fecha y hora de creación del registro |
-| `creado_por` | `string` | ID del usuario que creó el registro |
-| `modificado_en` | `DateTime` | Última fecha de modificación del registro |
-| `modificado_por` | `string` | ID del último usuario que modificó el registro |
-| `anulado_en` | `DateTime?` | Fecha de eliminación lógica (soft delete) |
-| `anulado_por` | `string?` | ID del usuario que realizó la eliminación lógica |
-
-### Registro de Actividades
-
-Todas las operaciones CRUD en este modelo generan registros de auditoría que incluyen:
-
-- Usuario que realizó la acción
-- Tipo de operación (CREAR, ACTUALIZAR, ELIMINAR, etc.)
-- Fecha y hora exacta de la operación
-- Dirección IP del solicitante
-- Datos anteriores y nuevos (para actualizaciones)
-
-### Consulta de Registros
-
-Los registros de auditoría pueden consultarse a través de la API de auditoría con filtros por:
-
-- Rango de fechas
-- Usuario
-- Tipo de acción
-- Entidad afectada
+❌ Este modelo no incluye campos de auditoría estándar.
 
 ## Seguridad
 
@@ -141,12 +117,12 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Relaciones con Otros Modelos
 
-- **archivo_adjunto_factura_archivo_pdf_idToarchivo_adjunto**: Uno a [archivo_adjunto](./archivo_adjunto.md) `factura_archivo_pdf_idToarchivo_adjunto`
-- **archivo_adjunto_factura_archivo_xml_idToarchivo_adjunto**: Uno a [archivo_adjunto](./archivo_adjunto.md) `factura_archivo_xml_idToarchivo_adjunto`
-- **usuario**: Uno a [usuario](./usuario.md) `facturaTousuario`
-- **pedido**: Uno a [pedido](./pedido.md) `facturaTopedido`
-- **asiento_contable**: Uno a [asiento_contable](./asiento_contable.md) `asiento_contableTofactura`
+- **archivoPdf**: Uno a [ArchivoAdjunto](./archivoadjunto.md) `FacturaArchivoPdf`
+- **archivoXml**: Uno a [ArchivoAdjunto](./archivoadjunto.md) `FacturaArchivoXml`
+- **cliente**: Uno a [Usuario](./usuario.md) `FacturaToUsuario`
+- **pedido**: Uno a [Pedido](./pedido.md) `FacturaToPedido`
+- **asientoContable**: Uno a [AsientoContable](./asientocontable.md) `AsientoContableToFactura`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-08T15:35:08.517Z
+✅ Documentación generada automáticamente el 2025-06-09T20:48:15.923Z

@@ -1,7 +1,7 @@
-# inventario
+# Inventario
 
 ## Descripción
-Modelo que representa inventario en el sistema.
+Modelo que representa Inventario en el sistema.
 
 ## Estructura
 
@@ -10,37 +10,43 @@ Modelo que representa inventario en el sistema.
 | Nombre | Tipo | Requerido | Valor por Defecto | Validaciones | Descripción |
 |--------|------|-----------|-------------------|--------------|-------------|
 | `id` | `string` | ✅ | `uuid_generate_v4()` | Identificador único, Valor por defecto |  |
-| `sucursal_id` | `string?` | ❌ | `null` | - |  |
-| `producto_id` | `string?` | ❌ | `null` | - |  |
+| `sucursalId` | `string?` | ❌ | `null` | - |  |
+| `productoId` | `string?` | ❌ | `null` | - |  |
 | `stock` | `number?` | ❌ | `null` | Valor por defecto |  |
-| `stock_minimo` | `number?` | ❌ | `null` | Valor por defecto |  |
+| `stockMinimo` | `number?` | ❌ | `null` | Valor por defecto |  |
 | `ubicacion` | `string?` | ❌ | `null` | - |  |
-| `creado_en` | `Date?` | ❌ | `now()` | Valor por defecto, Marca de tiempo automática |  |
-| `creado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `modificado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `modificado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `anulado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `anulado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
+| `creadoEn` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `creadoPor` | `string?` | ❌ | `null` | - |  |
+| `modificadoEn` | `Date?` | ❌ | `null` | - |  |
+| `modificadoPor` | `string?` | ❌ | `null` | - |  |
+| `anuladoEn` | `Date?` | ❌ | `null` | - |  |
+| `anuladoPor` | `string?` | ❌ | `null` | - |  |
 
 ### Relaciones
 
-- **producto**: Uno a [producto](./producto.md) `inventarioToproducto`
-- **sucursal**: Uno a [sucursal](./sucursal.md) `inventarioTosucursal`
-- **movimiento_inventario**: Muchos a [movimiento_inventario](./movimiento_inventario.md) `inventarioTomovimiento_inventario`
+- **producto**: Uno a [Producto](./producto.md) `InventarioToProducto`
+- **sucursal**: Uno a [Sucursal](./sucursal.md) `InventarioToSucursal`
+- **movimientosInventario**: Muchos a [MovimientoInventario](./movimientoinventario.md) `InventarioToMovimientoInventario`
 
 ## Ejemplos de Uso
 
 ### Creación
 
 ```typescript
-// Crear un nuevo inventario
-const nuevoinventario = await prisma.inventario.create({
+// Crear un nuevo Inventario
+const nuevoInventario = await prisma.inventario.create({
   data: {
-    sucursal_id: null,
-    producto_id: null,
+    sucursalId: null,
+    productoId: null,
     stock: null,
-    stock_minimo: null,
+    stockMinimo: null,
     ubicacion: null,
+    creadoEn: null,
+    creadoPor: null,
+    modificadoEn: null,
+    modificadoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
   }
 });
 ```
@@ -48,24 +54,24 @@ const nuevoinventario = await prisma.inventario.create({
 ### Consulta Básica
 
 ```typescript
-// Obtener todos los registros de inventario
+// Obtener todos los registros de Inventario
 const registros = await prisma.inventario.findMany({
     // Incluir relaciones
     include: {
       producto: true,
       sucursal: true,
-      movimiento_inventario: true
+      movimientosInventario: true
     }
 });
 
-// Obtener un inventario por ID
+// Obtener un Inventario por ID
 const registro = await prisma.inventario.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
     include: {
       producto: true,
       sucursal: true,
-      movimiento_inventario: true
+      movimientosInventario: true
     }
 });
 ```
@@ -74,41 +80,11 @@ const registro = await prisma.inventario.findUnique({
 
 - **Tabla en BD**: `inventario`
 - **Clave primaria**: `id`
-- **Campos de auditoría**: ✅ Sí
+- **Campos de auditoría**: ❌ No
 
 ## Auditoría
 
-### ✅ Auditoría Habilitada
-
-Este modelo incluye soporte completo de auditoría con los siguientes campos de seguimiento:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `creado_en` | `DateTime` | Fecha y hora de creación del registro |
-| `creado_por` | `string` | ID del usuario que creó el registro |
-| `modificado_en` | `DateTime` | Última fecha de modificación del registro |
-| `modificado_por` | `string` | ID del último usuario que modificó el registro |
-| `anulado_en` | `DateTime?` | Fecha de eliminación lógica (soft delete) |
-| `anulado_por` | `string?` | ID del usuario que realizó la eliminación lógica |
-
-### Registro de Actividades
-
-Todas las operaciones CRUD en este modelo generan registros de auditoría que incluyen:
-
-- Usuario que realizó la acción
-- Tipo de operación (CREAR, ACTUALIZAR, ELIMINAR, etc.)
-- Fecha y hora exacta de la operación
-- Dirección IP del solicitante
-- Datos anteriores y nuevos (para actualizaciones)
-
-### Consulta de Registros
-
-Los registros de auditoría pueden consultarse a través de la API de auditoría con filtros por:
-
-- Rango de fechas
-- Usuario
-- Tipo de acción
-- Entidad afectada
+❌ Este modelo no incluye campos de auditoría estándar.
 
 ## Seguridad
 
@@ -121,10 +97,10 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Relaciones con Otros Modelos
 
-- **producto**: Uno a [producto](./producto.md) `inventarioToproducto`
-- **sucursal**: Uno a [sucursal](./sucursal.md) `inventarioTosucursal`
-- **movimiento_inventario**: Muchos a [movimiento_inventario](./movimiento_inventario.md) `inventarioTomovimiento_inventario`
+- **producto**: Uno a [Producto](./producto.md) `InventarioToProducto`
+- **sucursal**: Uno a [Sucursal](./sucursal.md) `InventarioToSucursal`
+- **movimientosInventario**: Muchos a [MovimientoInventario](./movimientoinventario.md) `InventarioToMovimientoInventario`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-08T15:35:08.530Z
+✅ Documentación generada automáticamente el 2025-06-09T20:48:15.937Z

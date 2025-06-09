@@ -25,7 +25,7 @@ async function main() {
       create: {
         nombre: rol.nombre,
         descripcion: rol.descripcion,
-        creado_en: new Date(),
+        creadoEn: new Date(),
       },
     });
     console.log(`🌱 [SEED] Rol "${rol.nombre}" listo`);
@@ -45,12 +45,12 @@ async function main() {
       activo: true,
     },
     create: {
-      nombre_completo: 'Administrador General',
+      nombreCompleto: 'Administrador General',
       email: adminEmail,
       password: hashedPassword,
       telefono: '0999999999',
       activo: true,
-      creado_en: fechaActual,
+      creadoEn: fechaActual,
     },
   });
 
@@ -62,18 +62,18 @@ async function main() {
   });
 
   // Primero eliminar cualquier asociación existente para evitar duplicados
-  await prisma.usuario_rol.deleteMany({
-    where: { usuario_id: adminUser.id }
+  await prisma.usuarioRol.deleteMany({
+    where: { usuarioId: adminUser.id }
   });
 
   // Crear las asociaciones de roles con campos de auditoría completos
   for (const rol of rolesAdmin) {
-    await prisma.usuario_rol.create({
+    await prisma.usuarioRol.create({
       data: {
-        usuario_id: adminUser.id,
-        rol_id: rol.id,
-        creado_en: fechaActual,
-        creado_por: adminUser.id,
+        usuarioId: adminUser.id,
+        rolId: rol.id,
+        creadoEn: fechaActual,
+        creadoPor: adminUser.id,
       },
     });
     console.log(`🌱 [SEED] Asociación admin-rol "${rol.nombre}" creada`);
@@ -87,19 +87,19 @@ async function main() {
       activo: true,
     },
     create: {
-      nombre_completo: 'Usuario de Prueba',
+      nombreCompleto: 'Usuario de Prueba',
       email: testUserEmail,
       password: await bcrypt.hash('Test1234!', 10),
       telefono: '0988888888',
       activo: true,
-      creado_en: fechaActual,
-      creado_por: adminUser.id,
+      creadoEn: fechaActual,
+      creadoPor: adminUser.id,
     },
   });
 
   // Eliminar asociaciones existentes para el usuario de prueba
-  await prisma.usuario_rol.deleteMany({
-    where: { usuario_id: testUser.id }
+  await prisma.usuarioRol.deleteMany({
+    where: { usuarioId: testUser.id }
   });
 
   const rolesTest = await prisma.rol.findMany({
@@ -107,12 +107,12 @@ async function main() {
   });
 
   for (const rol of rolesTest) {
-    await prisma.usuario_rol.create({
+    await prisma.usuarioRol.create({
       data: {
-        usuario_id: testUser.id,
-        rol_id: rol.id,
-        creado_en: fechaActual,
-        creado_por: adminUser.id,
+        usuarioId: testUser.id,
+        rolId: rol.id,
+        creadoEn: fechaActual,
+        creadoPor: adminUser.id,
       },
     });
     console.log(`🌱 [SEED] Asociación testuser-rol "${rol.nombre}" creada`);
@@ -126,15 +126,15 @@ async function main() {
       activo: true,
     },
     create: {
-      nombre_completo: 'Cliente de Prueba',
+      nombreCompleto: 'Cliente de Prueba',
       email: clienteEmail,
       password: await bcrypt.hash('Cliente1234!', 10),
       telefono: '0977777777',
       dni: '1234567890',
       direccion: 'Av. Principal 123',
       activo: true,
-      creado_en: fechaActual,
-      creado_por: adminUser.id,
+      creadoEn: fechaActual,
+      creadoPor: adminUser.id,
     },
   });
 
@@ -145,29 +145,30 @@ async function main() {
 
   if (rolCliente) {
     // Eliminar asociaciones existentes
-    await prisma.usuario_rol.deleteMany({
-      where: { usuario_id: clienteUser.id }
+    await prisma.usuarioRol.deleteMany({
+      where: { usuarioId: clienteUser.id }
     });
 
-    await prisma.usuario_rol.create({
+    await prisma.usuarioRol.create({
       data: {
-        usuario_id: clienteUser.id,
-        rol_id: rolCliente.id,
-        creado_en: fechaActual,
-        creado_por: adminUser.id,
+        usuarioId: clienteUser.id,
+        rolId: rolCliente.id,
+        creadoEn: fechaActual,
+        creadoPor: adminUser.id,
       },
     });
     console.log(`🌱 [SEED] Asociación cliente-rol "${rolCliente.nombre}" creada`);
   }
 
   // 6. Registrar en log de auditoría
-  await prisma.log_auditoria.create({
+  await prisma.logAuditoria.create({
     data: {
       usuarioId: adminUser.id,
       accion: 'SEED',
       descripcion: 'Inicialización del sistema con roles y usuarios base',
       ip: '127.0.0.1',
-      entidadId: 'SISTEMA',
+      entidadId: null, // Usamos null ya que no hay una entidad específica para esta acción
+      entidadTipo: 'SISTEMA',
       modulo: 'SEED',
       fecha: fechaActual,
     }
@@ -183,20 +184,20 @@ async function main() {
       activo: false, // Asegurar que siempre esté desactivado
     },
     create: {
-      nombre_completo: 'Sistema Neoptica',
+      nombreCompleto: 'Sistema Neoptica',
       email: systemUserEmail,
       password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), // Contraseña aleatoria que nunca se usará
       telefono: '0000000000',
       activo: false, // Desactivado para que no aparezca en listas
-      creado_en: fechaActual,
-      creado_por: adminUser.id,
+      creadoEn: fechaActual,
+      creadoPor: adminUser.id,
     },
   });
 
   console.log(`🌱 [SEED] Usuario system creado: ${systemUser.id}`);
 
   // 7. Registrar en log de auditoría la creación del usuario system
-  await prisma.log_auditoria.create({
+  await prisma.logAuditoria.create({
     data: {
       usuarioId: adminUser.id,
       accion: 'SEED',

@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 
-import { registrarAuditoria } from '@/utils/auditoria';
+import { registrarAuditoria } from '@/utils/audit';
 import { success, fail } from '@/utils/response';
 
 const prisma = new PrismaClient();
@@ -55,18 +55,18 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
     // Crea el usuario
     const usuario = await prisma.usuario.create({
       data: {
-        nombre_completo: nombre_completo || email,
+        nombreCompleto: nombre_completo || email,
         email,
         password: hashPassword,
         telefono,
         activo: true,
-        proveedor_oauth: proveedor_oauth || null,
-        oauth_id: oauth_id || null,
-        usuario_rol: {
+        proveedorOauth: proveedor_oauth || null,
+        oauthId: oauth_id || null,
+        roles: {
           create: { rol: { connect: { nombre: roles[0] } } },
         },
       },
-      include: { usuario_rol: { include: { rol: true } } },
+      include: { roles: { include: { rol: true } } },
     });
     // console.log("[autoregistroCliente] USUARIO CREADO", usuario.id);
 
@@ -85,12 +85,12 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
     res.status(201).json(
       success({
         id: usuario.id,
-        nombre_completo: usuario.nombre_completo,
+        nombre_completo: usuario.nombreCompleto,
         email: usuario.email,
         telefono: usuario.telefono,
         activo: usuario.activo,
         roles: ['cliente'],
-        proveedor_oauth: usuario.proveedor_oauth,
+        proveedor_oauth: usuario.proveedorOauth,
       })
     );
     // console.log("[autoregistroCliente] FIN OK", usuario.id);

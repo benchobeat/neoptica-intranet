@@ -1,7 +1,7 @@
-# receta
+# Receta
 
 ## Descripción
-Modelo que representa receta en el sistema.
+Modelo que representa Receta en el sistema.
 
 ## Estructura
 
@@ -11,52 +11,100 @@ Modelo que representa receta en el sistema.
 |--------|------|-----------|-------------------|--------------|-------------|
 | `id` | `string` | ✅ | `uuid_generate_v4()` | Identificador único, Valor por defecto |  |
 | `citaId` | `string` | ✅ | - | - |  |
-| `tipo` | `string` | ✅ | - | - |  |
-| `esfera_od` | `number` | ✅ | - | - |  |
-| `esfera_oi` | `number` | ✅ | - | - |  |
-| `cilindro_od` | `number?` | ❌ | `null` | - |  |
-| `cilindro_oi` | `number?` | ❌ | `null` | - |  |
-| `eje_od` | `number?` | ❌ | `null` | - |  |
-| `eje_oi` | `number?` | ❌ | `null` | - |  |
+| `pacienteId` | `string` | ✅ | - | - |  |
+| `optometristaId` | `string` | ✅ | - | - |  |
+| `tipoReceta` | `string` | ✅ | - | Valor por defecto |  |
+| `fechaPrescripcion` | `Date` | ✅ | - | Valor por defecto |  |
+| `validezMeses` | `number` | ✅ | - | Valor por defecto |  |
+| `avLejosOd` | `string?` | ❌ | `null` | - |  |
+| `avLejosOi` | `string?` | ❌ | `null` | - |  |
+| `avCercaOd` | `string?` | ❌ | `null` | - |  |
+| `avCercaOi` | `string?` | ❌ | `null` | - |  |
+| `avConCorreccion` | `boolean?` | ❌ | `null` | Valor por defecto |  |
+| `esferaOd` | `number` | ✅ | - | - |  |
+| `esferaOi` | `number` | ✅ | - | - |  |
+| `cilindroOd` | `number?` | ❌ | `null` | - |  |
+| `cilindroOi` | `number?` | ❌ | `null` | - |  |
+| `ejeOd` | `number?` | ❌ | `null` | - |  |
+| `ejeOi` | `number?` | ❌ | `null` | - |  |
 | `adicion` | `number?` | ❌ | `null` | - |  |
-| `agudeza_visual_od` | `string?` | ❌ | `null` | - |  |
-| `agudeza_visual_oi` | `string?` | ❌ | `null` | - |  |
-| `dp` | `number?` | ❌ | `null` | - |  |
+| `alturaSegmento` | `number?` | ❌ | `null` | - |  |
+| `tipoLente` | `string?` | ❌ | `null` | - |  |
+| `dpLejos` | `number?` | ❌ | `null` | - |  |
+| `dpCerca` | `number?` | ❌ | `null` | - |  |
+| `tipoDP` | `string?` | ❌ | `null` | - |  |
+| `diametroLc` | `number?` | ❌ | `null` | - |  |
+| `curvaBase` | `number?` | ❌ | `null` | - |  |
+| `marcaLente` | `string?` | ❌ | `null` | - |  |
+| `material` | `string?` | ❌ | `null` | - |  |
+| `reemplazo` | `string?` | ❌ | `null` | - |  |
+| `tratamientos` | `string?` | ❌ | `null` | - |  |
+| `color` | `string?` | ❌ | `null` | - |  |
+| `diagnostico` | `string?` | ❌ | `null` | - |  |
 | `observaciones` | `string?` | ❌ | `null` | - |  |
-| `estado` | `boolean` | ✅ | - | - |  |
-| `creado_en` | `Date?` | ❌ | `now()` | Valor por defecto, Marca de tiempo automática |  |
-| `creado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `modificado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `modificado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `anulado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `anulado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
+| `recomendaciones` | `string?` | ❌ | `null` | - |  |
+| `estado` | `RecetaEstado` | ✅ | - | Valor por defecto |  |
+| `creadoEn` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `creadoPor` | `string?` | ❌ | `null` | - |  |
+| `modificadoEn` | `Date?` | ❌ | `null` | - |  |
+| `modificadoPor` | `string?` | ❌ | `null` | - |  |
+| `anuladoEn` | `Date?` | ❌ | `null` | - |  |
+| `anuladoPor` | `string?` | ❌ | `null` | - |  |
 
 ### Relaciones
 
-- **cita**: Uno a [cita](./cita.md) `citaToreceta`
+- **cita**: Uno a [Cita](./cita.md) `CitaToReceta`
+- **paciente**: Uno a [Usuario](./usuario.md) `PacienteRecetas`
+- **optometrista**: Uno a [Usuario](./usuario.md) `OptometristaRecetas`
 
 ## Ejemplos de Uso
 
 ### Creación
 
 ```typescript
-// Crear un nuevo receta
-const nuevoreceta = await prisma.receta.create({
+// Crear un nuevo Receta
+const nuevoReceta = await prisma.receta.create({
   data: {
     citaId: "valor",
-    tipo: "valor",
-    esfera_od: "valor",
-    esfera_oi: "valor",
-    cilindro_od: null,
-    cilindro_oi: null,
-    eje_od: null,
-    eje_oi: null,
+    pacienteId: "valor",
+    optometristaId: "valor",
+    tipoReceta: "valor",
+    fechaPrescripcion: "valor",
+    validezMeses: "valor",
+    avLejosOd: null,
+    avLejosOi: null,
+    avCercaOd: null,
+    avCercaOi: null,
+    avConCorreccion: null,
+    esferaOd: "valor",
+    esferaOi: "valor",
+    cilindroOd: null,
+    cilindroOi: null,
+    ejeOd: null,
+    ejeOi: null,
     adicion: null,
-    agudeza_visual_od: null,
-    agudeza_visual_oi: null,
-    dp: null,
+    alturaSegmento: null,
+    tipoLente: null,
+    dpLejos: null,
+    dpCerca: null,
+    tipoDP: null,
+    diametroLc: null,
+    curvaBase: null,
+    marcaLente: null,
+    material: null,
+    reemplazo: null,
+    tratamientos: null,
+    color: null,
+    diagnostico: null,
     observaciones: null,
+    recomendaciones: null,
     estado: "valor",
+    creadoEn: null,
+    creadoPor: null,
+    modificadoEn: null,
+    modificadoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
   }
 });
 ```
@@ -64,20 +112,24 @@ const nuevoreceta = await prisma.receta.create({
 ### Consulta Básica
 
 ```typescript
-// Obtener todos los registros de receta
+// Obtener todos los registros de Receta
 const registros = await prisma.receta.findMany({
     // Incluir relaciones
     include: {
-      cita: true
+      cita: true,
+      paciente: true,
+      optometrista: true
     }
 });
 
-// Obtener un receta por ID
+// Obtener un Receta por ID
 const registro = await prisma.receta.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
     include: {
-      cita: true
+      cita: true,
+      paciente: true,
+      optometrista: true
     }
 });
 ```
@@ -86,41 +138,11 @@ const registro = await prisma.receta.findUnique({
 
 - **Tabla en BD**: `receta`
 - **Clave primaria**: `id`
-- **Campos de auditoría**: ✅ Sí
+- **Campos de auditoría**: ❌ No
 
 ## Auditoría
 
-### ✅ Auditoría Habilitada
-
-Este modelo incluye soporte completo de auditoría con los siguientes campos de seguimiento:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `creado_en` | `DateTime` | Fecha y hora de creación del registro |
-| `creado_por` | `string` | ID del usuario que creó el registro |
-| `modificado_en` | `DateTime` | Última fecha de modificación del registro |
-| `modificado_por` | `string` | ID del último usuario que modificó el registro |
-| `anulado_en` | `DateTime?` | Fecha de eliminación lógica (soft delete) |
-| `anulado_por` | `string?` | ID del usuario que realizó la eliminación lógica |
-
-### Registro de Actividades
-
-Todas las operaciones CRUD en este modelo generan registros de auditoría que incluyen:
-
-- Usuario que realizó la acción
-- Tipo de operación (CREAR, ACTUALIZAR, ELIMINAR, etc.)
-- Fecha y hora exacta de la operación
-- Dirección IP del solicitante
-- Datos anteriores y nuevos (para actualizaciones)
-
-### Consulta de Registros
-
-Los registros de auditoría pueden consultarse a través de la API de auditoría con filtros por:
-
-- Rango de fechas
-- Usuario
-- Tipo de acción
-- Entidad afectada
+❌ Este modelo no incluye campos de auditoría estándar.
 
 ## Seguridad
 
@@ -133,8 +155,10 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Relaciones con Otros Modelos
 
-- **cita**: Uno a [cita](./cita.md) `citaToreceta`
+- **cita**: Uno a [Cita](./cita.md) `CitaToReceta`
+- **paciente**: Uno a [Usuario](./usuario.md) `PacienteRecetas`
+- **optometrista**: Uno a [Usuario](./usuario.md) `OptometristaRecetas`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-08T15:35:08.581Z
+✅ Documentación generada automáticamente el 2025-06-09T20:48:16.006Z

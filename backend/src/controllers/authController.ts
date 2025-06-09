@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
-import { registrarAuditoria } from '@/utils/auditoria';
+import { registrarAuditoria } from '@/utils/audit';
 import { sendMail } from '@/utils/mailer';
 import { success, fail } from '@/utils/response';
 
@@ -68,12 +68,12 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     expiresAt.setHours(expiresAt.getHours() + 24);
 
     // Guardar el token en la base de datos
-    await prisma.reset_token.create({
+    await prisma.resetToken.create({
       data: {
-        usuario_id: usuario.id,
+        usuarioId: usuario.id,
         token: resetTokenHash,
-        expires_at: expiresAt,
-        created_at: new Date(),
+        expiresAt: expiresAt,
+        createdAt: new Date(),
         // Los campos creado_por y creado_en se manejan automáticamente
       },
     });
@@ -85,7 +85,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     const mailSubject = 'Restablecimiento de contraseña - Neóptica Intranet';
     const mailHtml = `
       <h1>Restablecimiento de contraseña</h1>
-      <p>Hola ${usuario.nombre_completo},</p>
+      <p>Hola ${usuario.nombreCompleto},</p>
       <p>Has solicitado restablecer tu contraseña para acceder a Neóptica Intranet.</p>
       <p>Haz clic en el siguiente enlace para establecer una nueva contraseña:</p>
       <p><a href="${resetUrl}">Restablecer mi contraseña</a></p>
@@ -180,15 +180,15 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     }
 
     // Buscar token activo
-    const resetTokenRecord = await prisma.reset_token.findFirst({
+    const resetTokenRecord = await prisma.resetToken.findFirst({
       where: {
-        usuario_id: usuario.id,
-        expires_at: {
-          gt: new Date(), // No expirado
-        },
+        usuarioId: usuario.id,
+        expiresAt: {
+          gt: new Date() // No expirado
+        }
       },
       orderBy: {
-        created_at: 'desc',
+        createdAt: 'desc',
       },
     });
 
@@ -249,17 +249,17 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       where: { id: usuario.id },
       data: {
         password: passwordHash,
-        modificado_en: new Date(),
+        modificadoEn: new Date(),
         // No incluimos modificado_por ya que espera un UUID
       },
     });
 
     // Invalidar todos los tokens de restablecimiento
-    await prisma.reset_token.updateMany({
-      where: { usuario_id: usuario.id },
+    await prisma.resetToken.updateMany({
+      where: { usuarioId: usuario.id },
       data: {
-        expires_at: new Date(), // Expira ahora
-        modificado_en: new Date(),
+        expiresAt: new Date(), // Expira ahora
+        modificadoEn: new Date(),
         // No incluimos modificado_por ya que espera un UUID
       },
     });
@@ -323,7 +323,11 @@ export async function login(req: Request, res: Response): Promise<void> {
     const usuario = await prisma.usuario.findUnique({
       where: { email },
       include: {
-        usuario_rol: { include: { rol: true } },
+        roles: { 
+          include: { 
+            rol: true 
+          } 
+        },
       },
     });
 
@@ -388,7 +392,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     // Extraer todos los roles del usuario
-    const roles = usuario.usuario_rol?.map((ur) => ur.rol.nombre) || ['cliente'];
+    const roles = usuario.roles?.map((ur) => ur.rol.nombre) || ['cliente'];
 
     // console.log(`[DEBUG] Roles obtenidos del usuario: ${JSON.stringify(roles)}`);
 
@@ -411,7 +415,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       {
         id: usuario.id,
         email: usuario.email,
-        nombre_completo: usuario.nombre_completo,
+        nombreCompleto: usuario.nombreCompleto,
         roles, // Array con todos los roles del usuario
       },
       JWT_SECRET,
@@ -442,7 +446,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         token,
         usuario: {
           id: usuario.id,
-          nombre_completo: usuario.nombre_completo,
+          nombreCompleto: usuario.nombreCompleto,
           email: usuario.email,
           roles, // Array completo de roles
           // otros campos públicos si los necesitas

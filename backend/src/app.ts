@@ -7,7 +7,7 @@ import type { Request, Response, RequestHandler } from 'express';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 
-import passport from '@/config/passport';
+import passport from './config/passport';
 import { authenticateJWT } from '@/middlewares/auth';
 import auditoriaRoutes from '@/routes/auditoria'; // Importamos la ruta de auditoría
 import authRoutes from '@/routes/auth';
@@ -16,6 +16,7 @@ import marcaRoutes from '@/routes/marca'; // Importamos la ruta de marcas
 import productoRoutes from '@/routes/producto';
 import rolesRoutes from '@/routes/roles';
 import sucursalesRoutes from '@/routes/sucursales';
+import testMultirolRoutes from '@/routes/test-multirol'; // Importamos rutas de prueba para multirol
 import usuariosRoutes from '@/routes/usuarios';
 import { sendMail } from '@/utils/mailer';
 import { success } from '@/utils/response';
@@ -46,6 +47,7 @@ app.use('/api/productos', productoRoutes);
 app.use('/api/marcas', marcaRoutes); // Registramos la ruta de marcas
 app.use('/api/colores', colorRoutes); // Registramos la ruta de colores
 app.use('/api/auditoria', auditoriaRoutes); // Registramos la ruta de auditoría
+app.use('/api', testMultirolRoutes); // Registramos las rutas de prueba para multirol
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get('/', (req, res) => {

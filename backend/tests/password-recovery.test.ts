@@ -22,7 +22,7 @@ describe('Password Recovery', () => {
     // Crear usuario de prueba
     testUser = await prisma.usuario.create({
       data: {
-        nombre_completo: 'Usuario Test Recuperación',
+        nombreCompleto: 'Usuario Test Recuperación',
         email: testEmail,
         password: await bcrypt.hash('TestPass123!', 10),
         telefono: '0987654321',
@@ -38,10 +38,11 @@ describe('Password Recovery', () => {
 
     if (rolCliente) {
       // Asignar rol al usuario
-      await prisma.usuario_rol.create({
+      await prisma.usuarioRol.create({
         data: {
-          usuario_id: testUser.id,
-          rol_id: rolCliente.id
+          usuarioId: testUser.id,
+          rolId: rolCliente.id,
+          creadoEn: new Date()
         }
       });
     }
@@ -52,13 +53,13 @@ describe('Password Recovery', () => {
     // Solo limpiar si se creó el usuario de prueba
     if (testUser?.id) {
       // Eliminar tokens de recuperación
-      await prisma.reset_token.deleteMany({
-        where: { usuario_id: testUser.id }
+      await prisma.resetToken.deleteMany({
+        where: { usuarioId: testUser.id }
       });
       
       // Eliminar roles del usuario
-      await prisma.usuario_rol.deleteMany({
-        where: { usuario_id: testUser.id }
+      await prisma.usuarioRol.deleteMany({
+        where: { usuarioId: testUser.id }
       });
       
       // Eliminar usuario de prueba
@@ -91,8 +92,8 @@ describe('Password Recovery', () => {
       expect(response.body.ok).toBe(true);
       
       // Verificar que se haya creado un token
-      const token = await prisma.reset_token.findFirst({
-        where: { usuario_id: testUser.id }
+      const token = await prisma.resetToken.findFirst({
+        where: { usuarioId: testUser.id }
       });
       
       expect(token).toBeDefined();
@@ -101,8 +102,8 @@ describe('Password Recovery', () => {
       resetToken = crypto.randomBytes(32).toString('hex');
       
       // Actualizar el token en la base de datos para que coincida con el que usaremos
-      await prisma.reset_token.update({
-        where: { id: token!.id },
+      await prisma.resetToken.update({
+        where: { id: token.id },
         data: { token: await bcrypt.hash(resetToken, 10) }
       });
     });

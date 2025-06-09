@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
-import { registrarAuditoria } from '../utils/auditoria';
+import { registrarAuditoria } from '../utils/audit';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -92,10 +92,10 @@ export const listarAuditoria = async (req: Request, res: Response) => {
     }
 
     // Obtener el total de registros que coinciden con los filtros
-    const totalRegistros = await prisma.log_auditoria.count({ where });
+    const totalRegistros = await prisma.logAuditoria.count({ where });
 
     // Obtener registros con paginación y filtrado
-    const registros = await prisma.log_auditoria.findMany({
+    const registros = await prisma.logAuditoria.findMany({
       where,
       orderBy: {
         fecha: 'desc', // Ordenar por fecha descendente (más recientes primero)
@@ -106,7 +106,7 @@ export const listarAuditoria = async (req: Request, res: Response) => {
         usuario: {
           select: {
             id: true,
-            nombre_completo: true,
+            nombreCompleto: true,
             email: true,
           },
         },
@@ -184,13 +184,13 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
     }
 
     // Buscar el registro de auditoría por ID
-    const registro = await prisma.log_auditoria.findUnique({
+    const registro = await prisma.logAuditoria.findUnique({
       where: { id },
       include: {
         usuario: {
           select: {
             id: true,
-            nombre_completo: true,
+            nombreCompleto: true,
             email: true,
           },
         },
@@ -209,7 +209,7 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
     // Registrar esta consulta en la auditoría
     await registrarAuditoria({
       usuarioId: userId,
-      accion: 'obtener_auditoria',
+      accion: 'consultar_auditoria',
       descripcion: `Se consultó el registro de auditoría con ID: ${id}`,
       ip: req.ip,
       entidadTipo: 'log_auditoria',
@@ -223,33 +223,17 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
       error: null,
     });
   } catch (error: any) {
-    console.error('Error al obtener registro de auditoría por ID:', error);
+    console.error('Error al obtener registro de auditoría:', error);
 
     // Registrar error en auditoría
     await registrarAuditoria({
       usuarioId: (req as any).usuario?.id || (req as any).user?.id,
-      accion: 'obtener_auditoria_fallido',
+      accion: 'consultar_auditoria_fallido',
       descripcion: error.message || 'Error desconocido',
       ip: req.ip,
       entidadTipo: 'log_auditoria',
-      entidadId: req.params.id,
       modulo: 'auditoria',
     });
-
-    // Manejo detallado de errores
-    if (
-      error instanceof Error &&
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 'P2023'
-    ) {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'ID inválido',
-      });
-    }
 
     return res.status(500).json({
       ok: false,
@@ -261,7 +245,7 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
 
 /**
  * Controlador para filtrar registros de auditoría por módulo.
- *
+ * 
  * @param {Request} req - Objeto de solicitud Express con módulo en params
  * @param {Response} res - Objeto de respuesta Express
  * @returns {Promise<Response>} Lista de registros de auditoría filtrados por módulo
@@ -288,25 +272,19 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
     // Calcular offset para paginación
     const skip = (pageNum - 1) * limitNum;
 
-    // Validación del módulo
-    if (!modulo || typeof modulo !== 'string') {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'Módulo inválido',
-      });
-    }
+    // Construir filtro de búsqueda
+    const where = {
+      modulo: modulo as string,
+    };
 
-    // Obtener el total de registros para este módulo
-    const totalRegistros = await prisma.log_auditoria.count({
-      where: { modulo },
-    });
+    // Obtener el total de registros que coinciden con los filtros
+    const totalRegistros = await prisma.logAuditoria.count({ where });
 
-    // Buscar registros de auditoría filtrados por módulo
-    const registros = await prisma.log_auditoria.findMany({
-      where: { modulo },
+    // Obtener registros con paginación y filtrado
+    const registros = await prisma.logAuditoria.findMany({
+      where,
       orderBy: {
-        fecha: 'desc',
+        fecha: 'desc', // Ordenar por fecha descendente (más recientes primero)
       },
       skip,
       take: limitNum,
@@ -314,7 +292,7 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
         usuario: {
           select: {
             id: true,
-            nombre_completo: true,
+            nombreCompleto: true,
             email: true,
           },
         },
@@ -327,18 +305,18 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
     // Registrar esta consulta en la auditoría
     await registrarAuditoria({
       usuarioId: userId,
-      accion: 'filtrar_auditoria_por_modulo',
-      descripcion: `Se filtraron registros de auditoría para el módulo: ${modulo}`,
+      accion: 'filtrar_auditoria_modulo',
+      descripcion: `Se filtraron registros de auditoría por módulo: ${modulo}`,
       ip: req.ip,
       entidadTipo: 'log_auditoria',
       modulo: 'auditoria',
     });
 
+    // Enviar respuesta con metadatos de paginación
     return res.status(200).json({
       ok: true,
       data: {
         registros,
-        modulo,
         paginacion: {
           total: totalRegistros,
           pagina: pageNum,
@@ -354,7 +332,7 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
     // Registrar error en auditoría
     await registrarAuditoria({
       usuarioId: (req as any).usuario?.id || (req as any).user?.id,
-      accion: 'filtrar_auditoria_por_modulo_fallido',
+      accion: 'filtrar_auditoria_modulo_fallido',
       descripcion: error.message || 'Error desconocido',
       ip: req.ip,
       entidadTipo: 'log_auditoria',
@@ -371,16 +349,26 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
 
 /**
  * Controlador para filtrar registros de auditoría por usuario.
- *
+ * 
  * @param {Request} req - Objeto de solicitud Express con ID de usuario en params
  * @param {Response} res - Objeto de respuesta Express
  * @returns {Promise<Response>} Lista de registros de auditoría filtrados por usuario
  */
 export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { usuarioId } = req.params;
     const userId = (req as any).usuario?.id || (req as any).user?.id;
     const { page = '1', limit = '10' } = req.query;
+
+    // Validar que el usuarioId sea un UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!usuarioId || typeof usuarioId !== 'string' || !uuidRegex.test(usuarioId)) {
+      return res.status(400).json({
+        ok: false,
+        data: null,
+        error: 'ID de usuario inválido',
+      });
+    }
 
     // Convertir parámetros de paginación a números
     const pageNum = parseInt(page as string, 10);
@@ -398,40 +386,19 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
     // Calcular offset para paginación
     const skip = (pageNum - 1) * limitNum;
 
-    // Validación del ID de usuario
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'ID de usuario inválido',
-      });
-    }
+    // Construir filtro de búsqueda
+    const where = {
+      usuarioId: usuarioId as string,
+    };
 
-    // Verificar si el usuario existe
-    const usuarioExiste = await prisma.usuario.findUnique({
-      where: { id },
-      select: { id: true, nombre_completo: true },
-    });
+    // Obtener el total de registros que coinciden con los filtros
+    const totalRegistros = await prisma.logAuditoria.count({ where });
 
-    if (!usuarioExiste) {
-      return res.status(404).json({
-        ok: false,
-        data: null,
-        error: 'Usuario no encontrado',
-      });
-    }
-
-    // Obtener el total de registros para este usuario
-    const totalRegistros = await prisma.log_auditoria.count({
-      where: { usuarioId: id },
-    });
-
-    // Buscar registros de auditoría filtrados por usuario
-    const registros = await prisma.log_auditoria.findMany({
-      where: { usuarioId: id },
+    // Obtener registros con paginación y filtrado
+    const registros = await prisma.logAuditoria.findMany({
+      where,
       orderBy: {
-        fecha: 'desc',
+        fecha: 'desc', // Ordenar por fecha descendente (más recientes primero)
       },
       skip,
       take: limitNum,
@@ -439,7 +406,7 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
         usuario: {
           select: {
             id: true,
-            nombre_completo: true,
+            nombreCompleto: true,
             email: true,
           },
         },
@@ -452,19 +419,19 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
     // Registrar esta consulta en la auditoría
     await registrarAuditoria({
       usuarioId: userId,
-      accion: 'filtrar_auditoria_por_usuario',
-      descripcion: `Se filtraron registros de auditoría para el usuario: ${usuarioExiste.nombre_completo} (${id})`,
+      accion: 'filtrar_auditoria_usuario',
+      descripcion: `Se filtraron registros de auditoría para el usuario con ID: ${usuarioId}`,
       ip: req.ip,
       entidadTipo: 'log_auditoria',
-      entidadId: id,
+      entidadId: usuarioId,
       modulo: 'auditoria',
     });
 
+    // Enviar respuesta con metadatos de paginación
     return res.status(200).json({
       ok: true,
       data: {
         registros,
-        usuario: usuarioExiste,
         paginacion: {
           total: totalRegistros,
           pagina: pageNum,
@@ -480,28 +447,12 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
     // Registrar error en auditoría
     await registrarAuditoria({
       usuarioId: (req as any).usuario?.id || (req as any).user?.id,
-      accion: 'filtrar_auditoria_por_usuario_fallido',
+      accion: 'filtrar_auditoria_usuario_fallido',
       descripcion: error.message || 'Error desconocido',
       ip: req.ip,
       entidadTipo: 'log_auditoria',
-      entidadId: req.params.id,
       modulo: 'auditoria',
     });
-
-    // Manejo detallado de errores
-    if (
-      error instanceof Error &&
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 'P2023'
-    ) {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'ID de usuario inválido',
-      });
-    }
 
     return res.status(500).json({
       ok: false,
@@ -509,4 +460,12 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
       error: 'Error al filtrar registros de auditoría por usuario',
     });
   }
+};
+
+// Exportar controladores
+export default {
+  listarAuditoria,
+  obtenerAuditoriaPorId,
+  filtrarAuditoriaPorModulo,
+  filtrarAuditoriaPorUsuario,
 };

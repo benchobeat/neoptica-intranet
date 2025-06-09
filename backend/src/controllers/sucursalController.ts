@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
-import { registrarAuditoria } from '../utils/auditoria';
+import { registrarAuditoria } from '../utils/audit';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -87,7 +87,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           equals: nombreLimpio,
           mode: 'insensitive', // Búsqueda case-insensitive
         },
-        anulado_en: null, // Solo sucursales no anuladas
+        anuladoEn: null, // Solo sucursales no anuladas
       },
     });
 
@@ -107,7 +107,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
             equals: email.trim(),
             mode: 'insensitive', // Búsqueda case-insensitive
           },
-          anulado_en: null, // Solo sucursales no anuladas
+          anuladoEn: null, // Solo sucursales no anuladas
         },
       });
 
@@ -130,8 +130,8 @@ export const crearSucursal = async (req: Request, res: Response) => {
         telefono: telefono?.trim() || null,
         email: email?.trim().toLowerCase() || null,
         estado: estado !== undefined ? estado : true,
-        creado_por: userId || null,
-        creado_en: new Date(),
+        creadoPor: userId || null,
+        creadoEn: new Date(),
       },
     });
 
@@ -199,7 +199,7 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
 
     // Preparar filtros
     const filtro: any = {
-      anulado_en: null, // Solo sucursales no anuladas (soft delete)
+      anuladoEn: null, // Solo sucursales no anuladas (soft delete)
     };
 
     // Filtro adicional por nombre si se proporciona en la búsqueda
@@ -284,7 +284,7 @@ export const listarSucursales = async (req: Request, res: Response) => {
   try {
     // Preparar filtros
     const filtro: any = {
-      anulado_en: null, // Solo sucursales no anuladas (soft delete)
+      anuladoEn: null, // Solo sucursales no anuladas (soft delete)
     };
 
     // Filtro adicional por estado si se proporciona en la consulta
@@ -364,7 +364,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
     const sucursal = await prisma.sucursal.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo sucursales no anuladas (soft delete)
+        anuladoEn: null, // Solo sucursales no anuladas (soft delete)
       },
     });
 
@@ -458,7 +458,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     const sucursalExistente = await prisma.sucursal.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo sucursales no anuladas
+        anuladoEn: null, // Solo sucursales no anuladas
       },
     });
 
@@ -473,8 +473,8 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     // Preparar objeto de datos a actualizar
     const datosActualizados: any = {
       // Agregar campos de auditoría
-      modificado_por: userId || null,
-      modificado_en: new Date(),
+      modificadoPor: userId || null,
+      modificadoEn: new Date(),
     };
 
     // Validar y procesar nombre si se proporcionó
@@ -508,7 +508,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           id: {
             not: id, // Excluir la sucursal actual de la búsqueda
           },
-          anulado_en: null, // Solo sucursales no anuladas
+          anuladoEn: null, // Solo sucursales no anuladas
         },
       });
 
@@ -565,7 +565,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             id: {
               not: id, // Excluir la sucursal actual de la búsqueda
             },
-            anulado_en: null, // Solo sucursales no anuladas
+            anuladoEn: null, // Solo sucursales no anuladas
           },
         });
 
@@ -718,7 +718,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     const sucursalExistente = await prisma.sucursal.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo sucursales no anuladas
+        anuladoEn: null, // Solo sucursales no anuladas
       },
     });
 
@@ -734,8 +734,8 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     // Ejemplo: citas, inventarios, etc.
     const citasAsociadas = await prisma.cita.count({
       where: {
-        sucursal_id: id,
-        anulado_en: null, // Solo citas no anuladas
+        sucursalId: id,
+        anuladoEn: null, // Solo citas no anuladas
       },
     });
 
@@ -752,8 +752,8 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     await prisma.sucursal.update({
       where: { id },
       data: {
-        anulado_en: fechaActual,
-        anulado_por: userId || null,
+        anuladoEn: fechaActual,
+        anuladoPor: userId || null,
         estado: false, // También marcar como inactivo
       },
     });

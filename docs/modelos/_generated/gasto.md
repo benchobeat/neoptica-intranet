@@ -1,7 +1,7 @@
-# gasto
+# Gasto
 
 ## Descripción
-Modelo que representa gasto en el sistema.
+Modelo que representa Gasto en el sistema.
 
 ## Estructura
 
@@ -12,47 +12,53 @@ Modelo que representa gasto en el sistema.
 | `id` | `string` | ✅ | `uuid_generate_v4()` | Identificador único, Valor por defecto |  |
 | `descripcion` | `string?` | ❌ | `null` | - |  |
 | `monto` | `number` | ✅ | - | - |  |
-| `fecha_gasto` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `fechaGasto` | `Date?` | ❌ | `null` | Valor por defecto |  |
 | `categoria` | `string?` | ❌ | `null` | - |  |
-| `usuario_id` | `string?` | ❌ | `null` | - |  |
-| `sucursal_id` | `string?` | ❌ | `null` | - |  |
+| `usuarioId` | `string?` | ❌ | `null` | - |  |
+| `sucursalId` | `string?` | ❌ | `null` | - |  |
 | `moneda` | `string?` | ❌ | `null` | Valor por defecto |  |
-| `erp_id` | `number?` | ❌ | `null` | - |  |
-| `erp_tipo` | `string?` | ❌ | `null` | - |  |
-| `erp_payload` | `object?` | ❌ | `null` | - |  |
-| `asiento_contable_id` | `string?` | ❌ | `null` | - |  |
-| `creado_en` | `Date?` | ❌ | `now()` | Valor por defecto, Marca de tiempo automática |  |
-| `creado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `modificado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `modificado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `anulado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `anulado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
+| `erpId` | `number?` | ❌ | `null` | - |  |
+| `erpTipo` | `string?` | ❌ | `null` | - |  |
+| `erpPayload` | `object?` | ❌ | `null` | - |  |
+| `asientoContableId` | `string?` | ❌ | `null` | - |  |
+| `creadoEn` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `creadoPor` | `string?` | ❌ | `null` | - |  |
+| `modificadoEn` | `Date?` | ❌ | `null` | - |  |
+| `modificadoPor` | `string?` | ❌ | `null` | - |  |
+| `anuladoEn` | `Date?` | ❌ | `null` | - |  |
+| `anuladoPor` | `string?` | ❌ | `null` | - |  |
 
 ### Relaciones
 
-- **sucursal**: Uno a [sucursal](./sucursal.md) `gastoTosucursal`
-- **usuario**: Uno a [usuario](./usuario.md) `gastoTousuario`
-- **asiento_contable**: Uno a [asiento_contable](./asiento_contable.md) `asiento_contableTogasto`
+- **sucursal**: Uno a [Sucursal](./sucursal.md) `GastoToSucursal`
+- **usuario**: Uno a [Usuario](./usuario.md) `GastoToUsuario`
+- **asientoContable**: Uno a [AsientoContable](./asientocontable.md) `AsientoContableToGasto`
 
 ## Ejemplos de Uso
 
 ### Creación
 
 ```typescript
-// Crear un nuevo gasto
-const nuevogasto = await prisma.gasto.create({
+// Crear un nuevo Gasto
+const nuevoGasto = await prisma.gasto.create({
   data: {
     descripcion: null,
     monto: "valor",
-    fecha_gasto: null,
+    fechaGasto: null,
     categoria: null,
-    usuario_id: null,
-    sucursal_id: null,
+    usuarioId: null,
+    sucursalId: null,
     moneda: null,
-    erp_id: null,
-    erp_tipo: null,
-    erp_payload: null,
-    asiento_contable_id: null,
+    erpId: null,
+    erpTipo: null,
+    erpPayload: null,
+    asientoContableId: null,
+    creadoEn: null,
+    creadoPor: null,
+    modificadoEn: null,
+    modificadoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
   }
 });
 ```
@@ -60,24 +66,24 @@ const nuevogasto = await prisma.gasto.create({
 ### Consulta Básica
 
 ```typescript
-// Obtener todos los registros de gasto
+// Obtener todos los registros de Gasto
 const registros = await prisma.gasto.findMany({
     // Incluir relaciones
     include: {
       sucursal: true,
       usuario: true,
-      asiento_contable: true
+      asientoContable: true
     }
 });
 
-// Obtener un gasto por ID
+// Obtener un Gasto por ID
 const registro = await prisma.gasto.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
     include: {
       sucursal: true,
       usuario: true,
-      asiento_contable: true
+      asientoContable: true
     }
 });
 ```
@@ -86,41 +92,11 @@ const registro = await prisma.gasto.findUnique({
 
 - **Tabla en BD**: `gasto`
 - **Clave primaria**: `id`
-- **Campos de auditoría**: ✅ Sí
+- **Campos de auditoría**: ❌ No
 
 ## Auditoría
 
-### ✅ Auditoría Habilitada
-
-Este modelo incluye soporte completo de auditoría con los siguientes campos de seguimiento:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `creado_en` | `DateTime` | Fecha y hora de creación del registro |
-| `creado_por` | `string` | ID del usuario que creó el registro |
-| `modificado_en` | `DateTime` | Última fecha de modificación del registro |
-| `modificado_por` | `string` | ID del último usuario que modificó el registro |
-| `anulado_en` | `DateTime?` | Fecha de eliminación lógica (soft delete) |
-| `anulado_por` | `string?` | ID del usuario que realizó la eliminación lógica |
-
-### Registro de Actividades
-
-Todas las operaciones CRUD en este modelo generan registros de auditoría que incluyen:
-
-- Usuario que realizó la acción
-- Tipo de operación (CREAR, ACTUALIZAR, ELIMINAR, etc.)
-- Fecha y hora exacta de la operación
-- Dirección IP del solicitante
-- Datos anteriores y nuevos (para actualizaciones)
-
-### Consulta de Registros
-
-Los registros de auditoría pueden consultarse a través de la API de auditoría con filtros por:
-
-- Rango de fechas
-- Usuario
-- Tipo de acción
-- Entidad afectada
+❌ Este modelo no incluye campos de auditoría estándar.
 
 ## Seguridad
 
@@ -133,10 +109,10 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Relaciones con Otros Modelos
 
-- **sucursal**: Uno a [sucursal](./sucursal.md) `gastoTosucursal`
-- **usuario**: Uno a [usuario](./usuario.md) `gastoTousuario`
-- **asiento_contable**: Uno a [asiento_contable](./asiento_contable.md) `asiento_contableTogasto`
+- **sucursal**: Uno a [Sucursal](./sucursal.md) `GastoToSucursal`
+- **usuario**: Uno a [Usuario](./usuario.md) `GastoToUsuario`
+- **asientoContable**: Uno a [AsientoContable](./asientocontable.md) `AsientoContableToGasto`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-08T15:35:08.520Z
+✅ Documentación generada automáticamente el 2025-06-09T20:48:15.927Z

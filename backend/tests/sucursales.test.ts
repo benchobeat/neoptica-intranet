@@ -54,7 +54,7 @@ beforeAll(async () => {
     admin = await prisma.usuario.create({
       data: {
         email: adminEmail,
-        nombre_completo: 'Admin Test Sucursales',
+        nombreCompleto: 'Admin Test Sucursales',
         password: '$2b$10$vIF3vH4GQVDUMnW1EXvLWOCfueFpMLrpU9UyzFv0vSPGZe61/DLi2', // Admin1234!
         activo: true,
       }
@@ -64,11 +64,11 @@ beforeAll(async () => {
     // Buscar el rol 'admin' y asignar el id
     const adminRole = await prisma.rol.findFirst({ where: { nombre: 'admin' } });
     if (!adminRole) throw new Error('No existe el rol admin en la base de datos');
-    await prisma.usuario_rol.create({
+    await prisma.usuarioRol.create({
       data: {
-        usuario_id: admin.id,
-        rol_id: adminRole.id,
-        creado_por: null // Explícitamente null para evitar error de tipo
+        usuarioId: admin.id,
+        rolId: adminRole.id,
+        creadoEn: new Date()
       }
     });
   }

@@ -3,27 +3,17 @@ import { Decimal } from '@prisma/client/runtime/library';
 import type { Request, Response } from 'express';
 
 import type { ApiResponse, PaginatedResponse } from '@/types/response';
+import type { AuditoriaParams } from '@/utils/audit';
 
 declare module 'express' {
   interface Request {
     user?: {
       id: string;
-      nombre_completo: string;
+      nombreCompleto: string;
       email: string;
       // Agrega otras propiedades del usuario según sea necesario
     } | null;
   }
-}
-
-interface AuditoriaParams {
-  usuarioId: string | null;
-  accion: string;
-  descripcion?: string;
-  ip?: string;
-  entidadTipo?: string;
-  entidadId?: string;
-  modulo?: string;
-  datosAdicionales?: Record<string, unknown>;
 }
 
 // Definir la interfaz Producto basada en el modelo de Prisma
@@ -96,27 +86,13 @@ interface ProductoWithRelations extends Producto {
 type MarcaRelacion = { id: string; nombre: string } | null;
 type ColorRelacion = { id: string; nombre: string; codigo_hex: string | null } | null;
 
-// Definir el tipo de parámetros para la función de auditoría
-interface AuditoriaParams {
-  usuarioId: string | null;
-  accion: string;
-  descripcion?: string;
-  ip?: string;
-  entidadTipo?: string;
-  entidadId?: string;
-  modulo?: string;
-  datosAdicionales?: Record<string, unknown>;
-}
+// La interfaz AuditoriaParams ya está definida arriba
 
 // Función de auditoría dummy por defecto
-const dummyAuditoria = (params: AuditoriaParams): void => {
-  if (process.env.NODE_ENV !== 'test') {
-    console.log('Auditoría dummy:', {
-      accion: params.accion,
-      entidadTipo: params.entidadTipo,
-      entidadId: params.entidadId,
-      modulo: params.modulo,
-    });
+const dummyAuditoria = async (params: AuditoriaParams): Promise<void> => {
+  // Simplemente registra en la consola en modo desarrollo
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[AUDIT DUMMY]', params);
   }
 };
 
@@ -133,13 +109,13 @@ function apiResponse<T = unknown>(
 }
 
 // Cargar dinámicamente la función de auditoría real
-let registrarAuditoria: (params: AuditoriaParams) => void = dummyAuditoria;
+let registrarAuditoria: (params: AuditoriaParams) => Promise<void> = dummyAuditoria;
 
 // Cargar la función de auditoría real si está disponible
 (async () => {
   try {
     // Cargar la función de auditoría real si está disponible
-    const { registrarAuditoria: realAuditoria } = await import('../utils/auditoria');
+    const { registrarAuditoria: realAuditoria } = await import('../utils/audit');
     registrarAuditoria = realAuditoria;
   } catch (error: unknown) {
     console.error('Error al cargar el módulo de auditoría:', error);
@@ -500,10 +476,10 @@ export const listarProductos = async (
             select: { id: true, nombre: true },
           },
           color: {
-            select: { id: true, nombre: true, codigo_hex: true },
+            select: { id: true, nombre: true, codigoHex: true },
           },
           _count: {
-            select: { inventario: true },
+            select: { inventarios: true },
           },
         },
         skip: (page - 1) * limit,
@@ -536,7 +512,7 @@ export const listarProductos = async (
     // Mapear los resultados para incluir el stock calculado
     const productosConStock = productos.map((producto) => ({
       ...producto,
-      stock: producto._count?.inventario || 0,
+      stock: producto._count?.inventarios || 0,
     }));
 
     // Construir respuesta con tipos seguros
@@ -616,10 +592,10 @@ export const actualizarProducto = async (
       where: { id },
       include: {
         _count: {
-          select: { inventario: true },
+          select: { inventarios: true },
         },
       },
-    })) as (typeof producto & { _count?: { inventario?: number } }) | null;
+    })) as (typeof producto & { _count?: { inventarios?: number } }) | null;
 
     if (!producto) {
       return res.status(404).json(apiResponse(false, null, 'Producto no encontrado.'));
@@ -630,18 +606,18 @@ export const actualizarProducto = async (
       where: { id },
       data: {
         ...validacion,
-        modificado_en: new Date(),
-        modificado_por: req.user?.id || null,
+        modificadoEn: new Date(),
+        modificadoPor: req.user?.id || null,
       },
       include: {
         marca: {
           select: { id: true, nombre: true },
         },
         color: {
-          select: { id: true, nombre: true, codigo_hex: true },
+          select: { id: true, nombre: true, codigoHex: true },
         },
         _count: {
-          select: { inventario: true },
+          select: { inventarios: true },
         },
       },
     });
@@ -649,7 +625,7 @@ export const actualizarProducto = async (
     // Agregar el stock calculado al producto
     const productoConStock = {
       ...productoActualizado,
-      stock: productoActualizado._count?.inventario || 0,
+      stock: productoActualizado._count?.inventarios || 0,
     };
 
     // Registrar la acción de auditoría
@@ -722,10 +698,10 @@ export const obtenerProductoPorId = async (
           select: { id: true, nombre: true },
         },
         color: {
-          select: { id: true, nombre: true, codigo_hex: true },
+          select: { id: true, nombre: true, codigoHex: true },
         },
         _count: {
-          select: { inventario: true },
+          select: { inventarios: true },
         },
       },
     });
@@ -757,24 +733,24 @@ export const obtenerProductoPorId = async (
         productoConStock.precio instanceof Decimal
           ? productoConStock.precio.toNumber()
           : productoConStock.precio,
-      graduacion_esfera:
-        productoConStock.graduacion_esfera instanceof Decimal
-          ? productoConStock.graduacion_esfera.toNumber()
-          : productoConStock.graduacion_esfera,
-      graduacion_cilindro:
-        productoConStock.graduacion_cilindro instanceof Decimal
-          ? productoConStock.graduacion_cilindro.toNumber()
-          : productoConStock.graduacion_cilindro,
+      graduacionEsfera:
+        productoConStock.graduacionEsfera instanceof Decimal
+          ? productoConStock.graduacionEsfera.toNumber()
+          : productoConStock.graduacionEsfera,
+      graduacionCilindro:
+        productoConStock.graduacionCilindro instanceof Decimal
+          ? productoConStock.graduacionCilindro.toNumber()
+          : productoConStock.graduacionCilindro,
       adicion:
         productoConStock.adicion && productoConStock.adicion instanceof Decimal
           ? productoConStock.adicion.toNumber()
           : productoConStock.adicion,
-      stock: productoConStock._count?.inventario || 0,
+      stock: productoConStock._count?.inventarios || 0,
     };
 
     return res.status(200).json({
       ok: true,
-      data: responseData as ProductoWithRelations,
+      data: responseData as unknown as ProductoWithRelations,
       error: null,
     });
   } catch (error: unknown) {
@@ -887,10 +863,10 @@ export const eliminarProducto = async (
           select: { id: true, nombre: true },
         },
         color: {
-          select: { id: true, nombre: true, codigo_hex: true },
+          select: { id: true, nombre: true, codigoHex: true },
         },
         _count: {
-          select: { inventario: true },
+          select: { inventarios: true },
         },
       },
     });
@@ -909,18 +885,18 @@ export const eliminarProducto = async (
       where: { id },
       data: {
         activo: false,
-        anulado_en: new Date(),
-        anulado_por: req.user?.id || null,
+        anuladoEn: new Date(),
+        anuladoPor: req.user?.id || null,
       },
       include: {
         marca: {
           select: { id: true, nombre: true },
         },
         color: {
-          select: { id: true, nombre: true, codigo_hex: true },
+          select: { id: true, nombre: true, codigoHex: true },
         },
         _count: {
-          select: { inventario: true },
+          select: { inventarios: true },
         },
       },
     });
@@ -928,7 +904,7 @@ export const eliminarProducto = async (
     // Agregar el stock calculado al producto
     const productoConStock = {
       ...productoActualizado,
-      stock: productoActualizado._count?.inventario || 0,
+      stock: productoActualizado._count?.inventarios || 0,
     };
 
     // Registrar la acción de auditoría

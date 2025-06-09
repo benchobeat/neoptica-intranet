@@ -7,330 +7,353 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model archivo_adjunto {
+model ArchivoAdjunto {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  nombre_archivo String
-  url            String
-  tipo           String? @db.VarChar(20)
-  tamanio        Int?
-  extension      String? @db.VarChar(10)
-  subido_por     String? @db.Uuid
+  nombreArchivo String   @map("nombre_archivo")
+  url           String
+  tipo          String?  @db.VarChar(20)
+  tamanio       Int?
+  extension     String?  @db.VarChar(10)
+  subidoPor     String?  @map("subido_por") @db.Uuid
 
   // Relaciones
-  usuario                                         usuario?            @relation(fields: [subido_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  archivo_entidad                                 archivo_entidad[]
-  descanso_empleado                               descanso_empleado[]
-  factura_factura_archivo_pdf_idToarchivo_adjunto factura[]           @relation("factura_archivo_pdf_idToarchivo_adjunto")
-  factura_factura_archivo_xml_idToarchivo_adjunto factura[]           @relation("factura_archivo_xml_idToarchivo_adjunto")
+  usuario          Usuario?            @relation(fields: [subidoPor], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  archivoEntidad   ArchivoEntidad[]
+  descansoEmpleado DescansoEmpleado[]
+  facturasPdf      Factura[]           @relation("FacturaArchivoPdf")
+  facturasXml      Factura[]           @relation("FacturaArchivoXml")
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("archivo_adjunto")
 }
 
-model archivo_entidad {
+model ArchivoEntidad {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  archivo_id    String?   @db.Uuid
-  entidad_tipo  String?   @db.VarChar(50)
-  entidad_id    String?   @db.Uuid
-  fecha_vinculo DateTime? @default(now()) @db.Timestamptz(6)
+  archivoId    String?   @map("archivo_id") @db.Uuid
+  entidadTipo  String?   @map("entidad_tipo") @db.VarChar(50)
+  entidadId    String?   @map("entidad_id") @db.Uuid
+  fechaVinculo DateTime? @map("fecha_vinculo") @default(now()) @db.Timestamptz(6)
 
   // Relaciones
-  archivo_adjunto archivo_adjunto? @relation(fields: [archivo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  archivoAdjunto ArchivoAdjunto? @relation(fields: [archivoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
 
-  @@unique([archivo_id, entidad_tipo, entidad_id])
-  @@index([entidad_tipo, entidad_id], map: "idx_archivo_entidad_tipo")
+  // Índices
+  @@unique([archivoId, entidadTipo, entidadId], name: "archivo_entidad_archivo_id_entidad_tipo_entidad_id_key")
+  @@index([entidadTipo, entidadId], map: "idx_archivo_entidad_tipo")
+  @@map("archivo_entidad")
 }
 
-model cita {
+model Cita {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  cliente_id      String?  @db.Uuid
-  optometrista_id String?  @db.Uuid
-  sucursal_id     String?  @db.Uuid
-  fecha_hora      DateTime @db.Timestamptz(6)
-  estado          String?  @default("pendiente") @db.VarChar(20)
+  clienteId      String?  @map("cliente_id") @db.Uuid
+  optometristaId String?  @map("optometrista_id") @db.Uuid
+  sucursalId     String?  @map("sucursal_id") @db.Uuid
+  fechaHora      DateTime @map("fecha_hora") @db.Timestamptz(6)
+  estado         String?  @default("pendiente") @db.VarChar(20)
 
   // Relaciones
-  usuario_cita_cliente_idTousuario      usuario?            @relation("cita_cliente_idTousuario", fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario_cita_optometrista_idTousuario usuario?            @relation("cita_optometrista_idTousuario", fields: [optometrista_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sucursal                              sucursal?           @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  historial_clinico                     historial_clinico[]
-  recetas                               receta[] // Relación 1:N (varias recetas por cita)
+  cliente        Usuario?  @relation("cita_cliente_idTousuario", fields: [clienteId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  optometrista   Usuario?  @relation("cita_optometrista_idTousuario", fields: [optometristaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sucursal       Sucursal? @relation(fields: [sucursalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  historialClinico HistorialClinico[]
+  recetas        Receta[] // Relación 1:N (varias recetas por cita)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("cita")
 }
 
-model cuenta_contable {
+model CuentaContable {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  codigo          String   @unique @db.VarChar(30)
-  nombre          String   @db.VarChar(100)
-  tipo            String   @db.VarChar(20)
-  descripcion     String?
-  cuenta_padre_id String?  @db.Uuid
-  erp_id          Int?
-  erp_tipo        String?  @db.VarChar(30)
-  erp_codigo      String?  @db.VarChar(30)
-  activo          Boolean? @default(true)
+  codigo         String   @unique @db.VarChar(30)
+  nombre         String   @db.VarChar(100)
+  tipo           String   @db.VarChar(20)
+  descripcion    String?
+  cuentaPadreId  String?  @map("cuenta_padre_id") @db.Uuid
+  erpId          Int?     @map("erp_id")
+  erpTipo        String?  @map("erp_tipo") @db.VarChar(30)
+  erpCodigo      String?  @map("erp_codigo") @db.VarChar(30)
+  activo         Boolean? @default(true)
 
   // Relaciones
-  cuenta_contable       cuenta_contable?      @relation("cuenta_contableTocuenta_contable", fields: [cuenta_padre_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_cuenta_contable cuenta_contable[]     @relation("cuenta_contableTocuenta_contable")
-  movimiento_contable   movimiento_contable[]
+  cuentaPadre     CuentaContable?    @relation("CuentaContableToCuentaContable", fields: [cuentaPadreId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cuentasHijas    CuentaContable[]   @relation("CuentaContableToCuentaContable")
+  movimientos     MovimientoContable[]
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn       DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor      String?   @map("creado_por") @db.Uuid
+  modificadoEn   DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor  String?   @map("modificado_por") @db.Uuid
+  anuladoEn      DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor     String?   @map("anulado_por") @db.Uuid
+
+  @@map("cuenta_contable")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model cupon {
+model Cupon {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
   codigo          String    @unique @db.VarChar(50)
   descripcion     String?
-  monto_descuento Decimal?  @db.Decimal(10, 2)
-  vigencia_inicio DateTime? @db.Date
-  vigencia_fin    DateTime? @db.Date
-  limite_uso      Int?
-  usos_realizados Int?      @default(0)
+  montoDescuento  Decimal?  @map("monto_descuento") @db.Decimal(10, 2)
+  vigenciaInicio  DateTime? @map("vigencia_inicio") @db.Date
+  vigenciaFin     DateTime? @map("vigencia_fin") @db.Date
+  limiteUso       Int?      @map("limite_uso")
+  usosRealizados  Int?      @map("usos_realizados") @default(0)
   activo          Boolean?  @default(true)
   tipo            String?   @db.VarChar(30) // Ejemplo: "general", "producto", "usuario", "categoria"
 
   // Relaciones
-  pedidos           pedido[] // Relación con pedidos donde se ha usado este cupón
-  usuario_id        String?          @db.Uuid // Para cupones personalizados por usuario
-  usuario           usuario?         @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  productos_cupones producto_cupon[] // Relación muchos a muchos con productos
+  pedidos          Pedido[] // Relación con pedidos donde se ha usado este cupón
+  usuarioId        String?  @map("usuario_id") @db.Uuid // Para cupones personalizados por usuario
+  usuario          Usuario? @relation(fields: [usuarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productosCupones ProductoCupon[] // Relación muchos a muchos con productos
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn       DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor      String?   @map("creado_por") @db.Uuid
+  modificadoEn   DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor  String?   @map("modificado_por") @db.Uuid
+  anuladoEn      DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor     String?   @map("anulado_por") @db.Uuid
+
+  @@map("cupon")
 }
 
-model db_migrations {
-  id               Int       @id @default(autoincrement())
-  nombre_migracion String    @db.VarChar(255)
-  ejecutado_en     DateTime? @default(now()) @db.Timestamptz(6)
-  autor            String?   @db.VarChar(100)
+model DbMigration {
+  // ID
+  id Int @id @default(autoincrement())
+
+  // Campos normales
+  nombreMigracion String    @map("nombre_migracion") @db.VarChar(255)
+  ejecutadoEn     DateTime? @map("ejecutado_en") @default(now()) @db.Timestamptz(6)
+  autor           String?   @map("autor") @db.VarChar(100)
+
+  @@map("db_migrations")
 }
 
 // Modelo para relación muchos a muchos entre productos y cupones
-model producto_cupon {
+model ProductoCupon {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  producto_id String @db.Uuid
-  cupon_id    String @db.Uuid
+  productoId String @map("producto_id") @db.Uuid
+  cuponId    String @map("cupon_id") @db.Uuid
 
   // Relaciones
-  producto producto @relation(fields: [producto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  cupon    cupon    @relation(fields: [cupon_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cupon    Cupon    @relation(fields: [cuponId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
 
   // Índice único para evitar duplicados
-  @@unique([producto_id, cupon_id])
+  @@unique([productoId, cuponId])
+  @@map("producto_cupon")
 }
 
-model descanso_empleado {
+model DescansoEmpleado {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  empleado_id      String?   @db.Uuid
-  sucursal_id      String?   @db.Uuid
-  fecha_inicio     DateTime  @db.Timestamptz(6)
-  fecha_fin        DateTime  @db.Timestamptz(6)
-  motivo           String?
-  estado           String?   @default("pendiente") @db.VarChar(20)
-  adjunto_id       String?   @db.Uuid
-  revisado_por     String?   @db.Uuid
-  comentario_admin String?
-  revisado_en      DateTime? @db.Timestamptz(6)
+  empleadoId      String?  @map("empleado_id") @db.Uuid
+  sucursalId      String?  @map("sucursal_id") @db.Uuid
+  fechaInicio     DateTime @map("fecha_inicio") @db.Timestamptz(6)
+  fechaFin        DateTime @map("fecha_fin") @db.Timestamptz(6)
+  motivo          String?
+  estado          String?  @default("pendiente") @db.VarChar(20)
+  adjuntoId       String?  @map("adjunto_id") @db.Uuid
+  revisadoPor     String?  @map("revisado_por") @db.Uuid
+  comentarioAdmin String?  @map("comentario_admin")
+  revisadoEn      DateTime? @map("revisado_en") @db.Timestamptz(6)
 
   // Relaciones
-  archivo_adjunto                                 archivo_adjunto? @relation(fields: [adjunto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario_descanso_empleado_empleado_idTousuario  usuario?         @relation("descanso_empleado_empleado_idTousuario", fields: [empleado_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario_descanso_empleado_revisado_porTousuario usuario?         @relation("descanso_empleado_revisado_porTousuario", fields: [revisado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sucursal                                        sucursal?        @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  archivoAdjunto ArchivoAdjunto? @relation(fields: [adjuntoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empleado       Usuario?        @relation("DescansoEmpleadoEmpleado", fields: [empleadoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisor        Usuario?        @relation("DescansoEmpleadoRevisor", fields: [revisadoPor], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sucursal       Sucursal?       @relation(fields: [sucursalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn       DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor      String?   @map("creado_por") @db.Uuid
+  modificadoEn   DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor  String?   @map("modificado_por") @db.Uuid
+  anuladoEn      DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor     String?   @map("anulado_por") @db.Uuid
+
+  @@map("descanso_empleado")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model detalle_pedido {
+model DetallePedido {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  pedido_id       String? @db.Uuid
-  producto_id     String? @db.Uuid
-  cantidad        Int
-  precio_unitario Decimal @db.Decimal(10, 2)
+  pedidoId      String  @map("pedido_id") @db.Uuid  // Cambiado de String? a String
+  productoId    String? @map("producto_id") @db.Uuid
+  cantidad      Int
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
 
   // Relaciones
-  pedido   pedido?   @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  producto producto? @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pedido   Pedido   @relation("PedidoDetalles", fields: [pedidoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  producto Producto? @relation(fields: [productoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("detalle_pedido")
 }
 
-model factura {
+model Factura {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  pedido_id           String?   @db.Uuid
-  cliente_id          String?   @db.Uuid
-  fecha_emision       DateTime? @default(now()) @db.Timestamptz(6)
-  estado              String    @db.VarChar(20)
-  archivo_xml_id      String?   @db.Uuid
-  archivo_pdf_id      String?   @db.Uuid
-  moneda              String?   @default("USD") @db.VarChar(10)
-  erp_id              Int?
-  erp_tipo            String?   @db.VarChar(30)
-  erp_estado          String?   @db.VarChar(30)
-  erp_payload         Json?
-  asiento_contable_id String?   @db.Uuid // Reemplazamos movimiento_contable_id por asiento_contable_id
+  pedidoId          String?   @map("pedido_id") @db.Uuid
+  clienteId         String?   @map("cliente_id") @db.Uuid
+  fechaEmision      DateTime? @map("fecha_emision") @default(now()) @db.Timestamptz(6)
+  estado            String    @db.VarChar(20)
+  archivoXmlId      String?   @map("archivo_xml_id") @db.Uuid
+  archivoPdfId      String?   @map("archivo_pdf_id") @db.Uuid
+  moneda            String?   @default("USD") @db.VarChar(10)
+  erpId             Int?      @map("erp_id")
+  erpTipo           String?   @map("erp_tipo") @db.VarChar(30)
+  erpEstado         String?   @map("erp_estado") @db.VarChar(30)
+  erpPayload        Json?     @map("erp_payload")
+  asientoContableId String?   @map("asiento_contable_id") @db.Uuid
 
   // Relaciones
-  archivo_adjunto_factura_archivo_pdf_idToarchivo_adjunto archivo_adjunto?  @relation("factura_archivo_pdf_idToarchivo_adjunto", fields: [archivo_pdf_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  archivo_adjunto_factura_archivo_xml_idToarchivo_adjunto archivo_adjunto?  @relation("factura_archivo_xml_idToarchivo_adjunto", fields: [archivo_xml_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario                                                 usuario?          @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  pedido                                                  pedido?           @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  asiento_contable                                        asiento_contable? @relation(fields: [asiento_contable_id], references: [id], onDelete: NoAction, onUpdate: NoAction) // Nueva relación
+  archivoPdf    ArchivoAdjunto? @relation("FacturaArchivoPdf", fields: [archivoPdfId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  archivoXml    ArchivoAdjunto? @relation("FacturaArchivoXml", fields: [archivoXmlId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cliente       Usuario?        @relation(fields: [clienteId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pedido        Pedido?         @relation(fields: [pedidoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  asientoContable AsientoContable? @relation(fields: [asientoContableId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("factura")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model gasto {
+model Gasto {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  descripcion         String?
-  monto               Decimal   @db.Decimal(12, 2)
-  fecha_gasto         DateTime? @default(now()) @db.Timestamptz(6)
-  categoria           String?   @db.VarChar(50)
-  usuario_id          String?   @db.Uuid
-  sucursal_id         String?   @db.Uuid
-  moneda              String?   @default("USD") @db.VarChar(10)
-  erp_id              Int?
-  erp_tipo            String?   @db.VarChar(30)
-  erp_payload         Json?
-  asiento_contable_id String?   @db.Uuid // Nueva relación con asiento_contable
+  descripcion     String?   @db.VarChar(255)
+  monto           Decimal   @db.Decimal(12, 2)
+  fechaGasto      DateTime? @map("fecha_gasto") @default(now()) @db.Timestamptz(6)
+  categoria       String?   @db.VarChar(50)
+  usuarioId       String?   @map("usuario_id") @db.Uuid
+  sucursalId      String?   @map("sucursal_id") @db.Uuid
+  moneda          String?   @default("USD") @db.VarChar(10)
+  erpId           Int?      @map("erp_id")
+  erpTipo         String?   @map("erp_tipo") @db.VarChar(30)
+  erpPayload      Json?     @map("erp_payload")
+  asientoContableId String? @map("asiento_contable_id") @db.Uuid
 
   // Relaciones
-  sucursal         sucursal?         @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario          usuario?          @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  asiento_contable asiento_contable? @relation(fields: [asiento_contable_id], references: [id], onDelete: NoAction, onUpdate: NoAction) // Nueva relación
+  sucursal      Sucursal?      @relation(fields: [sucursalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario       Usuario?       @relation(fields: [usuarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  asientoContable AsientoContable? @relation(fields: [asientoContableId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("gasto")
 }
 
-model historial_clinico {
+model HistorialClinico {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  cliente_id      String?   @db.Uuid
-  optometrista_id String?   @db.Uuid
-  cita_id         String?   @db.Uuid
-  fecha           DateTime? @default(now()) @db.Timestamptz(6)
-  descripcion     String?
-  receta_id       String?   @db.Uuid
-  version         Int?      @default(1)
+  clienteId      String?   @map("cliente_id") @db.Uuid
+  optometristaId String?   @map("optometrista_id") @db.Uuid
+  citaId         String?   @map("cita_id") @db.Uuid
+  fecha          DateTime? @default(now()) @db.Timestamptz(6)
+  descripcion    String?
+  recetaId       String?   @map("receta_id") @db.Uuid
+  version        Int?      @default(1)
 
   // Relaciones
-  cita                                               cita?    @relation(fields: [cita_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario_historial_clinico_cliente_idTousuario      usuario? @relation("historial_clinico_cliente_idTousuario", fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario_historial_clinico_optometrista_idTousuario usuario? @relation("historial_clinico_optometrista_idTousuario", fields: [optometrista_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cita         Cita?    @relation(fields: [citaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cliente      Usuario? @relation("HistorialClinicoCliente", fields: [clienteId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  optometrista Usuario? @relation("HistorialClinicoOptometrista", fields: [optometristaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
 
-  @@index([cliente_id, fecha], map: "idx_historial_cliente_fecha")
+  // Índices
+  @@index([clienteId, fecha], map: "idx_historial_cliente_fecha")
+  @@map("historial_clinico")
 }
 
 // Enums para tipos de entidades y estados en ERP
-enum EntidadTipoERP {
+enum EntidadTipoErp {
   PRODUCTO
   PEDIDO
   FACTURA
@@ -342,7 +365,7 @@ enum EntidadTipoERP {
   ASIENTO
 }
 
-enum EstadoIntegracionERP {
+enum EstadoIntegracionErp {
   PENDIENTE
   PROCESANDO
   COMPLETADO
@@ -350,347 +373,362 @@ enum EstadoIntegracionERP {
   CANCELADO
 }
 
-model integracion_erp {
+model IntegracionErp {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales con enums
-  entidad_tipo     EntidadTipoERP?
-  entidad_id       String?               @db.Uuid
-  erp_id           Int?
-  erp_tipo         String?               @db.VarChar(30)
-  fecha_sync       DateTime?             @default(now()) @db.Timestamptz(6)
-  estado           EstadoIntegracionERP? @default(PENDIENTE)
-  request_payload  Json?
-  response_payload Json?
-  error            String?
+  entidadTipo     EntidadTipoErp?      @map("entidad_tipo")
+  entidadId       String?              @map("entidad_id") @db.Uuid
+  erpId           Int?                 @map("erp_id")
+  erpTipo         String?              @map("erp_tipo") @db.VarChar(30)
+  fechaSync       DateTime?            @map("fecha_sync") @default(now()) @db.Timestamptz(6)
+  estado          EstadoIntegracionErp? @map("estado") @default(PENDIENTE)
+  requestPayload  Json?                @map("request_payload")
+  responsePayload Json?                @map("response_payload")
+  error           String?
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
 
-  @@index([estado, entidad_tipo], map: "idx_integracion_erp_estado")
+  // Índices
+  @@index([estado, entidadTipo], map: "idx_integracion_erp_estado")
+  @@map("integracion_erp")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model inventario {
+model Inventario {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  sucursal_id  String? @db.Uuid
-  producto_id  String? @db.Uuid
-  stock        Int?    @default(0)
-  stock_minimo Int?    @default(3)
-  ubicacion    String?   // Para múltiples ubicaciones por sucursal
+  sucursalId  String? @map("sucursal_id") @db.Uuid
+  productoId  String? @map("producto_id") @db.Uuid
+  stock       Int?    @default(0)
+  stockMinimo Int?    @map("stock_minimo") @default(3)
+  ubicacion   String? // Para múltiples ubicaciones por sucursal
 
   // Relaciones
-  producto              producto?               @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sucursal              sucursal?               @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  movimiento_inventario movimiento_inventario[]
+  producto            Producto?            @relation(fields: [productoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sucursal            Sucursal?            @relation(fields: [sucursalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movimientosInventario MovimientoInventario[]
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
 
   // Restricción única para prevenir duplicados
-  @@unique([producto_id, sucursal_id, ubicacion])
-  @@index([producto_id, sucursal_id], map: "idx_inventario_producto_sucursal")
+  @@unique([productoId, sucursalId, ubicacion])
+  @@index([productoId, sucursalId], map: "idx_inventario_producto_sucursal")
+  @@map("inventario")
 }
 
-model log_auditoria {
+model LogAuditoria {
   // ID
-  id String @id @default(uuid())
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  usuarioId       String?  @db.Uuid
+  usuarioId       String?  @map("usuario_id") @db.Uuid
   accion          String
   descripcion     Json?    // Cambiado a tipo Json
   fecha           DateTime @default(now())
   ip              String?
-  tipo_correo     String?  @db.VarChar(40)
-  correo_destino  String?  @db.VarChar(120)
-  usuario_destino String?
-  entidad_tipo    String?  @db.VarChar(40)
-  entidad_id      String?  @db.Uuid
-  estado_envio    String?  @db.VarChar(20)
-  mensaje_error   String?
-  enviado_por     String?  @db.Uuid
-  origen_envio    String?  @db.VarChar(40)
+  tipoCorreo      String?  @map("tipo_correo") @db.VarChar(40)
+  correoDestino   String?  @map("correo_destino") @db.VarChar(120)
+  usuarioDestino  String?  @map("usuario_destino")
+  entidadTipo     String?  @map("entidad_tipo") @db.VarChar(40)
+  entidadId       String?  @map("entidad_id") @db.Uuid
+  estadoEnvio     String?  @map("estado_envio") @db.VarChar(20)
+  mensajeError    String?  @map("mensaje_error")
+  enviadoPor      String?  @map("enviado_por") @db.Uuid
+  origenEnvio     String?  @map("origen_envio") @db.VarChar(40)
   intentos        Int?     @default(1)
   modulo          String?
-  entidadId       String?
-  entidadTipo     String?
-  movimiento_id   String?  @db.Uuid
+  movimientoId    String?  @map("movimiento_id") @db.Uuid
 
   // Relaciones
-  usuario             usuario?             @relation(fields: [usuarioId], references: [id])
-  movimiento_contable movimiento_contable? @relation(fields: [movimiento_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario          Usuario?            @relation(fields: [usuarioId], references: [id])
+  movimientoContable MovimientoContable? @relation("MovimientoContableLogs", fields: [movimientoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  // Campos de control no aplica en este modelo
+  // Mapeo a la tabla original
+  @@map("log_auditoria")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model asiento_contable {
+model AsientoContable {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  fecha              DateTime  @default(now()) @db.Timestamptz(6)
-  descripcion        String?
-  referencia_externa String?   @db.VarChar(60)
-  tipo               String    @db.VarChar(30) // factura, pago, gasto, pedido, ajuste, etc.
-  entidad_tipo       String?   @db.VarChar(30) // El tipo de entidad relacionada (factura, pago, gasto, pedido)
-  entidad_id         String?   @db.Uuid // El ID de la entidad relacionada
-  sucursal_id        String?   @db.Uuid
-  usuario_id         String?   @db.Uuid
-  estado             String    @default("borrador") @db.VarChar(20) // borrador, validado, anulado, etc.
-  exportado          Boolean?  @default(false)
-  exportado_en       DateTime? @db.Timestamptz(6)
-  erp_id             Int?
-  erp_tipo           String?   @db.VarChar(30)
-  erp_payload        Json?
+  fecha             DateTime  @default(now()) @db.Timestamptz(6)
+  descripcion       String?
+  referenciaExterna String?   @map("referencia_externa") @db.VarChar(60)
+  tipo              String    @db.VarChar(30) // factura, pago, gasto, pedido, ajuste, etc.
+  entidadTipo       String?   @map("entidad_tipo") @db.VarChar(30)
+  entidadId         String?   @map("entidad_id") @db.Uuid
+  sucursalId        String?   @map("sucursal_id") @db.Uuid
+  usuarioId         String?   @map("usuario_id") @db.Uuid
+  estado            String    @default("borrador") @db.VarChar(20)
+  exportado         Boolean?  @default(false)
+  exportadoEn       DateTime? @map("exportado_en") @db.Timestamptz(6)
+  erpId             Int?      @map("erp_id")
+  erpTipo           String?   @map("erp_tipo") @db.VarChar(30)
+  erpPayload        Json?     @map("erp_payload")
 
   // Relaciones
-  movimientos movimiento_contable[] // Un asiento tiene muchos movimientos
-  sucursal    sucursal?             @relation("asiento_contable_sucursal", fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario     usuario?              @relation("asiento_contable_usuario", fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  facturas    factura[] // Relación con facturas
-  gastos      gasto[] // Relación con gastos
-  pagos       pago[] // Relación con pagos
-  pedidos     pedido[] // Relación con pedidos
+  movimientos MovimientoContable[]
+  sucursal    Sucursal? @relation("asiento_contable_sucursal", fields: [sucursalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario     Usuario?  @relation("asiento_contable_usuario", fields: [usuarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  facturas    Factura[]
+  gastos      Gasto[]
+  pagos       Pago[]
+  pedidos     Pedido[]
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
 
+  // Índices
   @@index([estado, fecha], map: "idx_asiento_estado_fecha")
-  @@index([entidad_tipo, entidad_id], map: "idx_asiento_entidad")
+  @@index([entidadTipo, entidadId], map: "idx_asiento_entidad")
+  @@map("asiento_contable")
 }
 
-model movimiento_contable {
+model MovimientoContable {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  asiento_id         String?         @db.Uuid // Nueva relación con asiento_contable
-  tipo               String          @db.VarChar(20) // debe, haber
-  monto              Decimal         @db.Decimal(12, 2)
-  cuenta_id          String?         @db.Uuid
-  sucursal_id        String?         @db.Uuid
-  usuario_id         String?         @db.Uuid
-  referencia_externa String?         @db.VarChar(60)
-  descripcion        String?
-  entidad_tipo       String?         @db.VarChar(30)
-  entidad_id         String?         @db.Uuid
-  exportado          Boolean?        @default(false)
-  exportado_en       DateTime?       @db.Timestamptz(6)
-  erp_id             Int?
-  erp_tipo           String?         @db.VarChar(30)
-  erp_payload        Json?
-  reversa_de         String?         @db.Uuid
-  log_auditoria      log_auditoria[]
+  asientoId         String?    @map("asiento_id") @db.Uuid
+  tipo              String     @db.VarChar(20) // debe, haber
+  monto             Decimal    @db.Decimal(12, 2)
+  cuentaId          String?    @map("cuenta_id") @db.Uuid
+  sucursalId        String?    @map("sucursal_id") @db.Uuid
+  usuarioId         String?    @map("usuario_id") @db.Uuid
+  referenciaExterna String?    @map("referencia_externa") @db.VarChar(60)
+  descripcion       String?
+  entidadTipo       String?    @map("entidad_tipo") @db.VarChar(30)
+  entidadId         String?    @map("entidad_id") @db.Uuid
+  exportado         Boolean?   @default(false)
+  exportadoEn       DateTime?  @map("exportado_en") @db.Timestamptz(6)
+  erpId             Int?       @map("erp_id")
+  erpTipo           String?    @map("erp_tipo") @db.VarChar(30)
+  erpPayload        Json?      @map("erp_payload")
+  reversaDe         String?    @map("reversa_de") @db.Uuid
+  logsAuditoria     LogAuditoria[] @relation("MovimientoContableLogs")
 
-  // Relaciones 
-  asiento_contable            asiento_contable?             @relation(fields: [asiento_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cuenta_contable             cuenta_contable?              @relation(fields: [cuenta_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  movimiento_contable         movimiento_contable?          @relation("movimiento_contableTomovimiento_contable", fields: [reversa_de], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_movimiento_contable   movimiento_contable[]         @relation("movimiento_contableTomovimiento_contable")
-  sucursal                    sucursal?                     @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario                     usuario?                      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  movimiento_contable_entidad movimiento_contable_entidad[]
+  // Relaciones
+  asientoContable    AsientoContable?  @relation(fields: [asientoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cuentaContable     CuentaContable?   @relation(fields: [cuentaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movimientoReversa  MovimientoContable? @relation("MovimientoContableReversa", fields: [reversaDe], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movimientosHijos   MovimientoContable[] @relation("MovimientoContableReversa")
+  sucursal           Sucursal?         @relation(fields: [sucursalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario            Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  entidadesMovimiento MovimientoContableEntidad[]
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
 
+  // Índices
   @@index([exportado], map: "idx_movcont_exportado")
-  @@index([asiento_id], map: "idx_movimiento_asiento")
+  @@index([asientoId], map: "idx_movimiento_asiento")
+  @@map("movimiento_contable")
 }
 
-model movimiento_contable_entidad {
+model MovimientoContableEntidad {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  movimiento_contable_id String? @db.Uuid
-  entidad_tipo           String? @db.VarChar(30)
-  entidad_id             String? @db.Uuid
+  movimientoContableId String? @map("movimiento_contable_id") @db.Uuid
+  entidadTipo          String? @map("entidad_tipo") @db.VarChar(30)
+  entidadId            String? @map("entidad_id") @db.Uuid
 
   // Relaciones
-  movimiento_contable movimiento_contable? @relation(fields: [movimiento_contable_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movimientoContable MovimientoContable? @relation(fields: [movimientoContableId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
 
-  @@unique([movimiento_contable_id, entidad_tipo, entidad_id])
+  // Restricciones únicas
+  @@unique([movimientoContableId, entidadTipo, entidadId])
+  @@map("movimiento_contable_entidad")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model movimiento_inventario {
+model MovimientoInventario {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  inventario_id    String?   @db.Uuid
-  usuario_id       String?   @db.Uuid
-  tipo             String?   @db.VarChar(20)
-  cantidad         Int
-  stock_resultante Int?
-  motivo           String?
-  fecha            DateTime? @default(now()) @db.Timestamptz(6)
-  reversa_de       String?   @db.Uuid
-  anulado          Boolean?  @default(false)
+  inventarioId    String? @map("inventario_id") @db.Uuid
+  usuarioId       String? @map("usuario_id") @db.Uuid
+  tipo            String? @db.VarChar(20)
+  cantidad        Int
+  stockResultante Int?    @map("stock_resultante")
+  motivo          String?
+  fecha           DateTime? @default(now()) @db.Timestamptz(6)
+  reversaDe       String?   @map("reversa_de") @db.Uuid
+  anulado         Boolean?  @default(false)
 
   // Relaciones
-  inventario                  inventario?             @relation(fields: [inventario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  movimiento_inventario       movimiento_inventario?  @relation("movimiento_inventarioTomovimiento_inventario", fields: [reversa_de], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_movimiento_inventario movimiento_inventario[] @relation("movimiento_inventarioTomovimiento_inventario")
-  usuario                     usuario?                @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventario          Inventario?           @relation(fields: [inventarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movimientoReversa   MovimientoInventario? @relation("MovimientoInventarioReversa", fields: [reversaDe], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movimientosHijos    MovimientoInventario[] @relation("MovimientoInventarioReversa")
+  usuario             Usuario?              @relation(fields: [usuarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("movimiento_inventario")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model pago {
+model Pago {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  pedido_id           String?   @db.Uuid
-  monto               Decimal   @db.Decimal(12, 2)
-  fecha_pago          DateTime? @default(now()) @db.Timestamptz(6)
-  metodo              String?   @db.VarChar(30)
-  referencia_externa  String?   @db.VarChar(60)
-  usuario_id          String?   @db.Uuid
-  moneda              String?   @default("USD") @db.VarChar(10)
-  erp_id              Int?
-  erp_tipo            String?   @db.VarChar(30)
-  erp_payload         Json?
-  asiento_contable_id String?   @db.Uuid // Nueva relación con asiento_contable
+  pedidoId          String?   @map("pedido_id") @db.Uuid
+  monto             Decimal   @db.Decimal(12, 2)
+  fechaPago         DateTime? @map("fecha_pago") @default(now()) @db.Timestamptz(6)
+  metodo            String?   @db.VarChar(30)
+  referenciaExterna String?   @map("referencia_externa") @db.VarChar(60)
+  usuarioId         String?   @map("usuario_id") @db.Uuid
+  moneda            String?   @default("USD") @db.VarChar(10)
+  erpId             Int?      @map("erp_id")
+  erpTipo           String?   @map("erp_tipo") @db.VarChar(30)
+  erpPayload        Json?     @map("erp_payload")
+  asientoContableId String?   @map("asiento_contable_id") @db.Uuid
 
   // Relaciones
-  pedido           pedido?           @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario          usuario?          @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  asiento_contable asiento_contable? @relation(fields: [asiento_contable_id], references: [id], onDelete: NoAction, onUpdate: NoAction) // Nueva relación
+  pedido        Pedido?         @relation(fields: [pedidoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario       Usuario?        @relation(fields: [usuarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  asientoContable AsientoContable? @relation(fields: [asientoContableId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("pago")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model pedido {
-  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cliente_id          String?           @db.Uuid
-  sucursal_id         String?           @db.Uuid
-  estado              String?           @default("pendiente") @db.VarChar(20)
-  total               Decimal?          @db.Decimal(10, 2)
-  metodo_pago         String?           @db.VarChar(30)
-  estado_pago         String?           @db.VarChar(20)
-  asiento_contable_id String?           @db.Uuid // Relación con asiento_contable
-  moneda              String?           @default("USD") @db.VarChar(10)
-  cupon_id            String?           @db.Uuid // Nueva relación con cupón
-  descuento_aplicado  Decimal?          @db.Decimal(10, 2) // Monto del descuento aplicado por el cupón
-  creado_en           DateTime?         @default(now()) @db.Timestamptz(6)
-  modificado_en       DateTime?         @db.Timestamptz(6)
-  anulado_en          DateTime?         @db.Timestamptz(6)
-  anulado_por         String?           @db.Uuid
-  creado_por          String?           @db.Uuid // Campo agregado para estandarizar
-  modificado_por      String?           @db.Uuid // Campo agregado para estandarizar
-  erp_id              Int?
-  erp_tipo            String?           @db.VarChar(30)
-  // movimiento_contable_id String?           @db.Uuid // Campo redundante eliminado
-  detalle_pedido      detalle_pedido[]
-  factura             factura[]
-  pago                pago[]
-  usuario             usuario?          @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sucursal            sucursal?         @relation(fields: [sucursal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  asiento_contable    asiento_contable? @relation(fields: [asiento_contable_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cupon               cupon?            @relation(fields: [cupon_id], references: [id], onDelete: NoAction, onUpdate: NoAction) // Nueva relación
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model producto {
+model Pedido {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  nombre        String   @db.VarChar(255)
-  descripcion   String?
-  precio        Decimal  @db.Decimal(10, 2)
-  categoria     String?  @db.VarChar(50)
-  imagen_url    String?
-  modelo_3d_url String?
-  tipo_producto String?   @db.VarChar(30)   // LENTE, ARMAZON, ACCESORIO, SOLUCION
-  tipo_lente    String?   @db.VarChar(50)    // Monofocal, Bifocal, Progresivo
-  material_lente String?   @db.VarChar(50)    // Policarbonato, Trivex, etc.
-  tratamiento_lente String?   @db.VarChar(100)   // Antirreflejante, Blue Light, etc.
-  graduacion_esfera Decimal?  @db.Decimal(4, 2)  // -10.00 a +10.00
-  graduacion_cilindro Decimal?  @db.Decimal(4, 2)
-  eje                 Int?      // 0-180
-  adicion             Decimal?  @db.Decimal(4, 2)  // Adición para lentes progresivos
-  tipo_armazon        String?   @db.VarChar(50)
-  material_armazon    String?   @db.VarChar(50)
-  tamano_puente       Int?      // En mm
-  tamano_aros         Int?      // En mm
-  tamano_varillas     Int?      // En mm
-  activo        Boolean? @default(true)
-  erp_id        Int?
-  erp_tipo      String?  @db.VarChar(30)
-  marca_id      String?  @db.Uuid
-  color_id      String?  @db.Uuid
+  clienteId          String?  @map("cliente_id") @db.Uuid
+  sucursalId         String?  @map("sucursal_id") @db.Uuid
+  estado             String?  @default("pendiente") @db.VarChar(20)
+  total              Decimal? @db.Decimal(10, 2)
+  metodoPago         String?  @map("metodo_pago") @db.VarChar(30)
+  estadoPago         String?  @map("estado_pago") @db.VarChar(20)
+  asientoContableId  String?  @map("asiento_contable_id") @db.Uuid
+  moneda             String?  @default("USD") @db.VarChar(10)
+  cuponId            String?  @map("cupon_id") @db.Uuid
+  descuentoAplicado  Decimal? @map("descuento_aplicado") @db.Decimal(10, 2)
+  erpId              Int?
+  erpTipo            String?  @map("erp_tipo") @db.VarChar(30)
 
-  // Relaciones y colecciones
-  marca               marca?                @relation(fields: [marca_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  color               color?                @relation(fields: [color_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  detalle_pedido      detalle_pedido[]
-  inventario          inventario[]
-  transferencia_stock transferencia_stock[]
-  productos_cupones   producto_cupon[] // Relación muchos a muchos con cupones
+  // Relaciones
+  detallesPedido  DetallePedido[] @relation("PedidoDetalles")
+  facturas        Factura[]
+  pagos           Pago[]
+  usuario         Usuario?         @relation(fields: [clienteId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sucursal        Sucursal?        @relation(fields: [sucursalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  asientoContable AsientoContable? @relation(fields: [asientoContableId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cupon           Cupon?           @relation(fields: [cuponId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("pedido")
 }
 
-model marca {
+model Producto {
+  // ID
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Campos normales
+  nombre          String   @db.VarChar(255)
+  descripcion     String?
+  precio          Decimal  @db.Decimal(10, 2)
+  categoria       String?  @db.VarChar(50)
+  imagenUrl       String?  @map("imagen_url")
+  modelo3dUrl     String?  @map("modelo_3d_url")
+  tipoProducto    String?  @map("tipo_producto") @db.VarChar(30)   // LENTE, ARMAZON, ACCESORIO, SOLUCION
+  tipoLente       String?  @map("tipo_lente") @db.VarChar(50)      // Monofocal, Bifocal, Progresivo
+  materialLente   String?  @map("material_lente") @db.VarChar(50)  // Policarbonato, Trivex, etc.
+  tratamientoLente String? @map("tratamiento_lente") @db.VarChar(100) // Antirreflejante, Blue Light, etc.
+  graduacionEsfera Decimal? @map("graduacion_esfera") @db.Decimal(4, 2)  // -10.00 a +10.00
+  graduacionCilindro Decimal? @map("graduacion_cilindro") @db.Decimal(4, 2)
+  eje              Int?      // 0-180
+  adicion          Decimal?  @map("adicion") @db.Decimal(4, 2)  // Adición para lentes progresivos
+  tipoArmazon      String?   @map("tipo_armazon") @db.VarChar(50)
+  materialArmazon  String?   @map("material_armazon") @db.VarChar(50)
+  tamanoPuente     Int?      @map("tamano_puente") // En mm
+  tamanoAros       Int?      @map("tamano_aros")   // En mm
+  tamanoVarillas   Int?      @map("tamano_varillas") // En mm
+  activo           Boolean?  @default(true)
+  erpId            Int?      @map("erp_id")
+  erpTipo          String?   @map("erp_tipo") @db.VarChar(30)
+  marcaId          String?   @map("marca_id") @db.Uuid
+  colorId          String?   @map("color_id") @db.Uuid
+
+  // Relaciones
+  marca             Marca?       @relation(fields: [marcaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  color             Color?       @relation(fields: [colorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  detallesPedido    DetallePedido[]
+  inventarios       Inventario[]
+  transferenciasStock TransferenciaStock[]
+  cupones           ProductoCupon[]
+
+  // Campos de control
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("producto")
+}
+
+model Marca {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
@@ -699,41 +737,45 @@ model marca {
   descripcion String?
   activo      Boolean? @default(true)
 
-  // Relaciones y colecciones
-  productos producto[]
+  // Relaciones
+  productos Producto[]
 
   // Campos de control
-  creado_por     String?      @db.Uuid
-  creado_en      DateTime?    @default(now()) @db.Timestamptz(6)
-  modificado_por String?      @db.Uuid
-  modificado_en  DateTime?    @db.Timestamptz(6)
-  anulado_por    String?      @db.Uuid
-  anulado_en     DateTime?    @db.Timestamptz(6)
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("marca")
 }
 
-model color {
+model Color {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
   nombre      String   @db.VarChar(100)
-  codigo_hex  String?  @db.VarChar(10)  // Valor hexadecimal del color (ej: #FFFFFF)
+  codigoHex   String?  @map("codigo_hex") @db.VarChar(10)  // Valor hexadecimal del color (ej: #FFFFFF)
   descripcion String?
   activo      Boolean? @default(true)
 
-  // Relaciones y colecciones
-  productos producto[]
+  // Relaciones
+  productos Producto[]
 
   // Campos de control
-  creado_por     String?      @db.Uuid
-  creado_en      DateTime?    @default(now()) @db.Timestamptz(6)
-  modificado_por String?      @db.Uuid
-  modificado_en  DateTime?    @db.Timestamptz(6)
-  anulado_por    String?      @db.Uuid
-  anulado_en     DateTime?    @db.Timestamptz(6)
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("color")
 }
 
-model rol {
+model Rol {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
@@ -741,19 +783,21 @@ model rol {
   nombre      String  @unique @db.VarChar(50)
   descripcion String?
 
-  // Relaciones y colecciones
-  usuario_rol usuario_rol[]
+  // Relaciones
+  usuariosRol UsuarioRol[]
 
   // Campos de control
-  creado_por     String?   @db.Uuid
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("rol")
 }
 
-model sucursal {
+model Sucursal {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
@@ -766,183 +810,240 @@ model sucursal {
   email     String?  @db.VarChar(100)
   estado    Boolean? @default(true)
 
-  // Relaciones y colecciones
-  cita                                                               cita[]
-  descanso_empleado                                                  descanso_empleado[]
-  gasto                                                              gasto[]
-  inventario                                                         inventario[]
-  movimiento_contable                                                movimiento_contable[]
-  pedido                                                             pedido[]
-  transferencia_stock_transferencia_stock_sucursal_destinoTosucursal transferencia_stock[] @relation("transferencia_stock_sucursal_destinoTosucursal")
-  transferencia_stock_transferencia_stock_sucursal_origenTosucursal  transferencia_stock[] @relation("transferencia_stock_sucursal_origenTosucursal")
-  asiento_contable                                                   asiento_contable[]    @relation("asiento_contable_sucursal")
+  // Relaciones
+  citas                Cita[]
+  descansosEmpleado    DescansoEmpleado[]
+  gastos              Gasto[]
+  inventarios         Inventario[]
+  movimientosContable MovimientoContable[]
+  pedidos             Pedido[]
+  transferenciasOrigen  TransferenciaStock[] @relation("transferencia_stock_sucursal_origenTosucursal")
+  transferenciasDestino TransferenciaStock[] @relation("transferencia_stock_sucursal_destinoTosucursal")
+  asientosContable     AsientoContable[]     @relation("asiento_contable_sucursal")
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("sucursal")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model transferencia_stock {
-  id                                                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  producto_id                                             String?   @db.Uuid
-  sucursal_origen                                         String?   @db.Uuid
-  sucursal_destino                                        String?   @db.Uuid
-  solicitado_por                                          String?   @db.Uuid
-  cantidad                                                Int
-  motivo                                                  String?
-  estado                                                  String?   @default("pendiente") @db.VarChar(20)
-  revisado_por                                            String?   @db.Uuid
-  comentario_admin                                        String?
-  solicitado_en                                           DateTime? @default(now()) @db.Timestamptz(6)
-  revisado_en                                             DateTime? @db.Timestamptz(6)
-  producto                                                producto? @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario_transferencia_stock_revisado_porTousuario       usuario?  @relation("transferencia_stock_revisado_porTousuario", fields: [revisado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario_transferencia_stock_solicitado_porTousuario     usuario?  @relation("transferencia_stock_solicitado_porTousuario", fields: [solicitado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sucursal_transferencia_stock_sucursal_destinoTosucursal sucursal? @relation("transferencia_stock_sucursal_destinoTosucursal", fields: [sucursal_destino], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sucursal_transferencia_stock_sucursal_origenTosucursal  sucursal? @relation("transferencia_stock_sucursal_origenTosucursal", fields: [sucursal_origen], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model usuario {
+model Usuario {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  nombre_completo String   @db.VarChar(255)
+  nombreCompleto  String   @map("nombre_completo") @db.VarChar(255)
   email           String   @unique @db.VarChar(255)
   password        String?  @db.VarChar(255) // Contraseña encriptada (bcrypt)
-  /// password: Contraseña hasheada para login tradicional con email/contraseña.
-  /// Se recomienda bcrypt (nunca almacenar en texto plano).
-  /// Opcional para compatibilidad con usuarios autenticados vía Google/Facebook.
   telefono        String?  @db.VarChar(20)
   dni             String?  @unique @db.VarChar(20)
-  foto_perfil     String?
+  fotoPerfil      String?  @map("foto_perfil")
   direccion       String?
   latitud         Float?
   longitud        Float?
-  google_uid      String?  @db.VarChar(128)
-  facebook_uid    String?  @db.VarChar(128)
+  googleUid       String?  @map("google_uid") @db.VarChar(128)
+  facebookUid     String?  @map("facebook_uid") @db.VarChar(128)
   activo          Boolean? @default(true)
-  email_verificado Boolean? @default(false)
-  erp_id          Int?
-  erp_tipo        String?  @db.VarChar(30)
-  proveedor_oauth String?  @db.VarChar(30) // google, facebook, instagram, etc
-  oauth_id        String?  @db.VarChar(128) // ID del usuario en el proveedor OAuth
-
-  // Relaciones y colecciones
-  archivo_adjunto                                                 archivo_adjunto[]
-  cita_cita_cliente_idTousuario                                   cita[]                  @relation("cita_cliente_idTousuario")
-  cita_cita_optometrista_idTousuario                              cita[]                  @relation("cita_optometrista_idTousuario")
-  descanso_empleado_descanso_empleado_empleado_idTousuario        descanso_empleado[]     @relation("descanso_empleado_empleado_idTousuario")
-  descanso_empleado_descanso_empleado_revisado_porTousuario       descanso_empleado[]     @relation("descanso_empleado_revisado_porTousuario")
-  factura                                                         factura[]
-  gasto                                                           gasto[]
-  historial_clinico_historial_clinico_cliente_idTousuario         historial_clinico[]     @relation("historial_clinico_cliente_idTousuario")
-  historial_clinico_historial_clinico_optometrista_idTousuario    historial_clinico[]     @relation("historial_clinico_optometrista_idTousuario")
-  log_auditoria                                                   log_auditoria[]
-  movimiento_contable                                             movimiento_contable[]
-  movimiento_inventario                                           movimiento_inventario[]
-  pago                                                            pago[]
-  pedido                                                          pedido[]
-  reset_token                                                     reset_token[] // Nueva relación para tokens de restablecimiento
-  transferencia_stock_transferencia_stock_revisado_porTousuario   transferencia_stock[]   @relation("transferencia_stock_revisado_porTousuario")
-  transferencia_stock_transferencia_stock_solicitado_porTousuario transferencia_stock[]   @relation("transferencia_stock_solicitado_porTousuario")
-  usuario_rol                                                     usuario_rol[]           @relation("UsuarioRoles")
-  asiento_contable                                                asiento_contable[]      @relation("asiento_contable_usuario")
-  cupones                                                         cupon[] // Nueva relación con cupones personalizados
-
-  // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
-
-  @@unique([proveedor_oauth, oauth_id])
-}
-
-model usuario_rol {
-  // ID
-  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-
-  // Campos normales
-  usuario_id String @db.Uuid
-  rol_id     String @db.Uuid
+  emailVerificado Boolean? @map("email_verificado") @default(false)
+  erpId           Int?     @map("erp_id")
+  erpTipo         String?  @map("erp_tipo") @db.VarChar(30)
+  proveedorOauth  String?  @map("proveedor_oauth") @db.VarChar(30) // google, facebook, instagram, etc
+  oauthId         String?  @map("oauth_id") @db.VarChar(128) // ID del usuario en el proveedor OAuth
 
   // Relaciones
-  rol     rol     @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuario usuario @relation("UsuarioRoles", fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  archivosAdjuntos  ArchivoAdjunto[]
+  citasCliente      Cita[]             @relation("cita_cliente_idTousuario")
+  citasOptometrista Cita[]             @relation("cita_optometrista_idTousuario")
+  descansos         DescansoEmpleado[] @relation("DescansoEmpleadoEmpleado")
+  descansosRevisados DescansoEmpleado[] @relation("DescansoEmpleadoRevisor")
+  facturas          Factura[]
+  gastos            Gasto[]
+  historialesCliente    HistorialClinico[] @relation("HistorialClinicoCliente")
+  historialesOptometrista HistorialClinico[] @relation("HistorialClinicoOptometrista")
+  logsAuditoria     LogAuditoria[]
+  movimientosContable MovimientoContable[]
+  movimientosInventario MovimientoInventario[]
+  pagos             Pago[]
+  pedidos           Pedido[]
+  resetTokens       ResetToken[]
+  transferenciasRevisadas TransferenciaStock[] @relation("transferencia_stock_revisado_porTousuario")
+  transferenciasSolicitadas TransferenciaStock[] @relation("transferencia_stock_solicitado_porTousuario")
+  roles             UsuarioRol[]       @relation("UsuarioRoles")
+  recetasComoPaciente    Receta[]           @relation("PacienteRecetas")
+  recetasComoOptometrista Receta[]           @relation("OptometristaRecetas")
+  asientosContable  AsientoContable[]  @relation("asiento_contable_usuario")
+  cupones           Cupon[]
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@unique([proveedorOauth, oauthId], map: "usuario_proveedor_oauth_oauth_id_key")
+  @@map("usuario")
 }
 
-model reset_token {
+model UsuarioRol {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  usuario_id String   @db.Uuid
+  usuarioId String @map("usuario_id") @db.Uuid
+  rolId     String @map("rol_id") @db.Uuid
+
+  // Relaciones
+  rol     Rol     @relation(fields: [rolId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario Usuario @relation("UsuarioRoles", fields: [usuarioId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Campos de control
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("usuario_rol")
+}
+
+model ResetToken {
+  // ID
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Campos normales
+  usuarioId  String   @map("usuario_id") @db.Uuid
   token      String   @db.Text // Token hash (bcrypt)
-  expires_at DateTime @db.Timestamptz(6)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt  DateTime @map("created_at") @default(now()) @db.Timestamptz(6)
   used       Boolean  @default(false)
 
   // Relaciones
-  usuario usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   // Campos de control
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+
+  @@map("reset_token")
 }
 
-model receta {
+model TransferenciaStock {
   // ID
-  id String @id @default(uuid())
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   // Campos normales
-  cita              cita     @relation(fields: [citaId], references: [id])
-  citaId            String   @db.Uuid
-  tipo              String // Ejemplo: "lejos", "cerca", "bifocal", "lentes de contacto"
-  esfera_od         Decimal // Ojo Derecho Esfera
-  esfera_oi         Decimal // Ojo Izquierdo Esfera
-  cilindro_od       Decimal? // Ojo Derecho Cilindro
-  cilindro_oi       Decimal? // Ojo Izquierdo Cilindro
-  eje_od            Int? // Ojo Derecho Eje
-  eje_oi            Int? // Ojo Izquierdo Eje
-  adicion           Decimal? // Para bifocales/progresivos
-  agudeza_visual_od String? // AV Ojo Derecho
-  agudeza_visual_oi String? // AV Ojo Izquierdo
-  dp                Decimal? // Distancia pupilar
-  observaciones     String?
-  estado            Boolean
+  productoId      String?    @map("producto_id") @db.Uuid
+  sucursalOrigen  String?    @map("sucursal_origen") @db.Uuid
+  sucursalDestino String?    @map("sucursal_destino") @db.Uuid
+  solicitadoPor   String?    @map("solicitado_por") @db.Uuid
+  cantidad        Int
+  motivo          String?
+  estado          String?    @default("pendiente") @db.VarChar(20)
+  revisadoPor     String?    @map("revisado_por") @db.Uuid
+  comentarioAdmin String?    @map("comentario_admin")
+  solicitadoEn    DateTime?  @map("solicitado_en") @default(now()) @db.Timestamptz(6)
+  revisadoEn      DateTime?  @map("revisado_en") @db.Timestamptz(6)
 
-  // Campos de control estandarizados
-  creado_en      DateTime? @default(now()) @db.Timestamptz(6)
-  creado_por     String?   @db.Uuid
-  modificado_en  DateTime? @db.Timestamptz(6)
-  modificado_por String?   @db.Uuid
-  anulado_en     DateTime? @db.Timestamptz(6)
-  anulado_por    String?   @db.Uuid
+  // Relaciones
+  producto        Producto?  @relation(fields: [productoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisor         Usuario?   @relation("transferencia_stock_revisado_porTousuario", fields: [revisadoPor], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  solicitante     Usuario?   @relation("transferencia_stock_solicitado_porTousuario", fields: [solicitadoPor], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  destino         Sucursal?  @relation("transferencia_stock_sucursal_destinoTosucursal", fields: [sucursalDestino], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  origen          Sucursal?  @relation("transferencia_stock_sucursal_origenTosucursal", fields: [sucursalOrigen], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Campos de control
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@map("transferencia_stock")
+}
+
+model Receta {
+  // ID y Relaciones
+  id        String  @id @default(uuid())
+  cita      Cita    @relation(fields: [citaId], references: [id])
+  citaId    String  @db.Uuid
+  paciente  Usuario @relation("PacienteRecetas", fields: [pacienteId], references: [id])
+  pacienteId String @db.Uuid
+  optometrista Usuario @relation("OptometristaRecetas", fields: [optometristaId], references: [id])
+  optometristaId String @db.Uuid
+
+  // Datos de la Receta
+  tipoReceta       String   @default("oftálmica") // oftálmica, lentes de contacto, sol
+  fechaPrescripcion DateTime @default(now())
+  validezMeses     Int      @default(12) // Validez estándar de la receta
+  
+  // Agudeza Visual (AV)
+  avLejosOd        String?  @map("av_lejos_od") // Ej: "20/20"
+  avLejosOi        String?  @map("av_lejos_oi")
+  avCercaOd        String?  @map("av_cerca_od")
+  avCercaOi        String?  @map("av_cerca_oi")
+  avConCorreccion  Boolean? @default(true) // AV con o sin corrección
+
+  // Esfera, Cilindro y Eje
+  esferaOd         Decimal  @map("esfera_od")
+  esferaOi         Decimal  @map("esfera_oi")
+  cilindroOd       Decimal? @map("cilindro_od")
+  cilindroOi       Decimal? @map("cilindro_oi")
+  // Eje debe estar entre 0 y 180 grados
+  ejeOd            Int?     @map("eje_od")  // Rango: 0-180
+  ejeOi            Int?     @map("eje_oi")  // Rango: 0-180
+
+  // Adición y Bifocal
+  adicion          Decimal? // Para lentes progresivos
+  alturaSegmento   Int?     @map("altura_segmento") // En mm
+  tipoLente        String?  @map("tipo_lente") // monofocal, bifocal, progresivo
+
+  // Distancia Interpupilar (DP)
+  dpLejos          Decimal? @map("dp_lejos")
+  dpCerca          Decimal? @map("dp_cerca")
+  tipoDP           String?  @map("tipo_dp") // binocular, monocular
+
+  // Lentes de Contacto (opcional)
+  diametroLc       Decimal? @map("diametro_lc") // Diámetro en mm
+  curvaBase        Decimal? @map("curva_base")
+  marcaLente       String?  @map("marca_lente")
+  material         String?  // Hidrogel, silicona hidrogel, etc.
+  reemplazo        String?  // Diario, quincenal, mensual
+
+  // Tratamientos y Filtros
+  tratamientos     String?  // Antirreflejante, blue light, fotocromático
+  color            String?  // Para lentes de sol
+
+  // Diagnóstico y Observaciones
+  diagnostico      String?
+  observaciones    String?
+  recomendaciones  String?
+  estado           RecetaEstado @default(ACTIVA)
+
+  // Auditoría
+  creadoEn         DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor        String?   @map("creado_por") @db.Uuid
+  modificadoEn     DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor    String?   @map("modificado_por") @db.Uuid
+  anuladoEn        DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor       String?   @map("anulado_por") @db.Uuid
+
+  @@map("receta")
+}
+
+enum RecetaEstado {
+  ACTIVA
+  UTILIZADA
+  VENCIDA
+  ANULADA
 }

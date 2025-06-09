@@ -1,7 +1,7 @@
-# marca
+# Marca
 
 ## Descripción
-Modelo que representa marca en el sistema.
+Modelo que representa Marca en el sistema.
 
 ## Estructura
 
@@ -13,28 +13,34 @@ Modelo que representa marca en el sistema.
 | `nombre` | `string` | ✅ | - | - |  |
 | `descripcion` | `string?` | ❌ | `null` | - |  |
 | `activo` | `boolean?` | ❌ | `null` | Valor por defecto |  |
-| `creado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `creado_en` | `Date?` | ❌ | `now()` | Valor por defecto, Marca de tiempo automática |  |
-| `modificado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `modificado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `anulado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `anulado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
+| `creadoEn` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `creadoPor` | `string?` | ❌ | `null` | - |  |
+| `modificadoEn` | `Date?` | ❌ | `null` | - |  |
+| `modificadoPor` | `string?` | ❌ | `null` | - |  |
+| `anuladoEn` | `Date?` | ❌ | `null` | - |  |
+| `anuladoPor` | `string?` | ❌ | `null` | - |  |
 
 ### Relaciones
 
-- **productos**: Muchos a [producto](./producto.md) `marcaToproducto`
+- **productos**: Muchos a [Producto](./producto.md) `MarcaToProducto`
 
 ## Ejemplos de Uso
 
 ### Creación
 
 ```typescript
-// Crear un nuevo marca
-const nuevomarca = await prisma.marca.create({
+// Crear un nuevo Marca
+const nuevoMarca = await prisma.marca.create({
   data: {
     nombre: "valor",
     descripcion: null,
     activo: null,
+    creadoEn: null,
+    creadoPor: null,
+    modificadoEn: null,
+    modificadoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
   }
 });
 ```
@@ -42,7 +48,7 @@ const nuevomarca = await prisma.marca.create({
 ### Consulta Básica
 
 ```typescript
-// Obtener todos los registros de marca
+// Obtener todos los registros de Marca
 const registros = await prisma.marca.findMany({
     // Incluir relaciones
     include: {
@@ -50,7 +56,7 @@ const registros = await prisma.marca.findMany({
     }
 });
 
-// Obtener un marca por ID
+// Obtener un Marca por ID
 const registro = await prisma.marca.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
@@ -64,41 +70,11 @@ const registro = await prisma.marca.findUnique({
 
 - **Tabla en BD**: `marca`
 - **Clave primaria**: `id`
-- **Campos de auditoría**: ✅ Sí
+- **Campos de auditoría**: ❌ No
 
 ## Auditoría
 
-### ✅ Auditoría Habilitada
-
-Este modelo incluye soporte completo de auditoría con los siguientes campos de seguimiento:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `creado_en` | `DateTime` | Fecha y hora de creación del registro |
-| `creado_por` | `string` | ID del usuario que creó el registro |
-| `modificado_en` | `DateTime` | Última fecha de modificación del registro |
-| `modificado_por` | `string` | ID del último usuario que modificó el registro |
-| `anulado_en` | `DateTime?` | Fecha de eliminación lógica (soft delete) |
-| `anulado_por` | `string?` | ID del usuario que realizó la eliminación lógica |
-
-### Registro de Actividades
-
-Todas las operaciones CRUD en este modelo generan registros de auditoría que incluyen:
-
-- Usuario que realizó la acción
-- Tipo de operación (CREAR, ACTUALIZAR, ELIMINAR, etc.)
-- Fecha y hora exacta de la operación
-- Dirección IP del solicitante
-- Datos anteriores y nuevos (para actualizaciones)
-
-### Consulta de Registros
-
-Los registros de auditoría pueden consultarse a través de la API de auditoría con filtros por:
-
-- Rango de fechas
-- Usuario
-- Tipo de acción
-- Entidad afectada
+❌ Este modelo no incluye campos de auditoría estándar.
 
 ## Seguridad
 
@@ -111,8 +87,8 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Relaciones con Otros Modelos
 
-- **productos**: Muchos a [producto](./producto.md) `marcaToproducto`
+- **productos**: Muchos a [Producto](./producto.md) `MarcaToProducto`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-08T15:35:08.556Z
+✅ Documentación generada automáticamente el 2025-06-09T20:48:15.967Z

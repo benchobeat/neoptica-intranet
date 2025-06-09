@@ -11,7 +11,7 @@ declare global {
       // Campos principales (siempre presentes)
       id: string;
       email: string;
-      nombre_completo: string;
+      nombreCompleto: string;
       roles: string[]; // Array de roles del usuario (puede estar vacío)
 
       // Campos opcionales de autenticación

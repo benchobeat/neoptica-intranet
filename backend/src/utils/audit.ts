@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-type AuditoriaParams = {
+export type AuditoriaParams = {
   accion: string;
   entidadTipo?: string;
   entidadId?: string;
@@ -30,15 +30,15 @@ export const registrarAuditoria = async (params: AuditoriaParams): Promise<void>
   } = params;
 
   try {
-    await prisma.log_auditoria.create({
+    await prisma.logAuditoria.create({
       data: {
         accion,
-        entidad_tipo: entidadTipo || null,
-        entidad_id: entidadId || null,
+        entidadTipo: entidadTipo || null,
+        entidadId: entidadId || null,
         descripcion: datosAdicionales ? JSON.stringify(datosAdicionales) : descripcion,
         ip: ip || null,
         modulo,
-        usuarioId: usuarioId,
+        usuarioId,
       },
     });
   } catch (error) {
@@ -95,7 +95,7 @@ export const obtenerRegistrosAuditoria = async (filtros: {
   }
 
   const [registros, total] = await Promise.all([
-    prisma.log_auditoria.findMany({
+    prisma.logAuditoria.findMany({
       where,
       skip,
       take: porPagina,
@@ -104,13 +104,13 @@ export const obtenerRegistrosAuditoria = async (filtros: {
         usuario: {
           select: {
             id: true,
-            nombre_completo: true,
+            nombreCompleto: true,
             email: true,
           },
         },
       },
     }),
-    prisma.log_auditoria.count({ where }),
+    prisma.logAuditoria.count({ where }),
   ]);
 
   return {
@@ -137,7 +137,7 @@ export const obtenerRegistrosAuditoria = async (filtros: {
  */
 export const limpiarRegistrosAntiguos = async (fecha: Date): Promise<number> => {
   try {
-    const result = await prisma.log_auditoria.deleteMany({
+    const result = await prisma.logAuditoria.deleteMany({
       where: {
         fecha: {
           lt: fecha,

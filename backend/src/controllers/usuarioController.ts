@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
-import { registrarAuditoria } from '@/utils/auditoria';
+import { registrarAuditoria } from '@/utils/audit';
 import { success, fail } from '@/utils/response';
 import { isSystemUser } from '@/utils/system';
 
@@ -17,18 +17,18 @@ export async function listarUsuarios(req: Request, res: Response): Promise<void>
     const usuarios = await prisma.usuario.findMany({
       where: { activo: true }, // Filtra solo los usuarios activos
       include: {
-        usuario_rol: { include: { rol: true } },
+        roles: { include: { rol: true } },
       },
     });
 
     // Mapear usuarios a formato seguro (sin password)
     const data = usuarios.map((usuario) => ({
       id: usuario.id,
-      nombre_completo: usuario.nombre_completo,
+      nombreCompleto: usuario.nombreCompleto,
       email: usuario.email,
       telefono: usuario.telefono,
       activo: usuario.activo,
-      roles: usuario.usuario_rol.map((ur) => ur.rol.nombre),
+      roles: usuario.roles.map((ur) => ur.rol.nombre),
     }));
 
     // Registrar auditoría de consulta de usuarios
@@ -86,19 +86,19 @@ export const listarUsuariosPaginados = async (req: Request, res: Response) => {
     const usuarios = await prisma.usuario.findMany({
       where: filtro,
       orderBy: {
-        nombre_completo: 'asc', // Ordenar alfabéticamente
+        nombreCompleto: 'asc', // Ordenar alfabéticamente
       },
       skip,
       take: pageSize,
       include: {
-        usuario_rol: { include: { rol: true } },
+        roles: { include: { rol: true } },
       },
     });
 
     // Mapear usuarios para incluir sus roles
     const usuariosConRoles = usuarios.map((usuario) => ({
       ...usuario,
-      roles: usuario.usuario_rol.map((ur) => ur.rol.nombre),
+      roles: usuario.roles.map((ur) => ur.rol.nombre),
     }));
 
     // Registrar auditoría de listado exitoso
@@ -150,7 +150,7 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
     const usuario = await prisma.usuario.findUnique({
       where: { id },
       include: {
-        usuario_rol: { include: { rol: true } },
+        roles: { include: { rol: true } },
       },
     });
 
@@ -161,13 +161,13 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
 
     const data = {
       id: usuario.id,
-      nombre_completo: usuario.nombre_completo,
+      nombreCompleto: usuario.nombreCompleto,
       email: usuario.email,
       telefono: usuario.telefono,
       activo: usuario.activo,
       direccion: usuario.direccion,
       dni: usuario.dni,
-      roles: usuario.usuario_rol.map((ur) => ur.rol.nombre),
+      roles: usuario.roles.map((ur) => ur.rol.nombre),
     };
 
     // Registrar auditoría de consulta de usuario
@@ -207,11 +207,11 @@ function telefonoValido(telefono: string): boolean {
 }
 
 export async function crearUsuario(req: Request, res: Response): Promise<void> {
-  const { nombre_completo, email, password, telefono, roles, dni, direccion } = req.body;
+  const { nombreCompleto, email, password, telefono, roles, dni, direccion } = req.body;
 
   // Log para debug
   console.log('[DEBUG] Datos recibidos en crearUsuario:', {
-    nombre_completo,
+    nombreCompleto,
     email,
     telefono,
     roles,
@@ -223,7 +223,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   let mensajeError = '';
 
   // Validación mínima
-  if (!nombre_completo || !email || !password) {
+  if (!nombreCompleto || !email || !password) {
     mensajeError = 'Faltan datos obligatorios';
     res.status(400).json(fail(mensajeError));
     await registrarAuditoria({
@@ -341,21 +341,21 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     // Crear usuario
     const usuario = await prisma.usuario.create({
       data: {
-        nombre_completo,
+        nombreCompleto,
         email,
         password: passwordHash,
         telefono,
         dni,
         direccion,
         activo: true,
-        creado_en: new Date(),
-        creado_por: usuarioId,
-        usuario_rol: {
-          create: rolesDb.map((r) => ({ rol_id: r.id })),
+        creadoEn: new Date(),
+        creadoPor: usuarioId,
+        roles: {
+          create: rolesDb.map((r) => ({ rolId: r.id })),
         },
       },
       include: {
-        usuario_rol: { include: { rol: true } },
+        roles: { include: { rol: true } },
       },
     });
 
@@ -363,7 +363,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     await registrarAuditoria({
       usuarioId,
       accion: 'crear_usuario_exitoso',
-      descripcion: `Usuario creado: ${usuario.email} (roles: ${usuario.usuario_rol.map((ur) => ur.rol.nombre).join(', ')})`,
+      descripcion: `Usuario creado: ${usuario.email} (roles: ${usuario.roles.map((ur) => ur.rol.nombre).join(', ')})`,
       ip: req.ip,
       entidadTipo: 'usuario',
       entidadId: usuario.id,
@@ -374,13 +374,13 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     res.status(201).json(
       success({
         id: usuario.id,
-        nombre_completo: usuario.nombre_completo,
+        nombreCompleto: usuario.nombreCompleto,
         email: usuario.email,
         telefono: usuario.telefono,
         dni: usuario.dni,
         direccion: usuario.direccion,
         activo: usuario.activo,
-        roles: usuario.usuario_rol.map((ur) => ur.rol.nombre),
+        roles: usuario.roles.map((ur) => ur.rol.nombre),
       })
     );
   } catch (error) {
@@ -412,7 +412,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
     res.status(403).json(fail('Acceso denegado: solo admin puede modificar usuarios'));
     return;
   }
-  const { nombre_completo, email, telefono, dni, direccion } = req.body;
+  const { nombreCompleto, email, telefono, dni, direccion } = req.body;
   let mensajeError = '';
 
   try {
@@ -545,8 +545,8 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
 
     // Detectar cambios
     const cambios: string[] = [];
-    if (nombre_completo && nombre_completo !== usuario.nombre_completo) {
-      cambios.push(`nombre_completo: "${usuario.nombre_completo}" → "${nombre_completo}"`);
+    if (nombreCompleto !== usuario.nombreCompleto) {
+      cambios.push(`nombreCompleto: "${usuario.nombreCompleto}" → "${nombreCompleto}"`);
     }
     if (email && email !== usuario.email) {
       cambios.push(`email: "${usuario.email}" → "${email}"`);
@@ -601,20 +601,20 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
       }
       // Obtener ids actuales y nuevos
       const nuevosIds = rolesDb.map((r) => r.id);
-      const actuales = await prisma.usuario_rol.findMany({ where: { usuario_id: id } });
-      const actualesIds = actuales.map((ur) => ur.rol_id);
+      const actuales = await prisma.usuarioRol.findMany({ where: { usuarioId: id } });
+      const actualesIds = actuales.map((ur) => ur.rolId);
       // Eliminar los que ya no estén
       const aEliminar = actualesIds.filter((rolId) => !nuevosIds.includes(rolId));
       if (aEliminar.length > 0) {
-        await prisma.usuario_rol.deleteMany({
-          where: { usuario_id: id, rol_id: { in: aEliminar } },
+        await prisma.usuarioRol.deleteMany({
+          where: { usuarioId: id, rolId: { in: aEliminar } },
         });
       }
       // Agregar los nuevos
       const aAgregar = nuevosIds.filter((rolId) => !actualesIds.includes(rolId));
       if (aAgregar.length > 0) {
-        await prisma.usuario_rol.createMany({
-          data: aAgregar.map((rol_id) => ({ usuario_id: id, rol_id })),
+        await prisma.usuarioRol.createMany({
+          data: aAgregar.map((rolId) => ({ usuarioId: id, rolId })),
         });
       }
       cambios.push(`roles: [${actualesIds.join(',')}] → [${nuevosIds.join(',')}]`);
@@ -622,7 +622,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
 
     // Log para debug
     console.log('[DEBUG] Datos a actualizar:', {
-      nombre_completo: nombre_completo || undefined,
+      nombreCompleto: nombreCompleto || undefined,
       email: email || undefined,
       telefono: telefono ?? null,
       dni: nuevoDni,
@@ -633,18 +633,18 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
     const usuarioActualizado = await prisma.usuario.update({
       where: { id },
       data: {
-        nombre_completo: nombre_completo || undefined,
+        nombreCompleto: nombreCompleto || undefined,
         email: email || undefined,
         telefono: telefono ?? null,
         // Solo actualizamos el DNI si es explícitamente nuevo y ha pasado todas las validaciones
         dni: nuevoDni,
         // Manejamos dirección de forma explícita para permitir strings vacías
         direccion: direccion !== undefined ? direccion : usuario.direccion,
-        modificado_en: new Date(),
-        modificado_por: usuarioId,
+        modificadoEn: new Date(),
+        modificadoPor: usuarioId,
       },
       include: {
-        usuario_rol: { include: { rol: true } },
+        roles: { include: { rol: true } },
       },
     });
 
@@ -661,12 +661,12 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
     res.json(
       success({
         id: usuarioActualizado.id,
-        nombre_completo: usuarioActualizado.nombre_completo,
+        nombreCompleto: usuarioActualizado.nombreCompleto,
         email: usuarioActualizado.email,
         telefono: usuarioActualizado.telefono,
         dni: usuarioActualizado.dni,
         activo: usuarioActualizado.activo,
-        roles: usuarioActualizado.usuario_rol.map((ur) => ur.rol.nombre),
+        roles: usuarioActualizado.roles.map((ur) => ur.rol.nombre),
       })
     );
   } catch (err) {
@@ -785,12 +785,12 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
 
     // Preparar datos para actualización
     const updateData: any = {
-      modificado_en: new Date(),
-      modificado_por: usuarioId,
+      modificadoEn: new Date(),
+      modificadoPor: usuarioId,
     };
 
     // Solo incluir campos que realmente se están actualizando
-    if (nombre_completo !== undefined) updateData.nombre_completo = nombre_completo;
+    if (nombre_completo !== undefined) updateData.nombreCompleto = nombre_completo;
     if (telefono !== undefined) updateData.telefono = telefono;
     if (direccion !== undefined) updateData.direccion = direccion;
     if (nuevoDni !== undefined) updateData.dni = nuevoDni;
@@ -802,14 +802,14 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
       where: { id: usuarioId },
       data: updateData,
       include: {
-        usuario_rol: { include: { rol: true } },
+        roles: { include: { rol: true } },
       },
     });
 
     // Detectar cambios
     const cambios: string[] = [];
-    if (nombre_completo && nombre_completo !== usuario.nombre_completo) {
-      cambios.push(`nombre_completo: "${usuario.nombre_completo}" → "${nombre_completo}"`);
+    if (nombre_completo && nombre_completo !== usuario.nombreCompleto) {
+      cambios.push(`nombreCompleto: "${usuario.nombreCompleto}" → "${nombre_completo}"`);
     }
     if (telefono !== undefined && telefono !== usuario.telefono) {
       cambios.push(`telefono: "${usuario.telefono || ''}" → "${telefono || ''}"`);
@@ -834,11 +834,11 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
     res.json(
       success({
         id: usuarioActualizado.id,
-        nombre_completo: usuarioActualizado.nombre_completo,
+        nombreCompleto: usuarioActualizado.nombreCompleto,
         telefono: usuarioActualizado.telefono,
         direccion: usuarioActualizado.direccion,
         dni: usuarioActualizado.dni,
-        roles: usuarioActualizado.usuario_rol.map((ur) => ur.rol.nombre),
+        roles: usuarioActualizado.roles.map((ur) => ur.rol.nombre),
         email: usuarioActualizado.email,
       })
     );
@@ -922,8 +922,8 @@ export async function eliminarUsuario(req: Request, res: Response): Promise<void
       where: { id },
       data: {
         activo: false,
-        anulado_en: new Date(),
-        anulado_por: userId,
+        anuladoEn: new Date(),
+        anuladoPor: userId,
       },
     });
 

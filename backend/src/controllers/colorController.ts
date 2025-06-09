@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
-import { registrarAuditoria } from '../utils/auditoria';
+import { registrarAuditoria } from '../utils/audit';
 
 const prisma = new PrismaClient();
 
@@ -15,9 +15,14 @@ const prisma = new PrismaClient();
 export const crearColor = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
   const userId = (req as any).usuario?.id || (req as any).user?.id;
-  // console.log('Body recibido en crearColor:', req.body);
+  // Forzar logs a la consola sin buffering
+  console.log('=====================================================');
+  console.log('CREAR COLOR - INICIO');
+  console.log('Usuario ID:', userId);
+  console.log('Body recibido:', JSON.stringify(req.body, null, 2));
+  // console.log('Headers:', JSON.stringify(req.headers, null, 2));
   try {
-    const { nombre, descripcion, activo, codigo_hex } = req.body;
+    const { nombre, descripcion, activo, codigoHex } = req.body;
 
     // Validación estricta y avanzada de datos de entrada
     if (!nombre || typeof nombre !== 'string') {
@@ -55,7 +60,7 @@ export const crearColor = async (req: Request, res: Response) => {
           equals: nombreLimpio,
           mode: 'insensitive', // Búsqueda case-insensitive
         },
-        anulado_en: null, // Solo colores no anulados
+        anuladoEn: null, // Solo colores no anulados
       },
     });
 
@@ -69,8 +74,8 @@ export const crearColor = async (req: Request, res: Response) => {
 
     // Validar el código hexadecimal si está presente
     let codigoHexLimpio = null;
-    if (codigo_hex) {
-      if (typeof codigo_hex !== 'string') {
+    if (codigoHex) {
+      if (typeof codigoHex !== 'string') {
         return res.status(400).json({
           ok: false,
           data: null,
@@ -79,7 +84,7 @@ export const crearColor = async (req: Request, res: Response) => {
       }
 
       // Eliminar espacios y asegurar formato correcto
-      codigoHexLimpio = codigo_hex.trim();
+      codigoHexLimpio = codigoHex.trim();
 
       // Asegurar que tiene el prefijo #
       if (!codigoHexLimpio.startsWith('#')) {
@@ -97,23 +102,36 @@ export const crearColor = async (req: Request, res: Response) => {
       }
     }
 
+    // Crear el objeto de datos para el nuevo color
+    const colorData = {
+      nombre: nombreLimpio,
+      codigoHex: codigoHexLimpio, // Prisma manejará el mapeo a snake_case
+      descripcion: descripcion?.trim() || null,
+      activo: activo !== undefined ? activo : true,
+      creadoPor: userId || null,
+      creadoEn: new Date(),
+    };
+
+    console.log('=====================================================');
+    console.log('DATOS A INSERTAR:');
+    console.log(JSON.stringify(colorData, null, 2));
+
     // Crear el nuevo color en la base de datos
     const nuevoColor = await prisma.color.create({
-      data: {
-        nombre: nombreLimpio,
-        codigo_hex: codigoHexLimpio,
-        descripcion: descripcion?.trim() || null,
-        activo: activo !== undefined ? activo : true,
-        creado_por: userId || null,
-        creado_en: new Date(),
-      },
+      data: colorData,
     });
+
+    console.log('=====================================================');
+    console.log('COLOR CREADO EN DB:');
+    console.log(JSON.stringify(nuevoColor, null, 2));
+    console.log('VERIFICACIÓN CODE_HEX:', nuevoColor.codigoHex);
+    console.log('=====================================================');
 
     // Registrar auditoría de creación exitosa
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'crear_color_exitoso',
-      descripcion: `Color creado: ${nuevoColor.nombre} | código_hex: ${nuevoColor.codigo_hex || 'N/A'}`,
+      descripcion: `Color creado: ${nuevoColor.nombre} | código_hex: ${nuevoColor.codigoHex || 'N/A'}`,
       ip: req.ip,
       entidadTipo: 'color',
       entidadId: nuevoColor.id,
@@ -159,7 +177,7 @@ export const listarColores = async (req: Request, res: Response) => {
   try {
     // Preparar filtros
     const filtro: any = {
-      anulado_en: null, // Solo colores no anulados (soft delete)
+      anuladoEn: null, // Solo colores no anulados (soft delete)
     };
 
     // Filtro adicional por activo si se proporciona en la consulta
@@ -252,7 +270,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
 
     // Preparar filtros
     const filtro: any = {
-      anulado_en: null, // Solo colores no anulados (soft delete)
+      anuladoEn: null, // Solo colores no anulados (soft delete)
     };
 
     // Filtro adicional por activo si se proporciona
@@ -266,7 +284,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
         contains: searchTerm.trim(),
         mode: 'insensitive', // Búsqueda case-insensitive
       };
-      // console.log(`Buscando colores paginados que contengan: "${searchTerm}"`);
+      console.log(`Buscando colores paginados que contengan: "${searchTerm}"`);
     }
 
     // Ejecutar consulta con count para obtener total
@@ -353,7 +371,7 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
     const color = await prisma.color.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo colores no anulados (soft delete)
+        anuladoEn: null, // Solo colores no anulados (soft delete)
       },
     });
 
@@ -433,7 +451,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
   const userId = (req as any).usuario?.id || (req as any).user?.id;
   const { id } = req.params;
   try {
-    const { nombre, descripcion, activo, codigo_hex } = req.body;
+    const { nombre, descripcion, activo, codigoHex } = req.body;
 
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -449,7 +467,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
     const colorExistente = await prisma.color.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo colores no anulados
+        anuladoEn: null, // Solo colores no anulados
       },
     });
 
@@ -506,7 +524,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
           id: {
             not: id, // Excluir el color actual
           },
-          anulado_en: null, // Solo colores no anulados
+          anuladoEn: null, // Solo colores no anulados
         },
       });
 
@@ -522,12 +540,12 @@ export const actualizarColor = async (req: Request, res: Response) => {
     }
 
     // Validar y actualizar el código hexadecimal si fue proporcionado
-    if (codigo_hex !== undefined) {
+    if (codigoHex !== undefined) {
       // Si es null, se permite eliminar el código hexadecimal
-      if (codigo_hex === null) {
-        datosActualizados.codigo_hex = null;
+      if (codigoHex === null) {
+        datosActualizados.codigoHex = null;
       } else {
-        if (typeof codigo_hex !== 'string') {
+        if (typeof codigoHex !== 'string') {
           return res.status(400).json({
             ok: false,
             data: null,
@@ -536,7 +554,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
         }
 
         // Eliminar espacios y asegurar formato correcto
-        let codigoHexLimpio = codigo_hex.trim();
+        let codigoHexLimpio = codigoHex.trim();
 
         // Asegurar que tiene el prefijo #
         if (!codigoHexLimpio.startsWith('#')) {
@@ -553,7 +571,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
           });
         }
 
-        datosActualizados.codigo_hex = codigoHexLimpio;
+        datosActualizados.codigoHex = codigoHexLimpio;
       }
     }
 
@@ -663,7 +681,7 @@ export const eliminarColor = async (req: Request, res: Response) => {
     const colorExistente = await prisma.color.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo colores no anulados
+        anuladoEn: null, // Solo colores no anulados
       },
     });
 
@@ -678,8 +696,8 @@ export const eliminarColor = async (req: Request, res: Response) => {
     // Verificar si el color tiene productos asociados
     const productosAsociados = await prisma.producto.count({
       where: {
-        color_id: id,
-        anulado_en: null, // Solo productos no anulados
+        colorId: id,
+        anuladoEn: null, // Solo productos no anulados
       },
     });
 
@@ -691,13 +709,13 @@ export const eliminarColor = async (req: Request, res: Response) => {
       });
     }
 
-    // Realizar soft delete (actualizando el campo anulado_en)
+    // Realizar soft delete (actualizando el campo anuladoEn)
     const fechaActual = new Date();
     await prisma.color.update({
       where: { id },
       data: {
-        anulado_en: fechaActual,
-        anulado_por: userId || null,
+        anuladoEn: fechaActual,
+        anuladoPor: userId || null,
         activo: false, // También marcar como inactivo
       },
     });

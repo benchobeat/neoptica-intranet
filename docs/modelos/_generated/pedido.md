@@ -1,7 +1,7 @@
-# pedido
+# Pedido
 
 ## Descripción
-Modelo que representa pedido en el sistema.
+Modelo que representa Pedido en el sistema.
 
 ## Estructura
 
@@ -10,55 +10,61 @@ Modelo que representa pedido en el sistema.
 | Nombre | Tipo | Requerido | Valor por Defecto | Validaciones | Descripción |
 |--------|------|-----------|-------------------|--------------|-------------|
 | `id` | `string` | ✅ | `uuid_generate_v4()` | Identificador único, Valor por defecto |  |
-| `cliente_id` | `string?` | ❌ | `null` | - |  |
-| `sucursal_id` | `string?` | ❌ | `null` | - |  |
+| `clienteId` | `string?` | ❌ | `null` | - |  |
+| `sucursalId` | `string?` | ❌ | `null` | - |  |
 | `estado` | `string?` | ❌ | `null` | Valor por defecto |  |
 | `total` | `number?` | ❌ | `null` | - |  |
-| `metodo_pago` | `string?` | ❌ | `null` | - |  |
-| `estado_pago` | `string?` | ❌ | `null` | - |  |
-| `asiento_contable_id` | `string?` | ❌ | `null` | - |  |
+| `metodoPago` | `string?` | ❌ | `null` | - |  |
+| `estadoPago` | `string?` | ❌ | `null` | - |  |
+| `asientoContableId` | `string?` | ❌ | `null` | - |  |
 | `moneda` | `string?` | ❌ | `null` | Valor por defecto |  |
-| `cupon_id` | `string?` | ❌ | `null` | - |  |
-| `descuento_aplicado` | `number?` | ❌ | `null` | - |  |
-| `creado_en` | `Date?` | ❌ | `now()` | Valor por defecto, Marca de tiempo automática |  |
-| `modificado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `anulado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `anulado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `creado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `modificado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `erp_id` | `number?` | ❌ | `null` | - |  |
-| `erp_tipo` | `string?` | ❌ | `null` | - |  |
+| `cuponId` | `string?` | ❌ | `null` | - |  |
+| `descuentoAplicado` | `number?` | ❌ | `null` | - |  |
+| `erpId` | `number?` | ❌ | `null` | - |  |
+| `erpTipo` | `string?` | ❌ | `null` | - |  |
+| `creadoEn` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `creadoPor` | `string?` | ❌ | `null` | - |  |
+| `modificadoEn` | `Date?` | ❌ | `null` | - |  |
+| `modificadoPor` | `string?` | ❌ | `null` | - |  |
+| `anuladoEn` | `Date?` | ❌ | `null` | - |  |
+| `anuladoPor` | `string?` | ❌ | `null` | - |  |
 
 ### Relaciones
 
-- **detalle_pedido**: Muchos a [detalle_pedido](./detalle_pedido.md) `detalle_pedidoTopedido`
-- **factura**: Muchos a [factura](./factura.md) `facturaTopedido`
-- **pago**: Muchos a [pago](./pago.md) `pagoTopedido`
-- **usuario**: Uno a [usuario](./usuario.md) `pedidoTousuario`
-- **sucursal**: Uno a [sucursal](./sucursal.md) `pedidoTosucursal`
-- **asiento_contable**: Uno a [asiento_contable](./asiento_contable.md) `asiento_contableTopedido`
-- **cupon**: Uno a [cupon](./cupon.md) `cuponTopedido`
+- **detallesPedido**: Muchos a [DetallePedido](./detallepedido.md) `PedidoDetalles`
+- **facturas**: Muchos a [Factura](./factura.md) `FacturaToPedido`
+- **pagos**: Muchos a [Pago](./pago.md) `PagoToPedido`
+- **usuario**: Uno a [Usuario](./usuario.md) `PedidoToUsuario`
+- **sucursal**: Uno a [Sucursal](./sucursal.md) `PedidoToSucursal`
+- **asientoContable**: Uno a [AsientoContable](./asientocontable.md) `AsientoContableToPedido`
+- **cupon**: Uno a [Cupon](./cupon.md) `CuponToPedido`
 
 ## Ejemplos de Uso
 
 ### Creación
 
 ```typescript
-// Crear un nuevo pedido
-const nuevopedido = await prisma.pedido.create({
+// Crear un nuevo Pedido
+const nuevoPedido = await prisma.pedido.create({
   data: {
-    cliente_id: null,
-    sucursal_id: null,
+    clienteId: null,
+    sucursalId: null,
     estado: null,
     total: null,
-    metodo_pago: null,
-    estado_pago: null,
-    asiento_contable_id: null,
+    metodoPago: null,
+    estadoPago: null,
+    asientoContableId: null,
     moneda: null,
-    cupon_id: null,
-    descuento_aplicado: null,
-    erp_id: null,
-    erp_tipo: null,
+    cuponId: null,
+    descuentoAplicado: null,
+    erpId: null,
+    erpTipo: null,
+    creadoEn: null,
+    creadoPor: null,
+    modificadoEn: null,
+    modificadoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
   }
 });
 ```
@@ -66,31 +72,31 @@ const nuevopedido = await prisma.pedido.create({
 ### Consulta Básica
 
 ```typescript
-// Obtener todos los registros de pedido
+// Obtener todos los registros de Pedido
 const registros = await prisma.pedido.findMany({
     // Incluir relaciones
     include: {
-      detalle_pedido: true,
-      factura: true,
-      pago: true,
+      detallesPedido: true,
+      facturas: true,
+      pagos: true,
       usuario: true,
       sucursal: true,
-      asiento_contable: true,
+      asientoContable: true,
       cupon: true
     }
 });
 
-// Obtener un pedido por ID
+// Obtener un Pedido por ID
 const registro = await prisma.pedido.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
     include: {
-      detalle_pedido: true,
-      factura: true,
-      pago: true,
+      detallesPedido: true,
+      facturas: true,
+      pagos: true,
       usuario: true,
       sucursal: true,
-      asiento_contable: true,
+      asientoContable: true,
       cupon: true
     }
 });
@@ -100,41 +106,11 @@ const registro = await prisma.pedido.findUnique({
 
 - **Tabla en BD**: `pedido`
 - **Clave primaria**: `id`
-- **Campos de auditoría**: ✅ Sí
+- **Campos de auditoría**: ❌ No
 
 ## Auditoría
 
-### ✅ Auditoría Habilitada
-
-Este modelo incluye soporte completo de auditoría con los siguientes campos de seguimiento:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `creado_en` | `DateTime` | Fecha y hora de creación del registro |
-| `creado_por` | `string` | ID del usuario que creó el registro |
-| `modificado_en` | `DateTime` | Última fecha de modificación del registro |
-| `modificado_por` | `string` | ID del último usuario que modificó el registro |
-| `anulado_en` | `DateTime?` | Fecha de eliminación lógica (soft delete) |
-| `anulado_por` | `string?` | ID del usuario que realizó la eliminación lógica |
-
-### Registro de Actividades
-
-Todas las operaciones CRUD en este modelo generan registros de auditoría que incluyen:
-
-- Usuario que realizó la acción
-- Tipo de operación (CREAR, ACTUALIZAR, ELIMINAR, etc.)
-- Fecha y hora exacta de la operación
-- Dirección IP del solicitante
-- Datos anteriores y nuevos (para actualizaciones)
-
-### Consulta de Registros
-
-Los registros de auditoría pueden consultarse a través de la API de auditoría con filtros por:
-
-- Rango de fechas
-- Usuario
-- Tipo de acción
-- Entidad afectada
+❌ Este modelo no incluye campos de auditoría estándar.
 
 ## Seguridad
 
@@ -147,14 +123,14 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Relaciones con Otros Modelos
 
-- **detalle_pedido**: Muchos a [detalle_pedido](./detalle_pedido.md) `detalle_pedidoTopedido`
-- **factura**: Muchos a [factura](./factura.md) `facturaTopedido`
-- **pago**: Muchos a [pago](./pago.md) `pagoTopedido`
-- **usuario**: Uno a [usuario](./usuario.md) `pedidoTousuario`
-- **sucursal**: Uno a [sucursal](./sucursal.md) `pedidoTosucursal`
-- **asiento_contable**: Uno a [asiento_contable](./asiento_contable.md) `asiento_contableTopedido`
-- **cupon**: Uno a [cupon](./cupon.md) `cuponTopedido`
+- **detallesPedido**: Muchos a [DetallePedido](./detallepedido.md) `PedidoDetalles`
+- **facturas**: Muchos a [Factura](./factura.md) `FacturaToPedido`
+- **pagos**: Muchos a [Pago](./pago.md) `PagoToPedido`
+- **usuario**: Uno a [Usuario](./usuario.md) `PedidoToUsuario`
+- **sucursal**: Uno a [Sucursal](./sucursal.md) `PedidoToSucursal`
+- **asientoContable**: Uno a [AsientoContable](./asientocontable.md) `AsientoContableToPedido`
+- **cupon**: Uno a [Cupon](./cupon.md) `CuponToPedido`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-08T15:35:08.550Z
+✅ Documentación generada automáticamente el 2025-06-09T20:48:15.960Z

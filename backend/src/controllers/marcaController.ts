@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
-import { registrarAuditoria } from '../utils/auditoria';
+import { registrarAuditoria } from '../utils/audit';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -57,7 +57,7 @@ export const crearMarca = async (req: Request, res: Response) => {
           equals: nombreLimpio,
           mode: 'insensitive', // Búsqueda case-insensitive
         },
-        anulado_en: null, // Solo marcas no anuladas
+        anuladoEn: null, // Solo marcas no anuladas
       },
     });
 
@@ -75,8 +75,8 @@ export const crearMarca = async (req: Request, res: Response) => {
         nombre: nombreLimpio,
         descripcion: descripcion?.trim() || null,
         activo: activo !== undefined ? activo : true,
-        creado_por: userId || null,
-        creado_en: new Date(),
+        creadoPor: userId || null,
+        creadoEn: new Date(),
       },
     });
 
@@ -145,7 +145,7 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
 
     // Preparar filtros
     const filtro: any = {
-      anulado_en: null, // Solo marcas no anuladas (soft delete)
+      anuladoEn: null, // Solo marcas no anuladas (soft delete)
     };
 
     // Filtro adicional por nombre si se proporciona en la búsqueda
@@ -229,7 +229,7 @@ export const listarMarcas = async (req: Request, res: Response) => {
   try {
     // Preparar filtros
     const filtro: any = {
-      anulado_en: null, // Solo marcas no anuladas (soft delete)
+      anuladoEn: null, // Solo marcas no anuladas (soft delete)
     };
 
     // Filtro adicional por ID si se proporciona en la consulta
@@ -320,7 +320,7 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
     const marca = await prisma.marca.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo marcas no anuladas (soft delete)
+        anuladoEn: null, // Solo marcas no anuladas (soft delete)
       },
     });
 
@@ -407,7 +407,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     const marcaExistente = await prisma.marca.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo marcas no anuladas
+        anuladoEn: null, // Solo marcas no anuladas
       },
     });
 
@@ -463,7 +463,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
           id: {
             not: id, // Excluir la marca actual de la búsqueda
           },
-          anulado_en: null, // Solo marcas no anuladas
+          anuladoEn: null, // Solo marcas no anuladas
         },
       });
 
@@ -581,7 +581,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     const marcaExistente = await prisma.marca.findUnique({
       where: {
         id,
-        anulado_en: null, // Solo marcas no anuladas
+        anuladoEn: null, // Solo marcas no anuladas
       },
     });
 
@@ -596,8 +596,8 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     // Verificar si la marca tiene productos asociados
     const productosAsociados = await prisma.producto.count({
       where: {
-        marca_id: id,
-        anulado_en: null, // Solo productos no anulados
+        marcaId: id,
+        anuladoEn: null, // Solo productos no anulados
       },
     });
 
@@ -609,13 +609,13 @@ export const eliminarMarca = async (req: Request, res: Response) => {
       });
     }
 
-    // Realizar soft delete (actualizando el campo anulado_en)
+    // Realizar soft delete (actualizando el campo anuladoEn)
     const fechaActual = new Date();
     await prisma.marca.update({
       where: { id },
       data: {
-        anulado_en: fechaActual,
-        anulado_por: userId || null,
+        anuladoEn: fechaActual,
+        anuladoPor: userId || null,
         activo: false, // También marcar como inactivo
       },
     });

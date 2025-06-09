@@ -3,7 +3,7 @@ import { Strategy as FacebookStrategy } from 'passport-facebook';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as InstagramStrategy } from 'passport-instagram';
 
-import prisma from '@/utils/prisma';
+import prisma from '../utils/prisma';
 
 // Google Strategy
 passport.use(
@@ -16,17 +16,17 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await prisma.usuario.findUnique({
-          where: { proveedor_oauth_oauth_id: { proveedor_oauth: 'google', oauth_id: profile.id } },
+          where: { proveedorOauth_oauthId: { proveedorOauth: 'google', oauthId: profile.id } },
         });
         if (!user) {
           user = await prisma.usuario.create({
             data: {
-              nombre_completo: profile.displayName,
+              nombreCompleto: profile.displayName,
               email: profile.emails?.[0]?.value,
-              proveedor_oauth: 'google',
-              oauth_id: profile.id,
+              proveedorOauth: 'google',
+              oauthId: profile.id,
               activo: true,
-              usuario_rol: { create: { rol: { connect: { nombre: 'cliente' } } } },
+              roles: { create: { rol: { connect: { nombre: 'cliente' } }, creadoEn: new Date(), creadoPor: 'system' } },
             },
           });
         }
@@ -51,18 +51,18 @@ passport.use(
       try {
         let user = await prisma.usuario.findUnique({
           where: {
-            proveedor_oauth_oauth_id: { proveedor_oauth: 'facebook', oauth_id: profile.id },
+            proveedorOauth_oauthId: { proveedorOauth: 'facebook', oauthId: profile.id },
           },
         });
         if (!user) {
           user = await prisma.usuario.create({
             data: {
-              nombre_completo: profile.displayName,
+              nombreCompleto: profile.displayName,
               email: profile.emails?.[0]?.value,
-              proveedor_oauth: 'facebook',
-              oauth_id: profile.id,
+              proveedorOauth: 'facebook',
+              oauthId: profile.id,
               activo: true,
-              usuario_rol: { create: { rol: { connect: { nombre: 'cliente' } } } },
+              roles: { create: { rol: { connect: { nombre: 'cliente' } }, creadoEn: new Date(), creadoPor: 'system' } },
             },
           });
         }
@@ -86,18 +86,18 @@ passport.use(
       try {
         let user = await prisma.usuario.findUnique({
           where: {
-            proveedor_oauth_oauth_id: { proveedor_oauth: 'instagram', oauth_id: profile.id },
+            proveedorOauth_oauthId: { proveedorOauth: 'instagram', oauthId: profile.id },
           },
         });
         if (!user) {
           user = await prisma.usuario.create({
             data: {
-              nombre_completo: profile.displayName,
+              nombreCompleto: profile.displayName,
               email: profile.emails?.[0]?.value || null, // Instagram puede no retornar email
-              proveedor_oauth: 'instagram',
-              oauth_id: profile.id,
+              proveedorOauth: 'instagram',
+              oauthId: profile.id,
               activo: true,
-              usuario_rol: { create: { rol: { connect: { nombre: 'cliente' } } } },
+              roles: { create: { rol: { connect: { nombre: 'cliente' } }, creadoEn: new Date(), creadoPor: 'system' } },
             },
           });
         }
@@ -108,18 +108,5 @@ passport.use(
     }
   )
 );
-
-passport.serializeUser((user: any, done) => {
-  done(null, user.id);
-});
-
-passport.deserializeUser(async (id: string, done) => {
-  try {
-    const user = await prisma.usuario.findUnique({ where: { id } });
-    done(null, user);
-  } catch (err) {
-    done(err, undefined);
-  }
-});
 
 export default passport;

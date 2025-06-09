@@ -1,7 +1,7 @@
-# cita
+# Cita
 
 ## Descripción
-Modelo que representa cita en el sistema.
+Modelo que representa Cita en el sistema.
 
 ## Estructura
 
@@ -10,39 +10,45 @@ Modelo que representa cita en el sistema.
 | Nombre | Tipo | Requerido | Valor por Defecto | Validaciones | Descripción |
 |--------|------|-----------|-------------------|--------------|-------------|
 | `id` | `string` | ✅ | `uuid_generate_v4()` | Identificador único, Valor por defecto |  |
-| `cliente_id` | `string?` | ❌ | `null` | - |  |
-| `optometrista_id` | `string?` | ❌ | `null` | - |  |
-| `sucursal_id` | `string?` | ❌ | `null` | - |  |
-| `fecha_hora` | `Date` | ✅ | - | - |  |
+| `clienteId` | `string?` | ❌ | `null` | - |  |
+| `optometristaId` | `string?` | ❌ | `null` | - |  |
+| `sucursalId` | `string?` | ❌ | `null` | - |  |
+| `fechaHora` | `Date` | ✅ | - | - |  |
 | `estado` | `string?` | ❌ | `null` | Valor por defecto |  |
-| `creado_en` | `Date?` | ❌ | `now()` | Valor por defecto, Marca de tiempo automática |  |
-| `creado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `modificado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `modificado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
-| `anulado_en` | `Date?` | ❌ | `null` | Marca de tiempo automática |  |
-| `anulado_por` | `string?` | ❌ | ID del usuario autenticado | Referencia a usuario |  |
+| `creadoEn` | `Date?` | ❌ | `null` | Valor por defecto |  |
+| `creadoPor` | `string?` | ❌ | `null` | - |  |
+| `modificadoEn` | `Date?` | ❌ | `null` | - |  |
+| `modificadoPor` | `string?` | ❌ | `null` | - |  |
+| `anuladoEn` | `Date?` | ❌ | `null` | - |  |
+| `anuladoPor` | `string?` | ❌ | `null` | - |  |
 
 ### Relaciones
 
-- **usuario_cita_cliente_idTousuario**: Uno a [usuario](./usuario.md) `cita_cliente_idTousuario`
-- **usuario_cita_optometrista_idTousuario**: Uno a [usuario](./usuario.md) `cita_optometrista_idTousuario`
-- **sucursal**: Uno a [sucursal](./sucursal.md) `citaTosucursal`
-- **historial_clinico**: Muchos a [historial_clinico](./historial_clinico.md) `citaTohistorial_clinico`
-- **recetas**: Muchos a [receta](./receta.md) `citaToreceta`
+- **cliente**: Uno a [Usuario](./usuario.md) `cita_cliente_idTousuario`
+- **optometrista**: Uno a [Usuario](./usuario.md) `cita_optometrista_idTousuario`
+- **sucursal**: Uno a [Sucursal](./sucursal.md) `CitaToSucursal`
+- **historialClinico**: Muchos a [HistorialClinico](./historialclinico.md) `CitaToHistorialClinico`
+- **recetas**: Muchos a [Receta](./receta.md) `CitaToReceta`
 
 ## Ejemplos de Uso
 
 ### Creación
 
 ```typescript
-// Crear un nuevo cita
-const nuevocita = await prisma.cita.create({
+// Crear un nuevo Cita
+const nuevoCita = await prisma.cita.create({
   data: {
-    cliente_id: null,
-    optometrista_id: null,
-    sucursal_id: null,
-    fecha_hora: "valor",
+    clienteId: null,
+    optometristaId: null,
+    sucursalId: null,
+    fechaHora: "valor",
     estado: null,
+    creadoEn: null,
+    creadoPor: null,
+    modificadoEn: null,
+    modificadoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
   }
 });
 ```
@@ -50,27 +56,27 @@ const nuevocita = await prisma.cita.create({
 ### Consulta Básica
 
 ```typescript
-// Obtener todos los registros de cita
+// Obtener todos los registros de Cita
 const registros = await prisma.cita.findMany({
     // Incluir relaciones
     include: {
-      usuario_cita_cliente_idTousuario: true,
-      usuario_cita_optometrista_idTousuario: true,
+      cliente: true,
+      optometrista: true,
       sucursal: true,
-      historial_clinico: true,
+      historialClinico: true,
       recetas: true
     }
 });
 
-// Obtener un cita por ID
+// Obtener un Cita por ID
 const registro = await prisma.cita.findUnique({
   where: { id: 'ID_DEL_REGISTRO' },
     // Incluir relaciones
     include: {
-      usuario_cita_cliente_idTousuario: true,
-      usuario_cita_optometrista_idTousuario: true,
+      cliente: true,
+      optometrista: true,
       sucursal: true,
-      historial_clinico: true,
+      historialClinico: true,
       recetas: true
     }
 });
@@ -80,41 +86,11 @@ const registro = await prisma.cita.findUnique({
 
 - **Tabla en BD**: `cita`
 - **Clave primaria**: `id`
-- **Campos de auditoría**: ✅ Sí
+- **Campos de auditoría**: ❌ No
 
 ## Auditoría
 
-### ✅ Auditoría Habilitada
-
-Este modelo incluye soporte completo de auditoría con los siguientes campos de seguimiento:
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `creado_en` | `DateTime` | Fecha y hora de creación del registro |
-| `creado_por` | `string` | ID del usuario que creó el registro |
-| `modificado_en` | `DateTime` | Última fecha de modificación del registro |
-| `modificado_por` | `string` | ID del último usuario que modificó el registro |
-| `anulado_en` | `DateTime?` | Fecha de eliminación lógica (soft delete) |
-| `anulado_por` | `string?` | ID del usuario que realizó la eliminación lógica |
-
-### Registro de Actividades
-
-Todas las operaciones CRUD en este modelo generan registros de auditoría que incluyen:
-
-- Usuario que realizó la acción
-- Tipo de operación (CREAR, ACTUALIZAR, ELIMINAR, etc.)
-- Fecha y hora exacta de la operación
-- Dirección IP del solicitante
-- Datos anteriores y nuevos (para actualizaciones)
-
-### Consulta de Registros
-
-Los registros de auditoría pueden consultarse a través de la API de auditoría con filtros por:
-
-- Rango de fechas
-- Usuario
-- Tipo de acción
-- Entidad afectada
+❌ Este modelo no incluye campos de auditoría estándar.
 
 ## Seguridad
 
@@ -127,12 +103,12 @@ Si los enlaces no funcionan, es posible que la documentación específica del mo
 
 ## Relaciones con Otros Modelos
 
-- **usuario_cita_cliente_idTousuario**: Uno a [usuario](./usuario.md) `cita_cliente_idTousuario`
-- **usuario_cita_optometrista_idTousuario**: Uno a [usuario](./usuario.md) `cita_optometrista_idTousuario`
-- **sucursal**: Uno a [sucursal](./sucursal.md) `citaTosucursal`
-- **historial_clinico**: Muchos a [historial_clinico](./historial_clinico.md) `citaTohistorial_clinico`
-- **recetas**: Muchos a [receta](./receta.md) `citaToreceta`
+- **cliente**: Uno a [Usuario](./usuario.md) `cita_cliente_idTousuario`
+- **optometrista**: Uno a [Usuario](./usuario.md) `cita_optometrista_idTousuario`
+- **sucursal**: Uno a [Sucursal](./sucursal.md) `CitaToSucursal`
+- **historialClinico**: Muchos a [HistorialClinico](./historialclinico.md) `CitaToHistorialClinico`
+- **recetas**: Muchos a [Receta](./receta.md) `CitaToReceta`
 
 ## Estado Actual
 
-✅ Documentación generada automáticamente el 2025-06-08T15:35:08.494Z
+✅ Documentación generada automáticamente el 2025-06-09T20:48:15.897Z
