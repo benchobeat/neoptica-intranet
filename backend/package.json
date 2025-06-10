@@ -7,7 +7,9 @@
     "@src": "build/src"
   },
   "scripts": {
-    "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node -r tsconfig-paths/register src/index.ts",
+    "dev": "nodemon",
+    "dev:alt": "concurrently \"tsc --watch\" \"nodemon --watch build build/src/index.js\"",
+    "dev:watch": "node scripts/dev-watch.js",
     "build": "tsc",
     "start": "node build/src/index.js",
     "test": "jest --config=jest.config.js --runInBand --detectOpenHandles",
@@ -57,6 +59,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^8.33.1",
     "@typescript-eslint/parser": "^8.33.1",
+    "concurrently": "^9.1.2",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^3.7.0",

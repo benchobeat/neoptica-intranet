@@ -1,0 +1,15 @@
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.spec.ts"],
+  "exec": "ts-node -r tsconfig-paths/register src/index.ts",
+  "legacyWatch": true,
+  "delay": "1000",
+  "signal": "SIGTERM",
+  "polling": true,
+  "pollInterval": 1000,
+  "verbose": true,
+  "env": {
+    "TS_NODE_TRANSPILE_ONLY": "true"
+  }
+}

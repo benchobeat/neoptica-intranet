@@ -15,12 +15,12 @@ const prisma = new PrismaClient();
 export const crearColor = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
   const userId = (req as any).usuario?.id || (req as any).user?.id;
-  // Forzar logs a la consola sin buffering
-  console.log('=====================================================');
-  console.log('CREAR COLOR - INICIO');
-  console.log('Usuario ID:', userId);
-  console.log('Body recibido:', JSON.stringify(req.body, null, 2));
-  // console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  
+  // Log temporal para verificar recarga
+  // console.log('✅ Llamada a crearColor recibida -', new Date().toISOString());
+  // console.log('📝 Datos recibidos:', JSON.stringify(req.body, null, 2));
+  
+  // No se necesitan logs de depuración en producción
   try {
     const { nombre, descripcion, activo, codigoHex } = req.body;
 
@@ -102,30 +102,20 @@ export const crearColor = async (req: Request, res: Response) => {
       }
     }
 
-    // Crear el objeto de datos para el nuevo color
-    const colorData = {
-      nombre: nombreLimpio,
-      codigoHex: codigoHexLimpio, // Prisma manejará el mapeo a snake_case
-      descripcion: descripcion?.trim() || null,
-      activo: activo !== undefined ? activo : true,
-      creadoPor: userId || null,
-      creadoEn: new Date(),
-    };
-
-    console.log('=====================================================');
-    console.log('DATOS A INSERTAR:');
-    console.log(JSON.stringify(colorData, null, 2));
-
-    // Crear el nuevo color en la base de datos
+    // Crear el nuevo color en la base de datos directamente con los valores individuales
     const nuevoColor = await prisma.color.create({
-      data: colorData,
+      data: {
+        nombre: nombreLimpio,
+        // Garantizar que codigoHex se pase explícitamente
+        codigoHex: codigoHexLimpio, 
+        descripcion: descripcion?.trim() || null,
+        activo: activo !== undefined ? activo : true,
+        creadoPor: userId || null,
+        creadoEn: new Date(),
+      },
     });
 
-    console.log('=====================================================');
-    console.log('COLOR CREADO EN DB:');
-    console.log(JSON.stringify(nuevoColor, null, 2));
-    console.log('VERIFICACIÓN CODE_HEX:', nuevoColor.codigoHex);
-    console.log('=====================================================');
+    // Registro de auditoría implícito en el bloque try
 
     // Registrar auditoría de creación exitosa
     await registrarAuditoria({

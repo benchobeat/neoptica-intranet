@@ -210,14 +210,14 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   const { nombreCompleto, email, password, telefono, roles, dni, direccion } = req.body;
 
   // Log para debug
-  console.log('[DEBUG] Datos recibidos en crearUsuario:', {
-    nombreCompleto,
-    email,
-    telefono,
-    roles,
-    dni,
-    direccion,
-  });
+  //console.log('[DEBUG] Datos recibidos en crearUsuario:', {
+  //  nombreCompleto,
+  //  email,
+  //  telefono,
+  //  roles,
+  //  dni,
+  //  direccion,
+  //});
 
   const usuarioId = (req as any).user?.id || 'sistema';
   let mensajeError = '';

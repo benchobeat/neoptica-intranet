@@ -66,7 +66,8 @@ Desarrollado en Node.js + Express + TypeScript + Prisma ORM + PostgreSQL, seguro
 - Sistema de roles
 - Helpers estándar para responses y errores
 - Semillas (seed) iniciales de usuarios y roles
-- Testing y build para producción
+- **Sistema de pruebas unitarias** completo con Jest y mocks
+- Build para producción
 - Fácil integración con frontend (RESTful)
 
 ## Requisitos
@@ -74,49 +75,56 @@ Desarrollado en Node.js + Express + TypeScript + Prisma ORM + PostgreSQL, seguro
 - npm v9+
 - PostgreSQL 13+
 - [Opcional] Docker para entorno controlado
+- [Opcional] Herramientas de desarrollo:
+  - Jest para pruebas unitarias
+  - ts-jest para soporte de TypeScript
+  - supertest para pruebas de integración
+  - mocks para pruebas aisladas
 
 
 ## Estructura de carpetas
 ```plaintext
 backend/
   ├── src/
-  │   ├── controllers/
+  │   ├── controllers/          # Controladores de la aplicación
   │   │   ├── productoController.ts
   │   │   ├── colorController.ts        # Módulo implementado
   │   │   ├── marcaController.ts        # Módulo implementado
   │   │   ├── sucursalController.ts     # Módulo implementado
   │   │   └── auditoriaController.ts    # Módulo implementado
-  │   ├── routes/
-  │   │   ├── producto.ts
-  │   │   ├── color.ts                  # Módulo implementado
-  │   │   ├── marca.ts                  # Módulo implementado
-  │   │   ├── sucursales.ts             # Módulo implementado
-  │   │   └── auditoria.ts              # Módulo implementado
-  │   └── ...
-├── .env                  # Variables de entorno
-├── .gitignore
-├── README.md
-├── jest.config.js        # Configuración de tests
-├── package.json
-├── package-lock.json
-├── tsconfig.json         # Configuración TS
-├── tsconfig.test.json    # Configuración TS para tests
-├── coverage/             # Reportes de cobertura
-├── node_modules/
-├── prisma/
-│   ├── schema.prisma     # Esquema de base de datos
-│   ├── seed.ts           # Script de datos iniciales
-│   └── migrations/       # Migraciones Prisma
-├── src/
-│   ├── app.ts            # Configuración principal Express
-│   ├── index.ts          # Entry point
-│   ├── controllers/      # Lógica de negocio (usuarioController.ts, etc.)
-│   ├── middlewares/      # Middlewares personalizados
-│   ├── prisma/           # Cliente Prisma
-│   ├── routes/           # Definición de rutas (API)
-│   └── utils/            # Utilidades y helpers
-├── tests/
-│   └── usuarios.test.ts  # Test avanzado de usuarios y edge cases
+  │   └── routes/               # Definición de rutas
+  │       ├── producto.ts
+  │       ├── color.ts          # Rutas de colores
+  │       ├── marca.ts          # Rutas de marcas
+  │       ├── sucursales.ts     # Rutas de sucursales
+  │       └── auditoria.ts      # Rutas de auditoría
+  │
+  ├── tests/unit/             # Pruebas unitarias
+  │   ├── __mocks__/           # Mocks globales
+  │   │   ├── prisma.ts        # Mock de Prisma Client
+  │   │   └── utils/           # Mocks de utilidades
+  │   │
+  │   ├── controllers/        # Pruebas de controladores
+  │   │   ├── color/           # Pruebas de módulo de colores
+  │   │   │   ├── createColor.test.ts
+  │   │   │   ├── getColor.test.ts
+  │   │   │   ├── listColors.test.ts
+  │   │   │   ├── updateColor.test.ts
+  │   │   │   └── deleteColor.test.ts
+  │   │   │
+  │   │   └── marca/           # Pruebas de módulo de marcas
+  │   │       ├── createMarca.test.ts
+  │   │       ├── getMarca.test.ts
+  │   │       ├── listMarcas.test.ts
+  │   │       ├── updateMarca.test.ts
+  │   │       └── deleteMarca.test.ts
+  │   │
+  │   └── __fixtures__/       # Datos de prueba
+  │
+  ├── .env                    # Variables de entorno
+  ├── jest.config.js            # Configuración de Jest
+  ├── tsconfig.test.json        # Configuración TS para tests
+  └── coverage/                 # Reportes de cobertura
 ```
 
 ## Variables de entorno
@@ -145,12 +153,21 @@ npx prisma db seed
 "scripts": {
   "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node -r tsconfig-paths/register src/index.ts",
   "build": "tsc",
-  "start": "node build/index.js"
+  "start": "node build/index.js",
+  "test": "jest --config=jest.config.js --runInBand --detectOpenHandles",
+  "test:watch": "jest --watch",
+  "test:coverage": "jest --coverage",
+  "test:unit": "jest tests/unit"
 }
 ```
-- dev: desarrollo con hot reload
-- build: compila TypeScript a JavaScript (/build)
-- start: ejecuta el servidor en modo producción
+
+- `dev`: Desarrollo con hot reload
+- `build`: Compila TypeScript a JavaScript (/build)
+- `start`: Ejecuta el servidor en modo producción
+- `test`: Ejecuta todas las pruebas
+- `test:watch`: Ejecuta pruebas en modo observador
+- `test:coverage`: Genera reporte de cobertura
+- `test:unit`: Ejecuta solo pruebas unitarias
 
 ## Helper global de respuestas
 Para garantizar consistencia en las respuestas de la API (tanto en éxito como en error), el backend utiliza un helper global centralizado en src/utils/response.ts.
@@ -181,6 +198,67 @@ export function fail(error: string, data: any = null): ApiResponse {
   };
 }
 ```
+
+## Testing y Calidad de Código
+
+### Estructura de Pruebas Unitarias
+
+El proyecto sigue un enfoque de pruebas unitarias organizado por módulos y funcionalidades. Cada controlador tiene sus propias pruebas unitarias que verifican:
+
+1. **Casos de éxito**: Verifican que las operaciones CRUD funcionen correctamente
+2. **Validaciones**: Comprueban que las validaciones de entrada funcionen como se espera
+3. **Manejo de errores**: Aseguran que los errores se manejen apropiadamente
+4. **Auditoría**: Verifican que se registren las acciones de auditoría
+
+### Ejemplo de Prueba Unitaria
+
+```typescript
+describe('Controlador de Marcas - Actualizar Marca', () => {
+  // Configuración de mocks y datos de prueba
+  const mockMarca = {
+    id: '550e8400-e29b-41d4-a716-446655440000',
+    nombre: 'Marca Original',
+    descripcion: 'Descripción original',
+    activo: true,
+  };
+
+  // Configuración de mocks antes de cada prueba
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Configuración de mocks específicos...
+  });
+
+  it('debe actualizar una marca existente exitosamente', async () => {
+    // Configuración de la prueba
+    // Ejecución del controlador
+    // Verificaciones de resultados
+  });
+});
+```
+
+### Mocks y Pruebas Aisladas
+
+Las pruebas están diseñadas para ser aisladas y confiables mediante el uso de mocks para:
+
+- **Base de datos (Prisma)**: Se simulan las respuestas de la base de datos
+- **Utilidades**: Se mockean utilidades como el sistema de auditoría
+- **Middleware**: Se simula el comportamiento del middleware de autenticación
+
+### Cobertura de Código
+
+El proyecto mantiene una alta cobertura de pruebas, con un objetivo mínimo del 80% de cobertura. Para generar el reporte de cobertura:
+
+```bash
+npm run test:coverage
+```
+
+### Buenas Prácticas de Testing
+
+1. **Nombres descriptivos**: Los nombres de las pruebas describen claramente el comportamiento esperado
+2. **Arrange-Act-Assert**: Estructura clara de las pruebas
+3. **Mocks consistentes**: Uso de mocks para aislar las pruebas
+4. **Datos de prueba**: Uso de fixtures para datos de prueba consistentes
+5. **Limpieza**: Cada prueba se ejecuta en un estado limpio
 
 ## Manejo de Errores
 
