@@ -1,21 +1,18 @@
 import { Request, Response } from 'express';
 import { jest } from '@jest/globals';
 
-// Definir el mock antes de importar los demás módulos
-const mockPrisma = {
-  color: {
-    findMany: jest.fn(),
-    count: jest.fn(),
-  }
-} as any;
+// Importar prismaMock directamente del mock
+const { prismaMock, resetPrismaMocks } = require('../../__mocks__/prisma');
 
 // Mockear módulos antes de importar el controlador
 jest.mock('@prisma/client', () => ({
-  PrismaClient: jest.fn(() => mockPrisma)
+  PrismaClient: jest.fn(() => prismaMock)
 }));
 
+// Mock de auditoría
+const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: jest.fn().mockImplementation(() => Promise.resolve())
+  registrarAuditoria: mockRegistrarAuditoria
 }));
 
 // Importar el controlador después de los mocks
@@ -54,8 +51,8 @@ describe('Controlador de Colores - Listar Colores', () => {
     };
 
     // Configuración por defecto para las pruebas
-    mockPrisma.color.findMany.mockReset();
-    mockPrisma.color.count.mockReset();
+    prismaMock.color.findMany.mockReset();
+    prismaMock.color.count.mockReset();
   });
 
   afterEach(() => {
@@ -65,7 +62,7 @@ describe('Controlador de Colores - Listar Colores', () => {
   describe('listarColores', () => {
     it('debe listar todos los colores activos', async () => {
       // Configurar el mock de Prisma
-      mockPrisma.color.findMany.mockResolvedValue(mockColorList);
+      prismaMock.color.findMany.mockResolvedValue(mockColorList);
 
       // Ejecutar la función del controlador
       await listarColores(mockRequest as Request, mockResponse as Response);
@@ -91,7 +88,7 @@ describe('Controlador de Colores - Listar Colores', () => {
       
       // Configurar el mock para simular un error
       const errorMessage = 'Error de base de datos';
-      mockPrisma.color.findMany.mockRejectedValue(new Error(errorMessage));
+      prismaMock.color.findMany.mockRejectedValue(new Error(errorMessage));
 
       // Ejecutar la función del controlador
       await listarColores(mockRequest as Request, mockResponse as Response);
@@ -117,8 +114,8 @@ describe('Controlador de Colores - Listar Colores', () => {
       };
 
       // Configurar mocks de Prisma
-      mockPrisma.color.count.mockResolvedValue(mockColorList.length);
-      mockPrisma.color.findMany.mockResolvedValue(mockColorList);
+      prismaMock.color.count.mockResolvedValue(mockColorList.length);
+      prismaMock.color.findMany.mockResolvedValue(mockColorList);
 
       // Ejecutar la función del controlador
       await listarColoresPaginados(mockRequest as Request, mockResponse as Response);
@@ -154,14 +151,14 @@ describe('Controlador de Colores - Listar Colores', () => {
 
     it('debe manejar parámetros de paginación por defecto', async () => {
       // Configurar mocks de Prisma
-      mockPrisma.color.count.mockResolvedValue(mockColorList.length);
-      mockPrisma.color.findMany.mockResolvedValue(mockColorList);
+      prismaMock.color.count.mockResolvedValue(mockColorList.length);
+      prismaMock.color.findMany.mockResolvedValue(mockColorList);
 
       // Ejecutar sin parámetros de paginación
       await listarColoresPaginados(mockRequest as Request, mockResponse as Response);
 
       // Verificar que se usen los valores por defecto
-      expect(mockPrisma.color.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      expect(prismaMock.color.findMany).toHaveBeenCalledWith(expect.objectContaining({
         skip: 0,
         take: 10,
         where: {

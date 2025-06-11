@@ -173,13 +173,6 @@ export const crearSucursal = async (req: Request, res: Response) => {
 };
 
 /**
- * Controlador para listar todas las sucursales con filtros opcionales.
- *
- * @param {Request} req - Objeto de solicitud Express
- * @param {Response} res - Objeto de respuesta Express
- * @returns {Promise<Response>} Lista de sucursales o mensaje de error
- */
-/**
  * Controlador para listar sucursales con paginación y filtros opcionales.
  *
  * @param {Request} req - Objeto de solicitud Express
@@ -701,6 +694,8 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría
   const userId = (req as any).usuario?.id || (req as any).user?.id;
   const { id } = req.params;
+  
+  // Remove debug logs
   try {
     // Ya tenemos el id y userId del bloque superior
 
@@ -715,12 +710,14 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     }
 
     // Verificar si la sucursal existe y no está anulada
-    const sucursalExistente = await prisma.sucursal.findUnique({
+    // Check if sucursal exists and is not deleted
+    const query = {
       where: {
         id,
         anuladoEn: null, // Solo sucursales no anuladas
       },
-    });
+    };
+    const sucursalExistente = await prisma.sucursal.findUnique(query);
 
     if (!sucursalExistente) {
       return res.status(404).json({
@@ -730,12 +727,11 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar si la sucursal tiene elementos asociados que impidan su eliminación
-    // Ejemplo: citas, inventarios, etc.
+    // Check for associated appointments that would prevent deletion
     const citasAsociadas = await prisma.cita.count({
       where: {
         sucursalId: id,
-        anuladoEn: null, // Solo citas no anuladas
+        anuladoEn: null, // Only count non-deleted appointments
       },
     });
 
@@ -747,14 +743,13 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
       });
     }
 
-    // Realizar soft delete (actualizando el campo anulado_en)
-    const fechaActual = new Date();
+    // Perform soft delete by updating the anuladoEn and anuladoPor fields
     await prisma.sucursal.update({
       where: { id },
       data: {
-        anuladoEn: fechaActual,
-        anuladoPor: userId || null,
-        estado: false, // También marcar como inactivo
+        estado: false,
+        anuladoEn: new Date(),
+        anuladoPor: userId,
       },
     });
 
@@ -772,7 +767,6 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     return res.status(200).json({
       ok: true,
       data: 'Sucursal eliminada correctamente.',
-      error: null,
     });
   } catch (error: any) {
     console.error('Error al eliminar sucursal:', error);

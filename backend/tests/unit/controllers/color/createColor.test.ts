@@ -1,54 +1,30 @@
 import { Request, Response } from 'express';
 import { jest } from '@jest/globals';
 
-// Definir el mock antes de importar los demás módulos
-const mockPrisma = {
-  color: {
-    findFirst: jest.fn(),
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn()
-  },
-  $transaction: jest.fn(async (callback) => {
-    if (typeof callback === 'function') {
-      return await callback(mockPrisma);
-    }
-    if (Array.isArray(callback)) {
-      return await Promise.all(callback);
-    }
-    return await Promise.resolve(callback);
-  })
-};
+// Importar prismaMock directamente del mock
+const { prismaMock, resetPrismaMocks } = require('../../__mocks__/prisma');
 
 // Mockear módulos antes de importar el controlador
 jest.mock('@prisma/client', () => ({
-  PrismaClient: jest.fn(() => mockPrisma)
+  PrismaClient: jest.fn(() => prismaMock)
 }));
 
+// Mock de auditoría
+const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: jest.fn().mockImplementation(() => Promise.resolve())
+  registrarAuditoria: mockRegistrarAuditoria
 }));
 
 // Importar el controlador después de los mocks
 import { crearColor } from '../../../../src/controllers/colorController';
-import { createMockRequest, createMockResponse } from '../../testUtils';
+import { createMockRequest, createMockResponse, resetMocks } from '../../test-utils';
 import { validColorData, invalidColorData, mockColor } from '../../__fixtures__/colorFixtures';
 
 describe('Controlador de Colores - Crear Color', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: any;
 
-  // Función auxiliar para resetear todos los mocks
-  const resetAllMocks = () => {
-    jest.clearAllMocks();
-    Object.values(mockPrisma.color).forEach(mockFn => {
-      if (typeof mockFn === 'function') {
-        (mockFn as jest.Mock).mockClear();
-      }
-    });
-  };
+  // Usamos la función centralizada para resetear mocks
 
   beforeEach(() => {
     // Configuración inicial para cada prueba
@@ -57,20 +33,21 @@ describe('Controlador de Colores - Crear Color', () => {
     });
 
     mockResponse = createMockResponse();
-    resetAllMocks();
+    resetMocks();
+    resetPrismaMocks();
   });
 
   it('debe crear un color exitosamente', async () => {
     // Configuración del mock para la prueba específica
-    (mockPrisma.color.findFirst as jest.Mock).mockImplementation(() => Promise.resolve(null));
-    (mockPrisma.color.create as jest.Mock).mockImplementation(() => Promise.resolve({...mockColor}));
+    (prismaMock.color.findFirst as jest.Mock).mockImplementation(() => Promise.resolve(null));
+    (prismaMock.color.create as jest.Mock).mockImplementation(() => Promise.resolve({...mockColor}));
 
     // Ejecuta el controlador
     await crearColor(mockRequest as Request, mockResponse as unknown as Response);
 
     // Verifica que se haya llamado a las funciones esperadas
-    expect(mockPrisma.color.findFirst).toHaveBeenCalled();
-    expect(mockPrisma.color.create).toHaveBeenCalled();
+    expect(prismaMock.color.findFirst).toHaveBeenCalled();
+    expect(prismaMock.color.create).toHaveBeenCalled();
 
     // Verifica la respuesta
     expect(mockResponse.status).toHaveBeenCalledWith(201);
@@ -84,14 +61,14 @@ describe('Controlador de Colores - Crear Color', () => {
 
   it('debe devolver error si ya existe un color con el mismo nombre', async () => {
     // Configura el mock para simular un color existente
-    (mockPrisma.color.findFirst as jest.Mock).mockImplementation(() => Promise.resolve({...mockColor}));
+    (prismaMock.color.findFirst as jest.Mock).mockImplementation(() => Promise.resolve({...mockColor}));
 
     // Ejecuta el controlador
     await crearColor(mockRequest as Request, mockResponse as unknown as Response);
 
     // Verifica que se haya llamado a la función esperada
-    expect(mockPrisma.color.findFirst).toHaveBeenCalled();
-    expect(mockPrisma.color.create).not.toHaveBeenCalled();
+    expect(prismaMock.color.findFirst).toHaveBeenCalled();
+    expect(prismaMock.color.create).not.toHaveBeenCalled();
 
     // Verifica la respuesta de error adecuada
     expect(mockResponse.status).toHaveBeenCalledWith(409);
@@ -124,7 +101,7 @@ describe('Controlador de Colores - Crear Color', () => {
 
   it('debe validar el formato del código hexadecimal', async () => {
     // Asegurarse de que findFirst devuelve null (no existe el color)
-    (mockPrisma.color.findFirst as jest.Mock).mockImplementation(() => Promise.resolve(null));
+    (prismaMock.color.findFirst as jest.Mock).mockImplementation(() => Promise.resolve(null));
     
     // Configurar la petición con un código hex inválido
     mockRequest.body = {

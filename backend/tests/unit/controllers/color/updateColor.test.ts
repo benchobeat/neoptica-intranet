@@ -1,22 +1,18 @@
 import { Request, Response } from 'express';
 import { jest } from '@jest/globals';
 
-// Definir el mock antes de importar los demás módulos
-const mockPrisma = {
-  color: {
-    findUnique: jest.fn(),
-    findFirst: jest.fn(),
-    update: jest.fn(),
-  }
-} as any;
+// Importar prismaMock directamente del mock
+const { prismaMock, resetPrismaMocks } = require('../../__mocks__/prisma');
 
 // Mockear módulos antes de importar el controlador
 jest.mock('@prisma/client', () => ({
-  PrismaClient: jest.fn(() => mockPrisma)
+  PrismaClient: jest.fn(() => prismaMock)
 }));
 
+// Mock de auditoría
+const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: jest.fn().mockImplementation(() => Promise.resolve())
+  registrarAuditoria: mockRegistrarAuditoria
 }));
 
 // Importar el controlador después de los mocks
@@ -56,10 +52,8 @@ describe('Controlador de Colores - Actualizar Color', () => {
       json: jest.fn().mockReturnThis()
     };
 
-    // Configuración por defecto para las pruebas
-    mockPrisma.color.findUnique.mockReset();
-    mockPrisma.color.findFirst.mockReset();
-    mockPrisma.color.update.mockReset();
+    // Resetear todos los mocks
+    resetPrismaMocks();
   });
 
   afterEach(() => {
@@ -68,9 +62,9 @@ describe('Controlador de Colores - Actualizar Color', () => {
 
   it('debe actualizar un color existente', async () => {
     // Configurar mocks de Prisma
-    mockPrisma.color.findUnique.mockResolvedValue(mockColor);
-    mockPrisma.color.findFirst.mockResolvedValue(null); // Para verificar que no hay duplicados
-    mockPrisma.color.update.mockResolvedValue({
+    prismaMock.color.findUnique.mockResolvedValue(mockColor);
+    prismaMock.color.findFirst.mockResolvedValue(null); // Para verificar que no hay duplicados
+    prismaMock.color.update.mockResolvedValue({
       ...mockColor,
       ...updatedColorData,
       modificadoEn: new Date(),
@@ -96,7 +90,7 @@ describe('Controlador de Colores - Actualizar Color', () => {
 
   it('debe retornar error 404 si el color no existe', async () => {
     // Configurar el mock para simular que no se encontró el color
-    mockPrisma.color.findUnique.mockResolvedValue(null);
+    prismaMock.color.findUnique.mockResolvedValue(null);
 
     // Ejecutar la función del controlador
     await actualizarColor(mockRequest as Request, mockResponse as Response);
@@ -128,8 +122,8 @@ describe('Controlador de Colores - Actualizar Color', () => {
 
   it('debe validar que el nombre no esté en uso por otro color', async () => {
     // Configurar mocks para simular que ya existe otro color con el mismo nombre
-    mockPrisma.color.findUnique.mockResolvedValue(mockColor);
-    mockPrisma.color.findFirst.mockResolvedValue({
+    prismaMock.color.findUnique.mockResolvedValue(mockColor);
+    prismaMock.color.findFirst.mockResolvedValue({
       ...mockColor,
       id: 'otro-id-diferente'
     });
@@ -151,7 +145,7 @@ describe('Controlador de Colores - Actualizar Color', () => {
     mockRequest.body = { nombre: '' }; // Nombre vacío
     
     // Configurar el mock para simular que el color existe
-    mockPrisma.color.findUnique.mockResolvedValue(mockColor);
+    prismaMock.color.findUnique.mockResolvedValue(mockColor);
 
     // Ejecutar la función del controlador
     await actualizarColor(mockRequest as Request, mockResponse as Response);
@@ -168,7 +162,7 @@ describe('Controlador de Colores - Actualizar Color', () => {
   it('debe manejar errores inesperados', async () => {
     // Configurar el mock para lanzar un error
     const errorMessage = 'Error inesperado';
-    mockPrisma.color.findUnique.mockRejectedValue(new Error(errorMessage));
+    prismaMock.color.findUnique.mockRejectedValue(new Error(errorMessage));
 
     // Ejecutar la función del controlador
     await actualizarColor(mockRequest as Request, mockResponse as Response);

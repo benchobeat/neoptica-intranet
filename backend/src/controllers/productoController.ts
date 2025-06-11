@@ -24,32 +24,32 @@ interface Producto {
   descripcion: string | null;
   precio: number; // Prisma manejará la conversión a Decimal
   categoria: string | null;
-  imagen_url: string | null;
-  modelo_3d_url: string | null;
-  tipo_producto: string | null;
-  tipo_lente: string | null;
-  material_lente: string | null;
-  tratamiento_lente: string | null;
-  graduacion_esfera: number | null; // Prisma manejará la conversión a Decimal
-  graduacion_cilindro: number | null; // Prisma manejará la conversión a Decimal
+  imagenUrl: string | null;
+  modelo3dUrl: string | null;
+  tipoProducto: string | null;
+  tipoLente: string | null;
+  materialLente: string | null;
+  tratamientoLente: string | null;
+  graduacionEsfera: number | null; // Prisma manejará la conversión a Decimal
+  graduacionCilindro: number | null; // Prisma manejará la conversión a Decimal
   eje: number | null;
   adicion: number | null; // Prisma manejará la conversión a Decimal
-  tipo_armazon: string | null;
-  material_armazon: string | null;
-  tamano_puente: number | null;
-  tamano_aros: number | null;
-  tamano_varillas: number | null;
+  tipoArmazon: string | null;
+  materialArmazon: string | null;
+  tamanoPuente: number | null;
+  tamanoAros: number | null;
+  tamanoVarillas: number | null;
   activo: boolean | null;
-  erp_id: number | null;
-  erp_tipo: string | null;
-  marca_id: string | null;
-  color_id: string | null;
-  creado_en: Date | null;
-  creado_por: string | null;
-  modificado_en: Date | null;
-  modificado_por: string | null;
-  anulado_en: Date | null;
-  anulado_por: string | null;
+  erpId: number | null;
+  erpTipo: string | null;
+  marcaId: string | null;
+  colorId: string | null;
+  creadoEn: Date | null;
+  creadoPor: string | null;
+  modificadoEn: Date | null;
+  modificadoPor: string | null;
+  anuladoEn: Date | null;
+  anuladoPor: string | null;
 
   // Relaciones opcionales
   marca?: {
@@ -89,11 +89,13 @@ type ColorRelacion = { id: string; nombre: string; codigo_hex: string | null } |
 // La interfaz AuditoriaParams ya está definida arriba
 
 // Función de auditoría dummy por defecto
+// eslint-disable-next-line require-await
 const dummyAuditoria = async (params: AuditoriaParams): Promise<void> => {
   // Simplemente registra en la consola en modo desarrollo
   if (process.env.NODE_ENV === 'development') {
     console.log('[AUDIT DUMMY]', params);
   }
+  return Promise.resolve();
 };
 
 /**
@@ -131,26 +133,26 @@ type ProductoBase = {
   descripcion?: string | null;
   precio: number;
   categoria?: string | null;
-  imagen_url?: string | null;
-  modelo_3d_url?: string | null;
-  tipo_producto?: string | null;
-  tipo_lente?: string | null;
-  material_lente?: string | null;
-  tratamiento_lente?: string | null;
-  graduacion_esfera?: number | null;
-  graduacion_cilindro?: number | null;
+  imagenUrl?: string | null;
+  modelo3dUrl?: string | null;
+  tipoProducto?: string | null;
+  tipoLente?: string | null;
+  materialLente?: string | null;
+  tratamientoLente?: string | null;
+  graduacionEsfera?: number | null;
+  graduacionCilindro?: number | null;
   eje?: number | null;
   adicion?: number | null;
-  tipo_armazon?: string | null;
-  material_armazon?: string | null;
-  tamano_puente?: number | null;
-  tamano_aros?: number | null;
-  tamano_varillas?: number | null;
+  tipoArmazon?: string | null;
+  materialArmazon?: string | null;
+  tamanoPuente?: number | null;
+  tamanoAros?: number | null;
+  tamanoVarillas?: number | null;
   activo?: boolean | null;
-  erp_id?: number | null;
-  erp_tipo?: string | null;
-  marca_id?: string | null;
-  color_id?: string | null;
+  erpId?: number | null;
+  erpTipo?: string | null;
+  marcaId?: string | null;
+  colorId?: string | null;
 };
 
 type ProductoCreateInput = Omit<ProductoBase, 'activo'> & {
@@ -204,7 +206,7 @@ export const crearProducto = async (req: Request, res: Response<ApiResponse<unkn
     // Registrar auditoría
     await registrarAuditoria({
       usuarioId: req.user?.id || null,
-      accion: 'crear_producto',
+      accion: 'crearProducto',
       entidadTipo: 'producto',
       entidadId: nuevoProducto.id,
       descripcion: `Producto creado: ${nuevoProducto.nombre}`,
@@ -233,7 +235,7 @@ export const crearProducto = async (req: Request, res: Response<ApiResponse<unkn
     // Registrar error en auditoría
     await registrarAuditoria({
       usuarioId: req.user?.id || null,
-      accion: 'error_crear_producto',
+      accion: 'errorCrearProducto',
       entidadTipo: 'producto',
       descripcion: `Error al crear producto: ${error instanceof Error ? error.message : 'Error desconocido'}`,
       ip: req.ip,
@@ -329,18 +331,18 @@ function validateProductoInput(data: unknown): ProductoCreateInput | { error: st
     return /^https?:\/\//.test(urlStr) ? urlStr : null;
   };
 
-  result.imagen_url = validateUrl(input.imagen_url);
-  result.modelo_3d_url = validateUrl(input.modelo_3d_url);
+  result.imagenUrl = validateUrl(input.imagenUrl);
+  result.modelo3dUrl = validateUrl(input.modelo3dUrl);
 
   // Validar campos numéricos opcionales
   const numericFields = [
-    'graduacion_esfera',
-    'graduacion_cilindro',
+    'graduacionEsfera',
+    'graduacionCilindro',
     'eje',
     'adicion',
-    'tamano_puente',
-    'tamano_aros',
-    'tamano_varillas',
+    'tamanoPuente',
+    'tamanoAros',
+    'tamanoVarillas',
   ] as const;
 
   for (const field of numericFields) {
@@ -352,13 +354,13 @@ function validateProductoInput(data: unknown): ProductoCreateInput | { error: st
 
   // Validar campos de texto opcionales
   const textFields = [
-    'tipo_producto',
-    'tipo_lente',
-    'material_lente',
-    'tratamiento_lente',
-    'tipo_armazon',
-    'material_armazon',
-    'erp_tipo',
+    'tipoProducto',
+    'tipoLente',
+    'materialLente',
+    'tratamientoLente',
+    'tipoArmazon',
+    'materialArmazon',
+    'erpTipo',
   ] as const;
 
   for (const field of textFields) {
@@ -368,7 +370,7 @@ function validateProductoInput(data: unknown): ProductoCreateInput | { error: st
   }
 
   // Validar campos de ID
-  const idFields = ['marca_id', 'color_id'] as const;
+  const idFields = ['marcaId', 'colorId'] as const;
   for (const field of idFields) {
     if (input[field] !== undefined) {
       result[field] = input[field] ? String(input[field]) : null;
@@ -390,9 +392,9 @@ type ListarProductosQueryParams = {
   q?: string | string[];
   categoria?: string | string[];
   soloActivos?: string | string[] | boolean;
-  marca_id?: string | string[];
-  color_id?: string | string[];
-  ordenarPor?: 'nombre' | 'precio' | 'categoria' | 'creado_en' | 'actualizado_en';
+  marcaId?: string | string[];
+  colorId?: string | string[];
+  ordenarPor?: 'nombre' | 'precio' | 'categoria' | 'creadoEn' | 'actualizadoEn';
   orden?: 'asc' | 'desc';
 };
 
@@ -413,8 +415,8 @@ export const listarProductos = async (
     const limit = Math.min(100, Math.max(1, Number(normalizeParam(req.query.limit, '20')) || 20));
     const searchTerm = normalizeParam(req.query.q, '');
     const categoria = normalizeParam(req.query.categoria, undefined);
-    const marcaId = normalizeParam(req.query.marca_id, undefined);
-    const colorId = normalizeParam(req.query.color_id, undefined);
+    const marcaId = normalizeParam(req.query.marcaId, undefined);
+    const colorId = normalizeParam(req.query.colorId, undefined);
     const soloActivos = normalizeBooleanParam(req.query.soloActivos);
 
     // Ordenación
@@ -422,15 +424,15 @@ export const listarProductos = async (
       | 'nombre'
       | 'precio'
       | 'categoria'
-      | 'creado_en'
-      | 'actualizado_en';
+      | 'creadoEn'
+      | 'actualizadoEn';
     const orden = normalizeParam(req.query.orden, 'asc') as 'asc' | 'desc';
 
     // Definir el tipo para el objeto where
     const where: {
       activo?: boolean;
-      marca_id?: string;
-      color_id?: string;
+      marcaId?: string;
+      colorId?: string;
       categoria?:
         | { equals: string; mode: 'insensitive' }
         | { contains: string; mode: 'insensitive' };
@@ -439,9 +441,7 @@ export const listarProductos = async (
         descripcion?: { contains: string; mode: 'insensitive' };
         categoria?: { contains: string; mode: 'insensitive' };
       }>;
-      marcaId?: string;
-      colorId?: string;
-      creado_en?: { gte?: Date; lte?: Date };
+      creadoEn?: { gte?: Date; lte?: Date };
     } = {};
 
     // Filtro por estado activo/inactivo
@@ -450,8 +450,8 @@ export const listarProductos = async (
     }
 
     // Filtros por ID de relaciones
-    if (marcaId) where.marca_id = marcaId;
-    if (colorId) where.color_id = colorId;
+    if (marcaId) where.marcaId = marcaId;
+    if (colorId) where.colorId = colorId;
 
     // Filtro por categoría
     if (categoria) {
@@ -492,7 +492,7 @@ export const listarProductos = async (
     // Registrar auditoría de la consulta
     const auditoriaParams: AuditoriaParams = {
       usuarioId: req.user?.id || null, // Asumiendo que el usuario está en req.user
-      accion: 'listar_productos',
+      accion: 'listarProductos',
       modulo: 'productos',
       descripcion: `Consulta de listado de productos (página ${page}, ${limit} por página)`,
       ip: req.ip,
@@ -536,7 +536,7 @@ export const listarProductos = async (
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorParams: AuditoriaParams = {
       usuarioId: req.user?.id || null, // Asumiendo que el usuario está en req.user
-      accion: 'error_listar_productos',
+      accion: 'errorListarProductos',
       modulo: 'productos',
       descripcion: `Error al listar productos: ${errorMessage}`,
       ip: req.ip,
@@ -632,7 +632,7 @@ export const actualizarProducto = async (
     try {
       await registrarAuditoria({
         usuarioId: req.user?.id || null,
-        accion: 'ACTUALIZAR',
+        accion: 'actualizarProducto',
         entidadTipo: 'producto',
         entidadId: id,
         descripcion: `Producto actualizado: ${productoActualizado.nombre}`,
@@ -911,7 +911,7 @@ export const eliminarProducto = async (
     try {
       await registrarAuditoria({
         usuarioId: req.user?.id || null,
-        accion: 'ELIMINAR',
+        accion: 'eliminarProducto',
         entidadTipo: 'producto',
         entidadId: id,
         descripcion: `Producto desactivado: ${producto.nombre}`,
