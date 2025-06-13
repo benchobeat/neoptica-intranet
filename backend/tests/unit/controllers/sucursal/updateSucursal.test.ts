@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { createMockRequest, createMockResponse } from '../../test-utils';
 
@@ -25,14 +25,17 @@ jest.mock('../../../../src/utils/audit', () => ({
 // Import the controller after setting up mocks
 import { actualizarSucursal } from '../../../../src/controllers/sucursalController';
 
-// Simple mock response type with only the methods we need for testing
-type MockResponse = {
+// Type for our mock response methods
+type MockResponseMethods = {
   status: jest.Mock<MockResponse, [number]>;
   json: jest.Mock<MockResponse, [any]>;
   sendStatus: jest.Mock<MockResponse, [number]>;
   send: jest.Mock<MockResponse, [any?]>;
-  set: jest.Mock<MockResponse, [string, string]>;
+  set: jest.Mock<MockResponse, [any, any?]>;
 };
+
+// Our mock response type that includes both Express Response and our mock methods
+type MockResponse = Response & MockResponseMethods;
 
 // Get the mocked Prisma client instance
 const prisma = new PrismaClient();
@@ -86,14 +89,35 @@ describe('actualizarSucursal', () => {
       ip: '127.0.0.1',
     });
 
-    // Setup response mocks with proper typing
-    const mockResponse: MockResponse = {
+    // Create the mock response object with type assertion
+    const mockResponse: any = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
       sendStatus: jest.fn().mockReturnThis(),
       send: jest.fn().mockReturnThis(),
       set: jest.fn().mockReturnThis(),
+      locals: {},
+      statusCode: 200,
+      headersSent: false,
+      chunkedEncoding: false,
+      shouldKeepAlive: true,
+      useChunkedEncodingByDefault: true,
+      // Add other required Express Response properties with default values
+      app: {},
+      headers: {},
+      statusMessage: '',
+      // Add other Express Response methods with no-op functions
+      append: jest.fn().mockReturnThis(),
+      attachment: jest.fn().mockReturnThis(),
+      // Add other methods as needed...
     };
+    
+    // Assign the mock response to res
+    res = mockResponse as MockResponse;
+    
+    // Assign the mock functions to the test variables
+    statusMock = res.status as jest.Mock<MockResponse, [number]>;
+    jsonMock = res.json as jest.Mock<MockResponse, [any]>;
     
     res = mockResponse;
     statusMock = mockResponse.status;

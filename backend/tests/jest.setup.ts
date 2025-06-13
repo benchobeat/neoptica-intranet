@@ -16,9 +16,7 @@ jest.mock('../src/config/prisma', () => {
         count: jest.fn(),
       },
       $transaction: jest.fn((operations) => {
-        return Array.isArray(operations)
-          ? Promise.all(operations)
-          : Promise.resolve(operations);
+        return Array.isArray(operations) ? Promise.all(operations) : Promise.resolve(operations);
       }),
     },
   };

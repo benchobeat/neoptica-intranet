@@ -3,7 +3,9 @@ import { jest } from '@jest/globals';
 
 // 1. Primero definimos los mocks locales
 const mockFindUnique = jest.fn() as any;
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
+const mockRegistrarAuditoria = jest.fn().mockImplementation(async () => {
+  return Promise.resolve();
+});
 
 // 2. Mock de Prisma Client
 const mockPrismaClient = {
@@ -48,7 +50,9 @@ describe('Controlador de Marcas - Obtener Marca por ID', () => {
     
     // Configurar implementaciones por defecto
     mockFindUnique.mockResolvedValue({ ...mockMarca });
-    mockRegistrarAuditoria.mockResolvedValue(undefined);
+    mockRegistrarAuditoria.mockImplementation(async (auditoria: any) => {
+      return Promise.resolve();
+    });
   });
 
   it('debe devolver una marca cuando existe', async () => {

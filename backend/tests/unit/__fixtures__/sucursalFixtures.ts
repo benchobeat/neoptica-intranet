@@ -24,7 +24,7 @@ export const createSucursalData = {
   email: 'centro@example.com',
   latitud: -0.180653,
   longitud: -78.467834,
-  estado: true
+  estado: true,
 };
 
 /**
@@ -35,9 +35,9 @@ export const updateSucursalData = {
   direccion: 'Av. Principal #1234',
   telefono: '0987654321',
   email: 'nuevo@example.com',
-  latitud: -0.180700,
-  longitud: -78.467900,
-  estado: false
+  latitud: -0.1807,
+  longitud: -78.4679,
+  estado: false,
 };
 
 /**
@@ -51,7 +51,7 @@ export const mockSucursal = {
   modificadoEn: null,
   modificadoPor: null,
   anuladoEn: null,
-  anuladoPor: null
+  anuladoPor: null,
 };
 
 /**
@@ -61,7 +61,7 @@ export const mockUpdatedSucursal = {
   ...mockSucursal,
   ...updateSucursalData,
   modificadoEn: new Date('2023-01-02T00:00:00.000Z'),
-  modificadoPor: mockUserId
+  modificadoPor: mockUserId,
 };
 
 /**
@@ -71,7 +71,7 @@ export const mockDeletedSucursal = {
   ...mockSucursal,
   estado: false,
   anuladoEn: new Date('2023-01-03T00:00:00.000Z'),
-  anuladoPor: mockUserId
+  anuladoPor: mockUserId,
 };
 
 /**
@@ -85,8 +85,8 @@ export const mockSucursalList = [
     direccion: 'Av. Norte #456',
     telefono: '022222222',
     email: 'norte@example.com',
-    latitud: -0.180000,
-    longitud: -78.460000
+    latitud: -0.18,
+    longitud: -78.46,
   },
   {
     ...mockSucursal,
@@ -95,9 +95,9 @@ export const mockSucursalList = [
     direccion: 'Av. Sur #789',
     telefono: '023333333',
     email: 'sur@example.com',
-    latitud: -0.190000,
-    longitud: -78.470000,
-    estado: false
+    latitud: -0.19,
+    longitud: -78.47,
+    estado: false,
   },
   {
     ...mockSucursal,
@@ -106,9 +106,9 @@ export const mockSucursalList = [
     direccion: 'Av. Este #012',
     telefono: '024444444',
     email: 'este@example.com',
-    latitud: -0.170000,
-    longitud: -78.450000
-  }
+    latitud: -0.17,
+    longitud: -78.45,
+  },
 ];
 
 /**
@@ -119,26 +119,26 @@ export const invalidSucursalData = {
   nombreCorto: {
     ...createSucursalData,
     nombre: 'AB',
-    error: 'El nombre debe tener al menos 3 caracteres.'
+    error: 'El nombre debe tener al menos 3 caracteres.',
   },
-  
+
   // Teléfono inválido
   telefonoInvalido: {
     ...createSucursalData,
     telefono: '12345',
-    error: 'El teléfono debe tener 10 dígitos.'
+    error: 'El teléfono debe tener 10 dígitos.',
   },
-  
+
   // Email inválido
   emailInvalido: {
     ...createSucursalData,
     email: 'correo-invalido',
-    error: 'El correo electrónico no es válido.'
+    error: 'El correo electrónico no es válido.',
   },
-  
+
   // Faltan campos requeridos
   camposFaltantes: {
     nombre: '',
-    error: 'El nombre es obligatorio y debe ser una cadena de texto.'
-  }
+    error: 'El nombre es obligatorio y debe ser una cadena de texto.',
+  },
 };

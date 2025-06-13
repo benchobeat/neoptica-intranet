@@ -7,7 +7,6 @@ import type { Request, Response, RequestHandler } from 'express';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 
-import passport from './config/passport';
 import { authenticateJWT } from '@/middlewares/auth';
 import auditoriaRoutes from '@/routes/auditoria'; // Importamos la ruta de auditoría
 import authRoutes from '@/routes/auth';
@@ -21,6 +20,8 @@ import usuariosRoutes from '@/routes/usuarios';
 import { sendMail } from '@/utils/mailer';
 import { success } from '@/utils/response';
 import { swaggerSpec } from '@/utils/swagger';
+
+import passport from './config/passport';
 
 dotenv.config();
 

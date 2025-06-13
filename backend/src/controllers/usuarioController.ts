@@ -1,12 +1,10 @@
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 
+import prisma from '@/utils/prisma';
 import { registrarAuditoria } from '@/utils/audit';
 import { success, fail } from '@/utils/response';
 import { isSystemUser } from '@/utils/system';
-
-const prisma = new PrismaClient();
 
 /**
  * Lista todos los usuarios (sin exponer password)
@@ -61,12 +59,12 @@ export const listarUsuariosPaginados = async (req: Request, res: Response) => {
 
     // Preparar filtros
     const filtro: any = {
-      anulado_en: null, // Solo marcas no anuladas (soft delete)
+      anuladoEn: null, // Solo marcas no anuladas (soft delete)
     };
 
-    // Filtro adicional por nombre_completo si se proporciona en la búsqueda
+    // Filtro adicional por nombreCompleto si se proporciona en la búsqueda
     if (searchText) {
-      filtro.nombre_completo = {
+      filtro.nombreCompleto = {
         contains: searchText,
         mode: 'insensitive',
       };
@@ -695,7 +693,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
  */
 export async function actualizarPerfilUsuario(req: Request, res: Response): Promise<void> {
   const usuarioId = (req as any).user?.id || 'sistema';
-  const { nombre_completo, telefono, direccion, dni, roles, email } = req.body;
+  const { nombreCompleto, telefono, direccion, dni, roles, email } = req.body;
 
   // Rechazar intentos de cambiar roles
   if (roles !== undefined) {
@@ -790,7 +788,7 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
     };
 
     // Solo incluir campos que realmente se están actualizando
-    if (nombre_completo !== undefined) updateData.nombreCompleto = nombre_completo;
+    if (nombreCompleto !== undefined) updateData.nombreCompleto = nombreCompleto;
     if (telefono !== undefined) updateData.telefono = telefono;
     if (direccion !== undefined) updateData.direccion = direccion;
     if (nuevoDni !== undefined) updateData.dni = nuevoDni;
@@ -808,8 +806,8 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
 
     // Detectar cambios
     const cambios: string[] = [];
-    if (nombre_completo && nombre_completo !== usuario.nombreCompleto) {
-      cambios.push(`nombreCompleto: "${usuario.nombreCompleto}" → "${nombre_completo}"`);
+    if (nombreCompleto && nombreCompleto !== usuario.nombreCompleto) {
+      cambios.push(`nombreCompleto: "${usuario.nombreCompleto}" → "${nombreCompleto}"`);
     }
     if (telefono !== undefined && telefono !== usuario.telefono) {
       cambios.push(`telefono: "${usuario.telefono || ''}" → "${telefono || ''}"`);

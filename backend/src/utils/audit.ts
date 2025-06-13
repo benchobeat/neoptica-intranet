@@ -117,9 +117,7 @@ export const obtenerRegistrosAuditoria = async (filtros: {
     data: registros.map((r) => ({
       ...r,
       // Convertimos la descripción JSON si existe
-      descripcion: typeof r.descripcion === 'string' 
-        ? JSON.parse(r.descripcion) 
-        : r.descripcion
+      descripcion: typeof r.descripcion === 'string' ? JSON.parse(r.descripcion) : r.descripcion,
     })),
     meta: {
       total,

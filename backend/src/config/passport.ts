@@ -26,7 +26,13 @@ passport.use(
               proveedorOauth: 'google',
               oauthId: profile.id,
               activo: true,
-              roles: { create: { rol: { connect: { nombre: 'cliente' } }, creadoEn: new Date(), creadoPor: 'system' } },
+              roles: {
+                create: {
+                  rol: { connect: { nombre: 'cliente' } },
+                  creadoEn: new Date(),
+                  creadoPor: 'system',
+                },
+              },
             },
           });
         }
@@ -62,7 +68,13 @@ passport.use(
               proveedorOauth: 'facebook',
               oauthId: profile.id,
               activo: true,
-              roles: { create: { rol: { connect: { nombre: 'cliente' } }, creadoEn: new Date(), creadoPor: 'system' } },
+              roles: {
+                create: {
+                  rol: { connect: { nombre: 'cliente' } },
+                  creadoEn: new Date(),
+                  creadoPor: 'system',
+                },
+              },
             },
           });
         }
@@ -97,7 +109,13 @@ passport.use(
               proveedorOauth: 'instagram',
               oauthId: profile.id,
               activo: true,
-              roles: { create: { rol: { connect: { nombre: 'cliente' } }, creadoEn: new Date(), creadoPor: 'system' } },
+              roles: {
+                create: {
+                  rol: { connect: { nombre: 'cliente' } },
+                  creadoEn: new Date(),
+                  creadoPor: 'system',
+                },
+              },
             },
           });
         }

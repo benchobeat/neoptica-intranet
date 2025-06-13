@@ -231,7 +231,12 @@ router.get('/', requireRole('admin', 'optometristsa', 'vendedor'), authenticateJ
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/paginado', requireRole('admin', 'optometristsa', 'vendedor'), authenticateJWT, listarColoresPaginados);
+router.get(
+  '/paginado',
+  requireRole('admin', 'optometristsa', 'vendedor'),
+  authenticateJWT,
+  listarColoresPaginados
+);
 
 /**
  * @swagger
@@ -327,7 +332,12 @@ router.get('/:id', requireRole('admin', 'vendedor'), authenticateJWT, obtenerCol
  *       500:
  *         description: Error interno del servidor
  */
-router.put('/:id', requireRole('admin', 'optometristsa', 'vendedor'), authenticateJWT, actualizarColor);
+router.put(
+  '/:id',
+  requireRole('admin', 'optometristsa', 'vendedor'),
+  authenticateJWT,
+  actualizarColor
+);
 
 /**
  * @swagger

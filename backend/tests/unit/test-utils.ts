@@ -1,12 +1,12 @@
-import { Request, Response } from 'express';
 import { jest } from '@jest/globals';
+import type { Request } from 'express';
+import { Response } from 'express';
 
 // Ya NO importamos el mock de Prisma Client directamente aquí
 // Los archivos de test deben importarlo directamente desde './__mocks__/prisma'
 
 // Mock de la función de auditoría
 export const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
-
 
 // Interface para una respuesta Mock más completa
 interface MockResponse {
@@ -18,13 +18,15 @@ interface MockResponse {
 }
 
 // Función para crear un mock de la petición HTTP
-export function createMockRequest(options: {
-  body?: any;
-  params?: any;
-  query?: any;
-  user?: any;
-  ip?: string;
-} = {}): Partial<Request> {
+export function createMockRequest(
+  options: {
+    body?: any;
+    params?: any;
+    query?: any;
+    user?: any;
+    ip?: string;
+  } = {}
+): Partial<Request> {
   const {
     body = {},
     params = {},
@@ -33,9 +35,9 @@ export function createMockRequest(options: {
       id: 'test-user-id',
       email: 'test@example.com',
       nombreCompleto: 'Usuario de Prueba',
-      roles: ['admin']
+      roles: ['admin'],
     },
-    ip = '127.0.0.1'
+    ip = '127.0.0.1',
   } = options;
 
   return {
@@ -44,19 +46,19 @@ export function createMockRequest(options: {
     query,
     user,
     ip,
-    headers: {}
+    headers: {},
   };
 }
 
 // Función para crear un mock de la respuesta HTTP
 export function createMockResponse(): MockResponse {
   const res: Partial<MockResponse> = {};
-  
+
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   res.send = jest.fn().mockReturnValue(res);
   res.end = jest.fn().mockReturnValue(res);
-  
+
   return res as MockResponse;
 }
 

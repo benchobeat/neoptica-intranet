@@ -22,7 +22,7 @@ declare global {
       facebook_uid?: string | null;
       proveedor_oauth?: string | null;
       oauth_id?: string | null;
-      
+
       // Datos de perfil
       foto_perfil?: string | null;
       direccion?: string | null;

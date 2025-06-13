@@ -177,7 +177,7 @@ router.post('/autoregistro', autoregistroCliente);
  *                   properties:
  *                     id:
  *                       type: string
- *                     nombre_completo:
+ *                     nombreCompleto:
  *                       type: string
  *                     telefono:
  *                       type: string
@@ -200,7 +200,7 @@ router.post('/autoregistro', autoregistroCliente);
  *       500:
  *         description: Error interno del servidor
  */
-router.put('/perfil', authenticateJWT, actualizarPerfilUsuario);
+router.put('/perfil', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista', 'cliente'), actualizarPerfilUsuario);
 
 /**
  * @swagger
@@ -260,7 +260,7 @@ router.put('/perfil', authenticateJWT, actualizarPerfilUsuario);
  *       401:
  *         description: No autorizado
  */
-router.get('/paginated', authenticateJWT, listarUsuariosPaginados);
+router.get('/paginated', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista'), listarUsuariosPaginados);
 
 /**
  * @swagger
@@ -415,7 +415,7 @@ router.post('/', authenticateJWT, requireRole('admin'), usuarioController.crearU
 router.put(
   '/:id',
   authenticateJWT,
-  requireRole('admin', 'vendedor', 'optometrista', 'cliente'),
+  requireRole('admin'),
   usuarioController.actualizarUsuario
 );
 
@@ -508,45 +508,6 @@ router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarUsuario);
  *               $ref: '#/components/schemas/Error'
  */
 router.put('/:id/password', authenticateJWT, cambiarPassword);
-
-/**
- * @swagger
- * /api/usuarios/cambiar-password:
- *   post:
- *     summary: Endpoint alternativo para cambiar contraseña (compatibilidad con tests)
- *     tags: [Usuarios]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [actual, nueva]
- *             properties:
- *               actual:
- *                 type: string
- *                 example: "Admin1234!"
- *               nueva:
- *                 type: string
- *                 example: "NuevoPass2024!"
- *     responses:
- *       200:
- *         description: Contraseña actualizada correctamente
- *       400:
- *         description: Error en la petición (password débil, etc)
- */
-// Middleware para inyectar el ID del usuario autenticado en los params
-function injectUserIdAsParam(req: any, _res: any, next: any) {
-  // Extrae el ID del usuario desde el token JWT y lo inyecta como param
-  if (req.user && req.user.id) {
-    req.params.id = req.user.id;
-  }
-  next();
-}
-// Ruta alternativa para compatibilidad con tests y clientes antiguos
-router.post('/cambiar-password', authenticateJWT, injectUserIdAsParam, cambiarPassword);
 
 /**
  * @swagger

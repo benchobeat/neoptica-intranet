@@ -1,5 +1,5 @@
-import type { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
 
 import { registrarAuditoria } from '../utils/audit';
 
@@ -15,11 +15,11 @@ const prisma = new PrismaClient();
 export const crearColor = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
   const userId = (req as any).usuario?.id || (req as any).user?.id;
-  
+
   // Log temporal para verificar recarga
   // console.log('✅ Llamada a crearColor recibida -', new Date().toISOString());
   // console.log('📝 Datos recibidos:', JSON.stringify(req.body, null, 2));
-  
+
   // No se necesitan logs de depuración en producción
   try {
     const { nombre, descripcion, activo, codigoHex } = req.body;
@@ -107,7 +107,7 @@ export const crearColor = async (req: Request, res: Response) => {
       data: {
         nombre: nombreLimpio,
         // Garantizar que codigoHex se pase explícitamente
-        codigoHex: codigoHexLimpio, 
+        codigoHex: codigoHexLimpio,
         descripcion: descripcion?.trim() || null,
         activo: activo !== undefined ? activo : true,
         creadoPor: userId || null,

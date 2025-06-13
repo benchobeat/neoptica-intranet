@@ -1,5 +1,5 @@
-import type { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
 
 import { registrarAuditoria } from '../utils/audit';
 
@@ -245,7 +245,7 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
 
 /**
  * Controlador para filtrar registros de auditoría por módulo.
- * 
+ *
  * @param {Request} req - Objeto de solicitud Express con módulo en params
  * @param {Response} res - Objeto de respuesta Express
  * @returns {Promise<Response>} Lista de registros de auditoría filtrados por módulo
@@ -349,7 +349,7 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
 
 /**
  * Controlador para filtrar registros de auditoría por usuario.
- * 
+ *
  * @param {Request} req - Objeto de solicitud Express con ID de usuario en params
  * @param {Response} res - Objeto de respuesta Express
  * @returns {Promise<Response>} Lista de registros de auditoría filtrados por usuario

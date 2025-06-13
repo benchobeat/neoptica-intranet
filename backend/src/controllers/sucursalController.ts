@@ -1,5 +1,5 @@
-import type { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
 
 import { registrarAuditoria } from '../utils/audit';
 
@@ -694,7 +694,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría
   const userId = (req as any).usuario?.id || (req as any).user?.id;
   const { id } = req.params;
-  
+
   // Remove debug logs
   try {
     // Ya tenemos el id y userId del bloque superior

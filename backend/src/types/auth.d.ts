@@ -1,4 +1,4 @@
-import { User } from 'express';
+import type { User } from 'express';
 
 export type AuthenticatedUser = User;
 

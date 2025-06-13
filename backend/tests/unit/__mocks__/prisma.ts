@@ -2,38 +2,47 @@ import { jest } from '@jest/globals';
 
 /**
  * Mock de Prisma Client para pruebas unitarias
- * Esta es una implementación simplificada que evita problemas de tipado
  */
 
-// Definir tipos para evitar errores TS
-type MockReturnValue = any;
-type MockArgs = any[];
+// Definir tipos básicos para los mocks
+type MockFn = jest.Mock;
 
 // Funciones mock básicas para cada entidad
 const mockEntityFunctions = {
-  create: jest.fn().mockResolvedValue({} as MockReturnValue),
-  findMany: jest.fn().mockResolvedValue([] as MockReturnValue[]),
-  findUnique: jest.fn().mockResolvedValue(null as MockReturnValue),
-  findFirst: jest.fn().mockResolvedValue(null as MockReturnValue),
-  update: jest.fn().mockResolvedValue({} as MockReturnValue),
-  updateMany: jest.fn().mockResolvedValue({ count: 0 } as { count: number }),
-  delete: jest.fn().mockResolvedValue({} as MockReturnValue),
-  count: jest.fn().mockResolvedValue(0 as number),
-};
+  create: jest.fn().mockImplementation(() => Promise.resolve({})),
+  findMany: jest.fn().mockImplementation(() => Promise.resolve([])),
+  findUnique: jest.fn().mockImplementation(() => Promise.resolve(null)),
+  findFirst: jest.fn().mockImplementation(() => Promise.resolve(null)),
+  update: jest.fn().mockImplementation(() => Promise.resolve({})),
+  updateMany: jest.fn().mockImplementation(() => Promise.resolve({ count: 0 })),
+  delete: jest.fn().mockImplementation(() => Promise.resolve({})),
+  count: jest.fn().mockImplementation(() => Promise.resolve(0)),
+} as const;
 
 // Crear un mock reusable para todas las entidades
-const prismaMock = {
+const prismaMock: any = {
+  $transaction: jest.fn(<T>(operations: Promise<T>[]) => Promise.all(operations)),
+  // Inicializar mocks para cada modelo de Prisma
+  $on: jest.fn(),
+  $connect: jest.fn(),
+  $disconnect: jest.fn(),
+  $use: jest.fn(),
+  $executeRaw: jest.fn(),
+  $queryRaw: jest.fn(),
+
+  // Inicializar mocks para cada modelo
   color: { ...mockEntityFunctions },
   marca: { ...mockEntityFunctions },
   producto: { ...mockEntityFunctions },
-  $transaction: jest.fn(<T>(operations: Promise<T>[]) => Promise.all(operations)),
+  sucursal: { ...mockEntityFunctions },
+  // Agregar otros modelos según sea necesario
 };
 
 // Función para resetear todos los mocks de Prisma
 const resetPrismaMocks = () => {
   // Resetear todos los métodos de todas las entidades
-  ['color', 'marca', 'producto'].forEach(entity => {
-    Object.keys(mockEntityFunctions).forEach(method => {
+  ['color', 'marca', 'producto'].forEach((entity) => {
+    Object.keys(mockEntityFunctions).forEach((method) => {
       prismaMock[entity][method].mockClear();
     });
   });
@@ -46,5 +55,5 @@ const resetPrismaMocks = () => {
 // Exportar el mock y la función de reseteo para usar en tests
 module.exports = {
   prismaMock,
-  resetPrismaMocks
+  resetPrismaMocks,
 };

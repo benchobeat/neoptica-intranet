@@ -1,15 +1,14 @@
 import crypto from 'crypto';
 
-import { PrismaClient } from '@prisma/client';
+
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
+import prisma from '@/utils/prisma';
 import { registrarAuditoria } from '@/utils/audit';
 import { sendMail } from '@/utils/mailer';
 import { success, fail } from '@/utils/response';
-
-const prisma = new PrismaClient();
 
 /**
  * Solicita un restablecimiento de contraseña generando un token seguro
@@ -72,7 +71,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       data: {
         usuarioId: usuario.id,
         token: resetTokenHash,
-        expiresAt: expiresAt,
+        expiresAt,
         createdAt: new Date(),
         // Los campos creado_por y creado_en se manejan automáticamente
       },
@@ -184,8 +183,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       where: {
         usuarioId: usuario.id,
         expiresAt: {
-          gt: new Date() // No expirado
-        }
+          gt: new Date(), // No expirado
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -323,10 +322,10 @@ export async function login(req: Request, res: Response): Promise<void> {
     const usuario = await prisma.usuario.findUnique({
       where: { email },
       include: {
-        roles: { 
-          include: { 
-            rol: true 
-          } 
+        roles: {
+          include: {
+            rol: true,
+          },
         },
       },
     });

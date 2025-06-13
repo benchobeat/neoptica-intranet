@@ -1,7 +1,8 @@
+import type { Request, Response } from 'express';
 import express from 'express';
+
 import { authenticateJWT, checkRole } from '@/middlewares/auth';
 import { success } from '@/utils/response';
-import { Request, Response } from 'express';
 
 const router = express.Router();
 
@@ -21,9 +22,14 @@ const router = express.Router();
  *       401:
  *         description: No autorizado, token inválido o expirado
  */
-router.get('/admin/ruta-protegida', authenticateJWT, checkRole(['admin']), (req: Request, res: Response) => {
-  res.json(success({ message: 'Acceso concedido' }));
-});
+router.get(
+  '/admin/ruta-protegida',
+  authenticateJWT,
+  checkRole(['admin']),
+  (req: Request, res: Response) => {
+    res.json(success({ message: 'Acceso concedido' }));
+  }
+);
 
 /**
  * @swagger
@@ -41,8 +47,13 @@ router.get('/admin/ruta-protegida', authenticateJWT, checkRole(['admin']), (req:
  *       401:
  *         description: No autorizado, token inválido o expirado
  */
-router.get('/vendedor/ruta-protegida', authenticateJWT, checkRole(['vendedor']), (req: Request, res: Response) => {
-  res.json(success({ message: 'Acceso concedido' }));
-});
+router.get(
+  '/vendedor/ruta-protegida',
+  authenticateJWT,
+  checkRole(['vendedor']),
+  (req: Request, res: Response) => {
+    res.json(success({ message: 'Acceso concedido' }));
+  }
+);
 
 export default router;

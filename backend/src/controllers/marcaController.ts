@@ -1,5 +1,5 @@
-import type { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import type { Request, Response } from 'express';
 
 import { registrarAuditoria } from '../utils/audit';
 

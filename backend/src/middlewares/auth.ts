@@ -35,7 +35,9 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
     const user: AuthenticatedUser = {
       id: String(payload.id),
       email: String(payload.email),
-      nombreCompleto: String(payload.nombre_completo || payload.nombreCompleto || 'Usuario sin nombre'),
+      nombreCompleto: String(
+        payload.nombre_completo || payload.nombreCompleto || 'Usuario sin nombre'
+      ),
       roles: Array.isArray(payload.roles) ? payload.roles : [],
       ...payload, // Incluir el resto de las propiedades del payload
     };
@@ -66,7 +68,7 @@ export function checkRole(requiredRoles: string[]) {
     // Verificar que el usuario tenga al menos uno de los roles requeridos
     // Hacemos una aserción de tipo para asegurarnos que TypeScript reconozca roles
     const userRoles = (req.user as Express.User).roles || [];
-    const hasRequiredRole = requiredRoles.some(role => userRoles.includes(role));
+    const hasRequiredRole = requiredRoles.some((role) => userRoles.includes(role));
 
     if (!hasRequiredRole) {
       res.status(403).json(fail('No tienes permisos para acceder a este recurso'));
