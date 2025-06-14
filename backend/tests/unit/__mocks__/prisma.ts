@@ -35,16 +35,24 @@ const prismaMock: any = {
   marca: { ...mockEntityFunctions },
   producto: { ...mockEntityFunctions },
   sucursal: { ...mockEntityFunctions },
+  usuario: { ...mockEntityFunctions },
+  rol: { ...mockEntityFunctions },
+  usuarioRol: { ...mockEntityFunctions },
   // Agregar otros modelos según sea necesario
 };
 
 // Función para resetear todos los mocks de Prisma
 const resetPrismaMocks = () => {
   // Resetear todos los métodos de todas las entidades
-  ['color', 'marca', 'producto'].forEach((entity) => {
-    Object.keys(mockEntityFunctions).forEach((method) => {
-      prismaMock[entity][method].mockClear();
-    });
+  const entities = ['color', 'marca', 'producto', 'usuario', 'rol', 'usuarioRol'];
+  entities.forEach((entity) => {
+    if (prismaMock[entity]) {
+      Object.keys(mockEntityFunctions).forEach((method) => {
+        if (prismaMock[entity][method]?.mockClear) {
+          prismaMock[entity][method].mockClear();
+        }
+      });
+    }
   });
 
   // Resetear $transaction

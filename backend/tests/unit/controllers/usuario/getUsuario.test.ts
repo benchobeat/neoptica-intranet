@@ -30,42 +30,111 @@ jest.mock('@/controllers/usuarioController', () => {
   };
 });
 
-// Mock request and response
-const mockRequest = (params: Record<string, any> = {}) => ({
-  params,
-  ip: '127.0.0.1',
-  user: { id: 'test-user-id' },
-});
+// Extended user type for testing
+interface TestUser {
+  id: string;
+  email?: string;
+  nombreCompleto?: string;
+  roles?: Array<{ rol: { nombre: string } }>;
+  [key: string]: any; // Allow any other properties
+}
 
-const mockResponse = () => {
+// Mock response type for testing
+type MockResponse = Response & {
+  status: jest.Mock<MockResponse, [number]>;
+  json: jest.Mock<MockResponse, [any]>;
+  send: jest.Mock<MockResponse, [any?]>;
+  mock: {
+    calls: {
+      status: any[];
+      json: any[];
+    };
+  };
+  mockClear: () => void;
+};
+
+// Helper function to create a mock request
+const mockRequest = (params: Record<string, any> = {}, user?: TestUser): Request => {
+  const req: any = {
+    params,
+    method: 'GET',
+    url: `/api/usuarios/${params.id}`,
+    headers: {},
+    ip: '127.0.0.1',
+    user: user || { id: 'test-user-id', email: 'test@example.com', nombreCompleto: 'Test User' },
+    // Add other required Request properties
+    get: jest.fn(),
+    accepts: jest.fn(),
+    header: jest.fn(),
+    // Add other Express Request methods as needed
+  };
+  return req as Request;
+};
+
+// Helper function to create a mock response
+const mockResponse = (): MockResponse => {
   const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
+  
+  // Mock essential response methods
+  res.status = jest.fn().mockImplementation((statusCode: number) => {
+    res.statusCode = statusCode;
+    return res;
+  });
+  
+  res.json = jest.fn().mockImplementation((data: any) => {
+    res._json = data;
+    return res;
+  });
+  
+  res.send = jest.fn().mockReturnValue(res);
+  
+  // Mock tracking for tests
   res.mock = {
     calls: {
       status: [],
       json: [],
     },
   };
-  res.status.mockImplementation((statusCode: number) => {
-    res.mock.calls.status.push(statusCode);
-    return res;
+  
+  // Track status calls
+  const originalStatus = res.status;
+  res.status = jest.fn((...args) => {
+    res.mock.calls.status.push(args);
+    return originalStatus.apply(res, args);
   });
-  res.json.mockImplementation((data: any) => {
-    res.mock.calls.json.push(data);
-    return res;
+  
+  // Track json calls
+  const originalJson = res.json;
+  res.json = jest.fn((...args) => {
+    res.mock.calls.json.push(args);
+    return originalJson.apply(res, args);
   });
-  return res;
+  
+  // Mock clear function
+  res.mockClear = () => {
+    res.mock.calls.status = [];
+    res.mock.calls.json = [];
+    res.status.mockClear();
+    res.json.mockClear();
+    res.send.mockClear();
+  };
+  
+  return res as MockResponse;
 };
 
 describe('obtenerUsuario', () => {
   let req: Request;
-  let res: Response;
+  let res: MockResponse;
   const next = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    req = mockRequest({ id: mockUsuarioAdmin.id });
+    req = mockRequest({ id: mockUsuarioAdmin.id }, { 
+      id: 'test-user-id', 
+      email: 'test@example.com', 
+      nombreCompleto: 'Test User',
+      roles: [{ rol: { nombre: 'admin' } }]
+    });
     res = mockResponse();
     mockFindUnique.mockClear();
     mockRegistrarAuditoria.mockClear();

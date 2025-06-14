@@ -23,50 +23,103 @@ import { Request, Response } from 'express';
 import { listarUsuarios } from '../../../../src/controllers/usuarioController';
 import { mockUsuarioAdmin, mockUsuarioVendedor } from '../../__fixtures__/usuarioFixtures';
 
-// Extend the Express Request type to include our custom properties
-type CustomRequest = Request & {
-  user?: {
-    id: string;
-    roles: string[];
-  };
+// Extended user type for testing
+interface TestUser {
+  id: string;
+  email: string;
+  nombreCompleto: string;
+  roles: string[];
+  [key: string]: any; // Allow any other properties
+}
+
+// Mock response type for testing
+type MockResponse = Response & {
+  status: jest.Mock<MockResponse, [number]>;
+  json: jest.Mock<MockResponse, [any]>;
+  send: jest.Mock<MockResponse, [any?]>;
+  mockClear: () => void;
+};
+
+// Helper function to create a mock request
+const mockRequest = (options: {
+  user?: Partial<TestUser>;
   ip?: string;
+  query?: Record<string, any>;
+  params?: Record<string, any>;
+  body?: any;
+} = {}): Request => {
+  const req: any = {
+    method: 'GET',
+    url: '/api/usuarios',
+    headers: {},
+    ip: options.ip || '127.0.0.1',
+    params: options.params || {},
+    query: options.query || {},
+    body: options.body || {},
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      roles: ['admin'],
+      ...(options.user || {})
+    },
+    // Add other required Request properties
+    get: jest.fn(),
+    header: jest.fn(),
+    accepts: jest.fn().mockReturnValue('application/json'),
+    acceptsCharsets: jest.fn().mockReturnValue(['utf-8']),
+    // Add other Express Request methods as needed
+  };
+  return req as Request;
 };
 
-// Mock request and response
-const mockRequest = (options: Partial<CustomRequest> = {}): CustomRequest => {
-  const req = {} as CustomRequest;
-  req.ip = options.ip || '127.0.0.1';
-  req.user = options.user || { id: 'test-user-id', roles: ['admin'] };
-  req.get = jest.fn();
-  req.header = jest.fn();
-  req.accepts = jest.fn().mockReturnValue('application/json');
-  req.acceptsCharsets = jest.fn().mockReturnValue(['utf-8']);
-  return req;
-};
-
-const mockResponse = (): jest.Mocked<Response> => {
+// Helper function to create a mock response
+const mockResponse = (): MockResponse => {
   const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
+  
+  // Mock essential response methods
+  res.status = jest.fn().mockImplementation((statusCode: number) => {
+    res.statusCode = statusCode;
+    return res;
+  });
+  
+  res.json = jest.fn().mockImplementation((data: any) => {
+    res._json = data;
+    return res;
+  });
+  
   res.send = jest.fn().mockReturnValue(res);
-  res.setHeader = jest.fn().mockReturnValue(res);
-  res.get = jest.fn();
-  return res as jest.Mocked<Response>;
+  
+  // Mock clear function
+  res.mockClear = () => {
+    res.status.mockClear();
+    res.json.mockClear();
+    res.send.mockClear();
+  };
+  
+  return res as MockResponse;
 };
-
-
 
 describe('listarUsuarios', () => {
-  let req: CustomRequest;
-  let res: jest.Mocked<Response>;
+  let req: Request;
+  let res: MockResponse;
 
   beforeEach(() => {
     // Reset mocks before each test
     jest.clearAllMocks();
     
     // Setup default request and response
-    req = mockRequest();
+    req = mockRequest({
+      user: {
+        id: 'test-user-id',
+        email: 'test@example.com',
+        nombreCompleto: 'Test User',
+        roles: ['admin']
+      }
+    });
     res = mockResponse();
+    mockFindMany.mockClear();
+    mockRegistrarAuditoria.mockClear();
     
     // Default mock implementation
     mockFindMany.mockResolvedValue([mockUsuarioAdmin, mockUsuarioVendedor]);

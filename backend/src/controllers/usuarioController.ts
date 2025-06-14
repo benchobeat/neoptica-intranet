@@ -206,17 +206,6 @@ function telefonoValido(telefono: string): boolean {
 
 export async function crearUsuario(req: Request, res: Response): Promise<void> {
   const { nombreCompleto, email, password, telefono, roles, dni, direccion } = req.body;
-
-  // Log para debug
-  //console.log('[DEBUG] Datos recibidos en crearUsuario:', {
-  //  nombreCompleto,
-  //  email,
-  //  telefono,
-  //  roles,
-  //  dni,
-  //  direccion,
-  //});
-
   const usuarioId = (req as any).user?.id || 'sistema';
   let mensajeError = '';
 
@@ -726,7 +715,6 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
   }
 
   try {
-    // console.log(`Actualizando perfil del usuario: ${usuarioId}`);
     const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
     if (!usuario) {
       res.status(404).json(fail('Usuario no encontrado'));
@@ -769,7 +757,6 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
           }
         }
       } catch (_error) {
-        // console.error("Error al procesar el DNI:", error);
         res.status(500).json(fail('Error al procesar el DNI'));
         return;
       }
@@ -792,8 +779,6 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
     if (telefono !== undefined) updateData.telefono = telefono;
     if (direccion !== undefined) updateData.direccion = direccion;
     if (nuevoDni !== undefined) updateData.dni = nuevoDni;
-
-    // console.log('Datos a actualizar:', JSON.stringify(updateData));
 
     // Actualizar usuario
     const usuarioActualizado = await prisma.usuario.update({
@@ -841,7 +826,7 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
       })
     );
   } catch (err) {
-    // console.error("Error en actualizarPerfilUsuario:", err);
+
     const mensajeError = err instanceof Error ? err.message : 'Error desconocido';
     res.status(500).json(fail(mensajeError));
     await registrarAuditoria({

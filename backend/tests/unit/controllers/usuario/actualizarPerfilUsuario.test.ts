@@ -1,6 +1,55 @@
-// Import types only to avoid hoisting issues
-type Request = import('express').Request;
-type Response = import('express').Response;
+// Import types
+import { Request, Response } from 'express';
+
+// Extended user type for testing
+interface TestUser {
+  id: string;
+  email: string;
+  nombreCompleto: string;
+  telefono?: string | null;
+  dni?: string | null;
+  direccion?: string | null;
+  password?: string;
+  salt?: string;
+  token?: string | null;
+  tokenExpiracion?: Date | null;
+  ultimoInicioSesion?: Date | null;
+  intentosFallidos?: number;
+  bloqueado?: boolean;
+  fechaNacimiento?: Date | null;
+  genero?: string | null;
+  fotoPerfil?: string | null;
+  notificaciones?: boolean;
+  preferencias?: Record<string, any>;
+  roles: Array<{ rol: { nombre: string } }>;
+  [key: string]: any; // For any additional properties that might exist
+}
+
+// Extend Express types to include our custom properties
+declare global {
+  namespace Express {
+    // Extend the existing Request type
+    interface Request {
+      user?: User;
+      ip?: string;
+      body: any;
+      params: Record<string, any>;
+      method: string;
+      url: string;
+      headers: Record<string, any>;
+      get: jest.Mock;
+    }
+  }
+}
+
+// Simplified mock response type for testing
+type MockResponse = {
+  status: jest.Mock<MockResponse, [number]>;
+  json: jest.Mock<MockResponse, [any]>;
+  send: jest.Mock<MockResponse, [any?]>;
+  mockClear: () => void;
+  [key: string]: any; // Allow any other properties
+};
 
 // Define mocks first
 const mockRegistrarAuditoria = jest.fn();
@@ -32,31 +81,40 @@ jest.doMock('@/utils/audit', () => ({
 // Now import the controller after setting up mocks
 const { actualizarPerfilUsuario } = require('@/controllers/usuarioController');
 
-// Mock response object
-const createMockResponse = (): Response => {
-  const res: Partial<Response> = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
-    send: jest.fn().mockReturnThis(),
-    // Add other mock implementations as needed
+// Helper function to create a mock response
+const createMockResponse = (): MockResponse => {
+  const res: Partial<MockResponse> = {};
+  
+  // Mock essential response methods
+  res.status = jest.fn().mockImplementation(() => res as MockResponse);
+  res.json = jest.fn().mockImplementation(() => res as MockResponse);
+  res.send = jest.fn().mockImplementation(() => res as MockResponse);
+  
+  // Mock clear function
+  res.mockClear = () => {
+    (res.status as jest.Mock).mockClear();
+    (res.json as jest.Mock).mockClear();
+    (res.send as jest.Mock).mockClear();
   };
-  return res as Response;
+  
+  return res as MockResponse;
 };
 
-// Mock request object
+// Helper function to create a mock request with user data
 const createMockRequest = (body: any, user: any): Request => {
-  return {
+  // Create a simple mock request with essential properties
+  const req: any = {
     body,
     user,
-    ip: '127.0.0.1',
     params: { id: user?.id },
-    // Add required Request properties
     method: 'POST',
-    url: '/api/usuarios/perfil',
+    url: '/api/usuarios/actualizar-perfil',
     headers: {},
-    get: jest.fn(),
-    // Add other required Request properties as needed
-  } as unknown as Request;
+    ip: '127.0.0.1',
+    get: jest.fn()
+  };
+  
+  return req as Request;
 };
 
 describe('actualizarPerfilUsuario', () => {
@@ -72,18 +130,13 @@ describe('actualizarPerfilUsuario', () => {
   };
   
   // Mock user data with all required fields
-  const mockUser = {
+  const mockUser: TestUser = {
     id: userId,
     nombreCompleto: 'Test User',
     email: 'test@example.com',
     telefono: '1234567890',
-    direccion: 'Test Address',
     dni: null,
-    activo: true,
-    creadoEn: new Date(),
-    modificadoEn: new Date(),
-    creadoPor: 'system',
-    modificadoPor: 'system',
+    direccion: 'Test Address',
     roles: [
       {
         rol: {
@@ -91,6 +144,7 @@ describe('actualizarPerfilUsuario', () => {
         }
       }
     ],
+    // Additional test-only properties
     password: 'hashedpassword',
     salt: 'somesalt',
     token: null,
@@ -107,8 +161,8 @@ describe('actualizarPerfilUsuario', () => {
 
   // Test variables
   let req: Partial<Request>;
-  let res: Partial<Response>;
-  let currentMockUser: any;
+  let res: MockResponse;
+  let currentMockUser: TestUser;
   
   // Mock functions are already defined at the top level
   
@@ -129,24 +183,48 @@ describe('actualizarPerfilUsuario', () => {
     // Setup request with user data
     const requestUser = { 
       id: userId,
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
       roles: ['user']
     };
     
+    // Create mock request with user and update data
+    const mockUserWithRoles = {
+      ...requestUser,
+      roles: requestUser.roles.map(rol => ({ rol: { nombre: rol } }))
+    };
+    
+    // Create the request with the properly typed user
     req = createMockRequest(
       { ...validUpdateData },
-      requestUser
+      mockUserWithRoles
     );
     
-    // Setup response mock with required Response properties
-    res = {
-      ...createMockResponse(),
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
-      send: jest.fn().mockReturnThis(),
-    } as unknown as Response;
+    // Update current mock user with the full user object
+    currentMockUser = { 
+      ...mockUser,
+      roles: mockUserWithRoles.roles 
+    };
+    
+    // Setup response mock
+    res = createMockResponse();
     
     // Setup Prisma mocks
-    mockFindUnique.mockResolvedValue(currentMockUser);
+    mockFindUnique.mockImplementation(({ where }) => {
+      if (where.id === currentMockUser.id) {
+        return Promise.resolve({
+          ...currentMockUser,
+          // Add any additional fields that the controller might expect
+          activo: true,
+          creadoEn: new Date(),
+          modificadoEn: new Date(),
+          creadoPor: 'system',
+          modificadoPor: 'system'
+        });
+      }
+      return Promise.resolve(null);
+    });
+
     // Mock the update function to return updated user data
     mockUpdate.mockImplementation(({ data }) => {
       // Create a copy of the current mock user
@@ -154,8 +232,8 @@ describe('actualizarPerfilUsuario', () => {
       
       // Update fields from the request data
       if (data.nombreCompleto) updatedUser.nombreCompleto = data.nombreCompleto;
-      if (data.telefono) updatedUser.telefono = data.telefono;
-      if (data.direccion) updatedUser.direccion = data.direccion;
+      if (data.telefono !== undefined) updatedUser.telefono = data.telefono;
+      if (data.direccion !== undefined) updatedUser.direccion = data.direccion;
       if (data.dni !== undefined) updatedUser.dni = data.dni;
       
       // Handle the case where nombre_completo is passed in the request body
@@ -164,13 +242,17 @@ describe('actualizarPerfilUsuario', () => {
       }
       
       // Update timestamps
-      updatedUser.modificadoEn = new Date();
-      updatedUser.modificadoPor = userId;
+      (updatedUser as any).modificadoEn = new Date();
+      (updatedUser as any).modificadoPor = userId;
       
-      // Ensure roles are in the expected format
-      updatedUser.roles = [{ rol: { nombre: 'cliente' } }];
+      // Update the current mock user for subsequent tests
+      currentMockUser = updatedUser;
       
-      return Promise.resolve(updatedUser);
+      return Promise.resolve({
+        ...updatedUser,
+        // Include any additional fields that the controller might expect
+        roles: updatedUser.roles || [{ rol: { nombre: 'cliente' } }]
+      });
     });
     
     // Setup role mocks
@@ -182,13 +264,10 @@ describe('actualizarPerfilUsuario', () => {
   });
 
   it('debe actualizar el perfil correctamente', async () => {
-    console.log('--- Starting test: debe actualizar el perfil correctamente ---');
-    
     // Arrange    // Create a copy of mockUser to avoid reference issues
     const userToUpdate = JSON.parse(JSON.stringify(mockUser));
     
     // Mock successful find
-    console.log('Mocking findUnique with user:', JSON.stringify(userToUpdate, null, 2));
     mockFindUnique.mockResolvedValueOnce(userToUpdate);
     
     // Create updated user with the new data
@@ -204,25 +283,21 @@ describe('actualizarPerfilUsuario', () => {
       roles: userToUpdate.roles || []
     };
     
-    console.log('Mocking update with response:', JSON.stringify(updatedUser, null, 2));
     mockUpdate.mockResolvedValueOnce(updatedUser);
     
-    req = createMockRequest(validUpdateData, { id: userId, roles: ['user'] });
-    console.log('Request created with body:', JSON.stringify(validUpdateData, null, 2));
+    req = createMockRequest(validUpdateData, { 
+      id: userId, 
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      roles: ['user'] 
+    });
     
     // Act
-    console.log('Calling actualizarPerfilUsuario...');
     try {
       await actualizarPerfilUsuario(req, res);
-      console.log('actualizarPerfilUsuario completed');
     } catch (error) {
-      console.error('Error in actualizarPerfilUsuario:', error);
       throw error;
     }
-    
-    // Debug: Log all calls to res.status and res.json
-    console.log('res.status calls:', (res.status as jest.Mock).mock.calls);
-    console.log('res.json calls:', (res.json as jest.Mock).mock.calls);
     
     // Assert - The controller doesn't set status code on success, only sends JSON
     // Verify database update was called with correct data
@@ -289,7 +364,12 @@ describe('actualizarPerfilUsuario', () => {
   it('no debe permitir actualizar el email', async () => {
     // Arrange
     const updateWithEmail = { ...validUpdateData, email: 'newemail@example.com' };
-    req = createMockRequest(updateWithEmail, { id: userId, roles: ['user'] });
+    req = createMockRequest(updateWithEmail, { 
+      id: userId, 
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      roles: ['user'] 
+    });
     
     // Act
     await actualizarPerfilUsuario(req, res);
@@ -307,7 +387,12 @@ describe('actualizarPerfilUsuario', () => {
   it('no debe permitir actualizar roles', async () => {
     // Arrange
     const updateWithRoles = { ...validUpdateData, roles: ['admin'] };
-    req = createMockRequest(updateWithRoles, { id: userId, roles: ['user'] });
+    req = createMockRequest(updateWithRoles, { 
+      id: userId, 
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      roles: ['user'] 
+    });
     
     // Act
     await actualizarPerfilUsuario(req, res);
@@ -342,7 +427,12 @@ describe('actualizarPerfilUsuario', () => {
   it('debe manejar errores de validación', async () => {
     // Arrange
     const invalidData = { ...validUpdateData, telefono: 'invalid' };
-    req = createMockRequest(invalidData, { id: userId, roles: ['user'] });
+    req = createMockRequest(invalidData, { 
+      id: userId, 
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      roles: ['user'] 
+    });
     
     // Act
     await actualizarPerfilUsuario(req, res);
@@ -457,35 +547,25 @@ describe('actualizarPerfilUsuario', () => {
   });
 
   it('debe manejar errores inesperados', async () => {
-    console.log('\n--- Starting test: debe manejar errores inesperados ---');
     
     // Arrange - Mock an error during the find operation
     const error = new Error('Error inesperado');
-    console.log('Mocking findUnique to reject with error:', error.message);
     mockFindUnique.mockRejectedValueOnce(error);
     
     // Reset mock calls
-    (res.status as jest.Mock).mockClear();
+    res.status.mockClear();
     (res.json as jest.Mock).mockClear();
     
     // Act
-    console.log('Calling actualizarPerfilUsuario...');
     try {
       await actualizarPerfilUsuario(req, res);
-      console.log('actualizarPerfilUsuario completed');
     } catch (error) {
-      console.error('Error in actualizarPerfilUsuario:', error);
       throw error;
     }
-    
-    // Debug: Log all calls to res.status and res.json
-    console.log('res.status calls:', (res.status as jest.Mock).mock.calls);
-    console.log('res.json calls:', (res.json as jest.Mock).mock.calls);
     
     // Assert
     expect(res.status).toHaveBeenCalledWith(500);
     const responseData = (res.json as jest.Mock).mock.calls[0][0];
-    console.log('Response data:', responseData);
     
     // Verify the error message contains the expected text
     expect(responseData).toMatchObject({
