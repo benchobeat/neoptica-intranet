@@ -183,17 +183,30 @@ describe('Controlador de Marcas - Listar Marcas', () => {
     expect(responseObject).toEqual({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al obtener el listado de marcas.',
+      error: 'Error interno del servidor al listar marcas'
     });
     
-    // Verificar que se registró la auditoría de error
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
+    // Verificar que se registró la auditoría de error con el formato JSON esperado
+    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(expect.objectContaining({
       usuarioId: 'usuario-test-id',
       accion: 'listar_marcas_fallido',
-      descripcion: 'Error inesperado',
+      descripcion: {
+        mensaje: 'Error al listar marcas',
+        accion: 'ERROR_LISTAR_MARCAS',
+        error: 'Error inesperado',
+        // stack puede ser undefined o string
+      },
       ip: '127.0.0.1',
       entidadTipo: 'marca',
       modulo: 'marcas',
+    }));
+    
+    // Verificar que la descripción tiene la estructura correcta
+    const auditoriaCall = mockRegistrarAuditoria.mock.calls[0][0];
+    expect(auditoriaCall.descripcion).toMatchObject({
+      mensaje: 'Error al listar marcas',
+      accion: 'ERROR_LISTAR_MARCAS',
+      error: 'Error inesperado',
     });
   });
 });

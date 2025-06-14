@@ -84,7 +84,15 @@ export const crearMarca = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'crear_marca_exitoso',
-      descripcion: `Marca creada: ${nuevaMarca.nombre}`,
+      descripcion: {
+        mensaje: 'Marca creada exitosamente',
+        accion: 'MARCA_CREADA',
+        detalles: {
+          nombre: nuevaMarca.nombre,
+          descripcion: nuevaMarca.descripcion || null,
+          activo: nuevaMarca.activo
+        }
+      },
       ip: req.ip,
       entidadTipo: 'marca',
       entidadId: nuevaMarca.id,
@@ -104,7 +112,15 @@ export const crearMarca = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: (req as any).usuario?.id || (req as any).user?.id,
       accion: 'crear_marca_fallido',
-      descripcion: mensajeError,
+      descripcion: JSON.stringify({
+        mensaje: 'Error al crear marca',
+        accion: 'ERROR_CREAR_MARCA',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          error: mensajeError,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        }
+      }),
       ip: req.ip,
       entidadTipo: 'marca',
       modulo: 'marcas',
@@ -275,12 +291,17 @@ export const listarMarcas = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error al listar marcas:', error);
-
+    
     // Registrar auditoría de error
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'listar_marcas_fallido',
-      descripcion: error.message || 'Error desconocido',
+      descripcion: {
+        mensaje: 'Error al listar marcas',
+        accion: 'ERROR_LISTAR_MARCAS',
+        error: error.message || 'Error desconocido',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       ip: req.ip,
       entidadTipo: 'marca',
       modulo: 'marcas',
@@ -289,7 +310,7 @@ export const listarMarcas = async (req: Request, res: Response) => {
     return res.status(500).json({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al obtener el listado de marcas.',
+      error: 'Error interno del servidor al listar marcas',
     });
   }
 };
@@ -329,7 +350,7 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
       return res.status(404).json({
         ok: false,
         data: null,
-        error: 'Marca no encontrada.',
+        error: 'Marca no encontrada'
       });
     }
 
@@ -337,7 +358,14 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'obtener_marca',
-      descripcion: `Se consultó la marca: ${marca.nombre}`,
+      descripcion: {
+        mensaje: 'Consulta de marca exitosa',
+        accion: 'CONSULTA_MARCA',
+        detalles: {
+          id: marca.id,
+          nombre: marca.nombre
+        }
+      },
       ip: req.ip,
       entidadTipo: 'marca',
       entidadId: id,
@@ -356,7 +384,12 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'obtener_marca_fallido',
-      descripcion: error.message || 'Error desconocido',
+      descripcion: {
+        mensaje: `Error al obtener marca: ${error.message || 'Error desconocido'}`,
+        accion: 'ERROR_OBTENER_MARCA',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       ip: req.ip,
       entidadTipo: 'marca',
       entidadId: req.params.id,
@@ -511,7 +544,16 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'actualizar_marca',
-      descripcion: `Se actualizó la marca: ${marcaActualizada.nombre}`,
+      descripcion: {
+        mensaje: 'Marca actualizada exitosamente',
+        accion: 'MARCA_ACTUALIZADA',
+        detalles: {
+          id: marcaActualizada.id,
+          nombre: marcaActualizada.nombre,
+          cambios: Object.keys(datosActualizados).filter(k => !k.endsWith('_en') && !k.endsWith('_por')),
+          activo: marcaActualizada.activo
+        }
+      },
       ip: req.ip,
       entidadTipo: 'marca',
       entidadId: id,
@@ -530,7 +572,12 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: (req as any).usuario?.id || (req as any).user?.id,
       accion: 'actualizar_marca_fallido',
-      descripcion: error.message || 'Error desconocido',
+      descripcion: {
+        mensaje: `Error al actualizar marca: ${error.message || 'Error desconocido'}`,
+        accion: 'ERROR_ACTUALIZAR_MARCA',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       ip: req.ip,
       entidadTipo: 'marca',
       entidadId: req.params.id,
@@ -624,7 +671,16 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'eliminar_marca',
-      descripcion: `Se eliminó (soft delete) la marca con ID: ${id}`,
+      descripcion: {
+        mensaje: 'Marca eliminada exitosamente',
+        accion: 'MARCA_ELIMINADA',
+        detalles: {
+          id: id,
+          tipo: 'soft_delete',
+          anuladoEn: fechaActual.toISOString(),
+          anuladoPor: userId
+        }
+      },
       ip: req.ip,
       entidadTipo: 'marca',
       entidadId: id,
@@ -643,7 +699,12 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: (req as any).usuario?.id || (req as any).user?.id,
       accion: 'eliminar_marca_fallido',
-      descripcion: error.message || 'Error desconocido',
+      descripcion: {
+        mensaje: `Error al eliminar marca: ${error.message || 'Error desconocido'}`,
+        accion: 'ERROR_ELIMINAR_MARCA',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       ip: req.ip,
       entidadTipo: 'marca',
       entidadId: req.params.id,

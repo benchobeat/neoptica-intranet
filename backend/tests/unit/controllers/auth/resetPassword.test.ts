@@ -1,22 +1,29 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import { resetPassword } from '../../../../src/controllers/authController';
-import prisma from '@/utils/prisma';
-import { registrarAuditoria } from '@/utils/audit';
 
-// Mock the dependencies
-jest.mock('bcrypt');
+// Mock Prisma first
 jest.mock('@/utils/prisma', () => ({
-  usuario: {
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
-  resetToken: {
-    findFirst: jest.fn(),
-    updateMany: jest.fn(),
-  },
+  __esModule: true,
+  default: {
+    usuario: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue({}),
+    },
+    resetToken: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    $transaction: jest.fn().mockImplementation(fn => fn())
+  }
 }));
 
+// Now import the controller and other dependencies
+import prisma from '@/utils/prisma';
+import { resetPassword } from '../../../../src/controllers/authController';
+import { registrarAuditoria } from '@/utils/audit';
+
+// Mock the rest of dependencies
+jest.mock('bcrypt');
 jest.mock('@/utils/audit', () => ({
   registrarAuditoria: jest.fn().mockResolvedValue(undefined),
 }));
@@ -100,7 +107,12 @@ describe('Auth Controller - Reset Password', () => {
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
         accion: 'reset_password_fallido',
-        descripcion: 'Token, email y password son requeridos',
+        descripcion: expect.objectContaining({
+          mensaje: 'Faltan campos requeridos para restablecer la contraseña',
+          error: 'Token, email y password son requeridos',
+          camposFaltantes: ['token', 'email', 'password'],
+          timestamp: expect.any(String)
+        })
       })
     );
   });
@@ -123,7 +135,12 @@ describe('Auth Controller - Reset Password', () => {
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
         accion: 'reset_password_fallido',
-        descripcion: 'Email no encontrado: test@example.com',
+        descripcion: expect.objectContaining({
+          mensaje: 'Intento de restablecimiento con email no registrado',
+          email: 'test@example.com',
+          accion: 'USUARIO_NO_ENCONTRADO',
+          timestamp: expect.any(String)
+        })
       })
     );
   });
@@ -146,7 +163,15 @@ describe('Auth Controller - Reset Password', () => {
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
         accion: 'reset_password_fallido',
-        descripcion: 'Token no encontrado o expirado para test@example.com',
+        descripcion: expect.objectContaining({
+          mensaje: 'Intento de restablecimiento con token inválido o expirado',
+          email: 'test@example.com',
+          accion: 'TOKEN_INVALIDO_O_EXPIRADO',
+          timestamp: expect.any(String),
+          detalles: expect.objectContaining({
+            razon: expect.any(String)
+          })
+        })
       })
     );
   });
@@ -169,7 +194,15 @@ describe('Auth Controller - Reset Password', () => {
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
         accion: 'reset_password_fallido',
-        descripcion: 'Token inválido para test@example.com',
+        descripcion: expect.objectContaining({
+          mensaje: 'Intento de restablecimiento con token inválido',
+          email: 'test@example.com',
+          accion: 'TOKEN_INVALIDO',
+          timestamp: expect.any(String),
+          detalles: expect.objectContaining({
+            razon: expect.any(String)
+          })
+        })
       })
     );
   });
@@ -192,51 +225,83 @@ describe('Auth Controller - Reset Password', () => {
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
         accion: 'reset_password_fallido',
-        descripcion: 'Password débil para test@example.com',
+        modulo: 'auth',
+        entidadTipo: 'usuario',
+        entidadId: mockUser.id,
+        usuarioId: mockUser.id,
+        ip: '127.0.0.1',
+        descripcion: expect.objectContaining({
+          mensaje: 'Intento de restablecimiento con contraseña débil',
+          email: 'test@example.com',
+          accion: 'PASSWORD_DEBIL',
+          timestamp: expect.any(String),
+          detalles: expect.objectContaining({
+            longitud: 4,
+            requisitosCumplidos: expect.any(Object)
+          })
+        })
       })
     );
   });
 
   it('debe restablecer la contraseña correctamente', async () => {
+    // Arrange
+    const now = new Date();
+    
     // Act
     await resetPassword(req as Request, res as Response);
 
     // Assert
-    // Verify password was hashed
     expect(bcrypt.hash).toHaveBeenCalledWith('NewSecure123!', 10);
-    
-    // Verify user was updated with new password
-    expect(prisma.usuario.update).toHaveBeenCalledWith({
-      where: { id: mockUser.id },
-      data: {
-        password: 'new-hashed-password',
-        modificadoEn: expect.any(Date),
-      },
-    });
-
-    // Verify all reset tokens were invalidated
+    const updateCall = (prisma.usuario.update as jest.Mock).mock.calls[0][0];
+    expect(updateCall).toEqual(
+      expect.objectContaining({
+        where: { id: mockUser.id },
+        data: {
+          password: 'new-hashed-password',
+          modificadoEn: expect.any(Date)
+        }
+      })
+    );
+    // Check that updateMany was called with the correct arguments
     expect(prisma.resetToken.updateMany).toHaveBeenCalledWith({
       where: { usuarioId: mockUser.id },
       data: {
-        expiresAt: expect.any(Date),
         modificadoEn: expect.any(Date),
-      },
+        expiresAt: expect.any(Date)
+      }
     });
-
-    // Verify success response
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ok: true,
         data: 'Contraseña restablecida correctamente',
+        error: null
       })
     );
-
-    // Verify audit log
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
-        accion: 'reset_password',
-        descripcion: 'Contraseña restablecida exitosamente para test@example.com',
+        accion: 'reset_password_exitoso',
+        modulo: 'auth',
+        entidadTipo: 'usuario',
+        entidadId: mockUser.id,
         usuarioId: mockUser.id,
+        ip: '127.0.0.1',
+        descripcion: expect.objectContaining({
+          mensaje: 'Contraseña restablecida exitosamente',
+          email: 'test@example.com',
+          accion: 'CONTRASENA_RESTABLECIDA',
+          timestamp: expect.any(String),
+          detalles: expect.objectContaining({
+            metodo: 'email',
+            longitudNuevaContrasena: 13,
+            requisitosCumplidos: {
+              contieneMayuscula: true,
+              contieneMinuscula: true,
+              contieneNumero: true,
+              longitudMinima: true
+            }
+          })
+        })
       })
     );
   });
@@ -258,10 +323,25 @@ describe('Auth Controller - Reset Password', () => {
         error: 'Error al restablecer la contraseña',
       })
     );
+
+    // Verify error audit log
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
-        accion: 'reset_password_fallido',
-        descripcion: 'Database error',
+        accion: 'reset_password_error',
+        modulo: 'auth',
+        entidadTipo: 'usuario',
+        usuarioId: null,
+        ip: '127.0.0.1',
+        descripcion: expect.objectContaining({
+          mensaje: 'Error al procesar el restablecimiento de contraseña',
+          error: 'Database error',
+          email: 'test@example.com',
+          timestamp: expect.any(String),
+          detalles: expect.objectContaining({
+            accion: 'ERROR_RESTABLECIMIENTO_CONTRASENA',
+            tipoError: 'Error'
+          })
+        })
       })
     );
   });

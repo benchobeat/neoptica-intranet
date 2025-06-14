@@ -1,12 +1,16 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+interface JsonObject { [key: string]: JsonValue; }
+interface JsonArray extends Array<JsonValue> {}
 
 export type AuditoriaParams = {
   accion: string;
   entidadTipo?: string;
   entidadId?: string;
-  descripcion: string;
+  descripcion: string | Record<string, unknown>;
   ip?: string;
   modulo: string;
   usuarioId?: string;
@@ -30,12 +34,21 @@ export const registrarAuditoria = async (params: AuditoriaParams): Promise<void>
   } = params;
 
   try {
+    // Ensure we have a valid JSON object
+    const descripcionJson: Prisma.InputJsonValue = {
+      timestamp: new Date().toISOString(),
+      accion,
+      ...(typeof descripcion === 'string' 
+        ? { mensaje: descripcion, ...(datosAdicionales || {}) } 
+        : { ...(descripcion as Record<string, unknown>), ...(datosAdicionales || {}) })
+    };
+
     await prisma.logAuditoria.create({
       data: {
         accion,
         entidadTipo: entidadTipo || null,
         entidadId: entidadId || null,
-        descripcion: datosAdicionales ? JSON.stringify(datosAdicionales) : descripcion,
+        descripcion: descripcionJson,
         ip: ip || null,
         modulo,
         usuarioId,

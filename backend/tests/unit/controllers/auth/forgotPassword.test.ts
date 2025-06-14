@@ -1,27 +1,33 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { forgotPassword } from '../../../../src/controllers/authController';
+
+// Mock Prisma first
+jest.mock('@/utils/prisma', () => ({
+  __esModule: true,
+  default: {
+    usuario: {
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
+    resetToken: {
+      create: jest.fn().mockResolvedValue({}),
+    },
+    $transaction: jest.fn().mockImplementation(fn => fn())
+  }
+}));
+
+// Now import the controller and other dependencies
 import prisma from '@/utils/prisma';
+import { forgotPassword } from '../../../../src/controllers/authController';
 import { registrarAuditoria } from '@/utils/audit';
 import { sendMail } from '@/utils/mailer';
 
-// Mock the dependencies
+// Mock the rest of dependencies
 jest.mock('bcrypt');
 jest.mock('crypto');
-jest.mock('@/utils/prisma', () => ({
-  usuario: {
-    findUnique: jest.fn(),
-  },
-  resetToken: {
-    create: jest.fn(),
-  },
-}));
-
 jest.mock('@/utils/audit', () => ({
   registrarAuditoria: jest.fn().mockResolvedValue(undefined),
 }));
-
 jest.mock('@/utils/mailer', () => ({
   sendMail: jest.fn().mockResolvedValue(undefined),
 }));
@@ -91,7 +97,12 @@ describe('Auth Controller - Forgot Password', () => {
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
         accion: 'forgot_password_fallido',
-        descripcion: 'Email es requerido',
+        descripcion: expect.objectContaining({
+          mensaje: 'Solicitud de restablecimiento de contraseña fallida',
+          error: 'Email es requerido',
+          email: null,
+          timestamp: expect.any(String)
+        })
       })
     );
   });
@@ -114,7 +125,12 @@ describe('Auth Controller - Forgot Password', () => {
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
         accion: 'forgot_password_fallido',
-        descripcion: 'Email no encontrado: nonexistent@example.com',
+        descripcion: expect.objectContaining({
+          mensaje: 'Intento de restablecimiento con email no registrado',
+          email: 'nonexistent@example.com',
+          accion: 'EMAIL_NO_ENCONTRADO',
+          timestamp: expect.any(String)
+        })
       })
     );
     expect(prisma.resetToken.create).not.toHaveBeenCalled();
@@ -169,9 +185,23 @@ describe('Auth Controller - Forgot Password', () => {
     // Verify audit log
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
-        accion: 'forgot_password',
-        descripcion: 'Solicitud de restablecimiento de contraseña para test@example.com',
+        accion: 'forgot_password_solicitud',
+        modulo: 'auth',
+        entidadTipo: 'usuario',
+        entidadId: mockUser.id,
         usuarioId: mockUser.id,
+        ip: '127.0.0.1',
+        descripcion: expect.objectContaining({
+          mensaje: 'Solicitud de restablecimiento de contraseña procesada',
+          email: 'test@example.com',
+          usuarioId: mockUser.id,
+          tokenGenerado: true,
+          timestamp: expect.any(String),
+          detalles: {
+            metodo: 'email',
+            expiracion: expect.any(String)
+          }
+        })
       })
     );
   });
@@ -186,18 +216,37 @@ describe('Auth Controller - Forgot Password', () => {
     // Act
     await forgotPassword(req as Request, res as Response);
 
-    // Assert
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Error en forgot password:', 'Database error');
+    // Verify error response
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Error en forgot password:', expect.any(Error));
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ok: true,
         data: 'Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.',
       })
     );
+    
+    // Verify error audit log
     expect(registrarAuditoria).toHaveBeenCalledWith(
       expect.objectContaining({
-        accion: 'forgot_password_fallido',
-        descripcion: 'Database error',
+        accion: 'forgot_password_error',
+        descripcion: expect.objectContaining({
+          mensaje: 'Error al procesar la solicitud de restablecimiento de contraseña',
+          error: 'Database error',
+          email: 'test@example.com',
+          timestamp: expect.any(String),
+          detalles: {
+            tipoError: 'Error'
+          }
+        })
+      })
+    );
+    expect(registrarAuditoria).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accion: 'forgot_password_error',
+        modulo: 'auth',
+        entidadTipo: 'usuario',
+        ip: '127.0.0.1',
+        descripcion: expect.any(Object) // Can be string or object with error details
       })
     );
 

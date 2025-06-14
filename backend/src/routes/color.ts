@@ -153,11 +153,11 @@ router.post('/', authenticateJWT, requireRole('admin'), crearColor);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/', requireRole('admin', 'optometristsa', 'vendedor'), authenticateJWT, listarColores);
+router.get('/', authenticateJWT, requireRole('admin', 'optometristsa', 'vendedor'), listarColores);
 
 /**
  * @swagger
- * /api/colores/paginated:
+ * /api/colores/paginado:
  *   get:
  *     summary: Listar colores con paginación y búsqueda
  *     tags: [Colores]
@@ -233,8 +233,8 @@ router.get('/', requireRole('admin', 'optometristsa', 'vendedor'), authenticateJ
  */
 router.get(
   '/paginado',
-  requireRole('admin', 'optometristsa', 'vendedor'),
   authenticateJWT,
+  requireRole('admin', 'optometristsa', 'vendedor'),
   listarColoresPaginados
 );
 
@@ -280,7 +280,7 @@ router.get(
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/:id', requireRole('admin', 'vendedor'), authenticateJWT, obtenerColorPorId);
+router.get('/:id', authenticateJWT, requireRole('admin', 'vendedor'), obtenerColorPorId);
 
 /**
  * @swagger
@@ -334,8 +334,8 @@ router.get('/:id', requireRole('admin', 'vendedor'), authenticateJWT, obtenerCol
  */
 router.put(
   '/:id',
-  requireRole('admin', 'optometristsa', 'vendedor'),
   authenticateJWT,
+  requireRole('admin', 'optometristsa', 'vendedor'),
   actualizarColor
 );
 
@@ -384,6 +384,6 @@ router.put(
  *       500:
  *         description: Error interno del servidor
  */
-router.delete('/:id', requireRole('admin'), authenticateJWT, eliminarColor);
+router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarColor);
 
 export default router;

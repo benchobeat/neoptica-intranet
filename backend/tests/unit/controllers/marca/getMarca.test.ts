@@ -94,7 +94,7 @@ describe('Controlador de Marcas - Obtener Marca por ID', () => {
     expect(mockResponse.json).toHaveBeenCalledWith({
       ok: false,
       data: null,
-      error: 'Marca no encontrada.',
+      error: 'Marca no encontrada'
     });
   });
 

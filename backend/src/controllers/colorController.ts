@@ -16,11 +16,6 @@ export const crearColor = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
   const userId = (req as any).usuario?.id || (req as any).user?.id;
 
-  // Log temporal para verificar recarga
-  // console.log('✅ Llamada a crearColor recibida -', new Date().toISOString());
-  // console.log('📝 Datos recibidos:', JSON.stringify(req.body, null, 2));
-
-  // No se necesitan logs de depuración en producción
   try {
     const { nombre, descripcion, activo, codigoHex } = req.body;
 
@@ -121,7 +116,16 @@ export const crearColor = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'crear_color_exitoso',
-      descripcion: `Color creado: ${nuevoColor.nombre} | código_hex: ${nuevoColor.codigoHex || 'N/A'}`,
+      descripcion: {
+        mensaje: 'Color creado exitosamente',
+        accion: 'COLOR_CREADO',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          nombre: nuevoColor.nombre,
+          codigoHex: nuevoColor.codigoHex || null,
+          activo: nuevoColor.activo
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       entidadId: nuevoColor.id,
@@ -140,7 +144,15 @@ export const crearColor = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'crear_color_fallido',
-      descripcion: error instanceof Error ? error.message : 'Error desconocido',
+      descripcion: {
+        mensaje: 'Error al crear color',
+        accion: 'ERROR_CREAR_COLOR',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       modulo: 'colores',
@@ -182,7 +194,6 @@ export const listarColores = async (req: Request, res: Response) => {
         contains: searchTerm.trim(),
         mode: 'insensitive', // Búsqueda case-insensitive
       };
-      // console.log(`Buscando colores que contengan: "${searchTerm}"`);
     }
 
     // Buscar colores según filtros y ordenar alfabéticamente
@@ -197,7 +208,16 @@ export const listarColores = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'listar_colores',
-      descripcion: `Se listaron ${colores.length} colores`,
+      descripcion: {
+        mensaje: 'Listado de colores obtenido exitosamente',
+        accion: 'COLORES_LISTADOS',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          total: colores.length,
+          activo: req.query.activo !== undefined ? req.query.activo === 'true' : undefined,
+          busqueda: req.query.search || null
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       modulo: 'colores',
@@ -215,7 +235,19 @@ export const listarColores = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'listar_colores_fallido',
-      descripcion: error instanceof Error ? error.message : 'Error desconocido',
+      descripcion: {
+        mensaje: 'Error al listar colores',
+        accion: 'ERROR_LISTAR_COLORES',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          stack: error instanceof Error ? error.stack : undefined,
+          filtros: {
+            activo: req.query.activo,
+            busqueda: req.query.search
+          }
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       modulo: 'colores',
@@ -242,16 +274,80 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
 
   try {
     // Obtener parámetros de paginación y búsqueda
-    const page = parseInt(req.query.page as string) || 1;
-    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const pageRaw = parseInt(req.query.pagina as string);
+    const pageSizeRaw = parseInt(req.query.limite as string);
+    
+    // Verificar si los valores son NaN (entrada no numérica)
+    const page = !isNaN(pageRaw) ? pageRaw : 1;
+    const pageSize = !isNaN(pageSizeRaw) ? pageSizeRaw : 10;
     const searchTerm = (req.query.search as string) || '';
+    
+    // Verificar si los parámetros originales eran no-numéricos
+    if (
+      (req.query.pagina && isNaN(pageRaw)) || 
+      (req.query.limite && isNaN(pageSizeRaw))
+    ) {
+      const errorMsg = `Parámetros de paginación inválidos: valores no numéricos (pagina=${req.query.pagina}, limite=${req.query.limite})`;
+      console.error(errorMsg);
+      
+      // Registrar auditoría de error de validación
+      await registrarAuditoria({
+        usuarioId: userId,
+        accion: 'error_validacion_paginacion',
+        descripcion: {
+          mensaje: 'Error de validación en parámetros de paginación',
+          accion: 'ERROR_VALIDACION_PAGINACION',
+          timestamp: new Date().toISOString(),
+          detalles: {
+            error: errorMsg,
+            parametros: {
+              page: req.query.page,
+              pageSize: req.query.pageSize
+            }
+          }
+        },
+        ip: req.ip,
+        entidadTipo: 'color',
+        modulo: 'colores',
+      });
+
+      return res.status(500).json({
+        ok: false,
+        data: null,
+        error: 'Error al listar colores paginados',
+      });
+    }
 
     // Validar parámetros
     if (page < 1 || pageSize < 1 || pageSize > 100) {
-      return res.status(400).json({
+      const errorMsg = `Parámetros de paginación inválidos: página=${page}, pageSize=${pageSize}`;
+      console.error(errorMsg);
+      
+      // Registrar auditoría de error de validación
+      await registrarAuditoria({
+        usuarioId: userId,
+        accion: 'error_validacion_paginacion',
+        descripcion: {
+          mensaje: 'Error de validación en parámetros de paginación',
+          accion: 'ERROR_VALIDACION_PAGINACION',
+          timestamp: new Date().toISOString(),
+          detalles: {
+            error: errorMsg,
+            parametros: {
+              page,
+              pageSize
+            }
+          }
+        },
+        ip: req.ip,
+        entidadTipo: 'color',
+        modulo: 'colores',
+      });
+
+      return res.status(500).json({
         ok: false,
         data: null,
-        error: 'Parámetros de paginación inválidos',
+        error: 'Error al listar colores paginados',
       });
     }
 
@@ -274,7 +370,6 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
         contains: searchTerm.trim(),
         mode: 'insensitive', // Búsqueda case-insensitive
       };
-      console.log(`Buscando colores paginados que contengan: "${searchTerm}"`);
     }
 
     // Ejecutar consulta con count para obtener total
@@ -294,7 +389,21 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'listar_colores_paginados',
-      descripcion: `Se listaron ${colores.length} colores (página ${page}, búsqueda: "${searchTerm || 'ninguna'}")`,
+      descripcion: {
+        mensaje: 'Listado paginado de colores obtenido exitosamente',
+        accion: 'COLORES_PAGINADOS_LISTADOS',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          total: total,
+          pagina: page,
+          porPagina: pageSize,
+          totalPaginas: Math.ceil(total / pageSize),
+          filtros: {
+            activo: req.query.activo !== undefined ? req.query.activo === 'true' : undefined,
+            busqueda: searchTerm || null
+          }
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       modulo: 'colores',
@@ -319,7 +428,21 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'listar_colores_paginados_fallido',
-      descripcion: error instanceof Error ? error.message : 'Error desconocido',
+      descripcion: {
+        mensaje: 'Error al listar colores paginados',
+        accion: 'ERROR_LISTAR_COLORES_PAGINADOS',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          stack: error instanceof Error ? error.stack : undefined,
+          filtros: {
+            pagina: req.query.page,
+            porPagina: req.query.pageSize,
+            activo: req.query.activo,
+            busqueda: req.query.search
+          }
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       modulo: 'colores',
@@ -378,7 +501,17 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'obtener_color',
-      descripcion: `Se consultó el color: ${color.nombre}`,
+      descripcion: {
+        mensaje: 'Color obtenido exitosamente',
+        accion: 'COLOR_OBTENIDO',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          id: color.id,
+          nombre: color.nombre,
+          activo: color.activo,
+          tieneCodigoHex: color.codigoHex !== null
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       entidadId: id,
@@ -397,7 +530,16 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'obtener_color_fallido',
-      descripcion: error instanceof Error ? error.message : 'Error desconocido',
+      descripcion: {
+        mensaje: 'Error al obtener color',
+        accion: 'ERROR_OBTENER_COLOR',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          stack: error instanceof Error ? error.stack : undefined,
+          idSolicitado: id
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       entidadId: id,
@@ -472,8 +614,8 @@ export const actualizarColor = async (req: Request, res: Response) => {
     // Preparar objeto de datos a actualizar
     const datosActualizados: any = {
       // Agregar campos de auditoría
-      modificado_por: userId || null,
-      modificado_en: new Date(),
+      modificadoPor: userId || null,
+      modificadoEn: new Date(),
     };
 
     if (nombre !== undefined) {
@@ -593,7 +735,25 @@ export const actualizarColor = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'actualizar_color',
-      descripcion: `Se actualizó el color: ${colorActualizado.nombre}`,
+      descripcion: {
+        mensaje: 'Color actualizado exitosamente',
+        accion: 'COLOR_ACTUALIZADO',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          id: colorActualizado.id,
+          nombreAnterior: colorExistente.nombre,
+          nombreNuevo: colorActualizado.nombre,
+          cambios: Object.keys(datosActualizados)
+            .filter(key => !['modificadoPor', 'modificadoEn'].includes(key))
+            .reduce((obj, key) => ({
+              ...obj,
+              [key]: {
+                anterior: colorExistente[key as keyof typeof colorExistente],
+                nuevo: colorActualizado[key as keyof typeof colorActualizado]
+              }
+            }), {})
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       entidadId: id,
@@ -612,7 +772,17 @@ export const actualizarColor = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'actualizar_color_fallido',
-      descripcion: error instanceof Error ? error.message : 'Error desconocido',
+      descripcion: {
+        mensaje: 'Error al actualizar color',
+        accion: 'ERROR_ACTUALIZAR_COLOR',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          stack: error instanceof Error ? error.stack : undefined,
+          id: id,
+          datosSolicitados: req.body
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       entidadId: id,
@@ -714,7 +884,18 @@ export const eliminarColor = async (req: Request, res: Response) => {
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'eliminar_color',
-      descripcion: `Se eliminó (soft delete) el color con ID: ${id}`,
+      descripcion: {
+        mensaje: 'Color eliminado exitosamente',
+        accion: 'COLOR_ELIMINADO',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          id: id,
+          nombre: colorExistente.nombre,
+          tipo: 'soft_delete',
+          fechaEliminacion: fechaActual.toISOString(),
+          usuarioEliminacion: userId
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       entidadId: id,
@@ -730,10 +911,23 @@ export const eliminarColor = async (req: Request, res: Response) => {
     console.error('Error al eliminar color:', error);
 
     // Registrar auditoría de error
+    const errorObj = error as any;
+    const tieneProductosAsociados = errorObj?.productosAsociados || 0;
+    
     await registrarAuditoria({
       usuarioId: userId,
       accion: 'eliminar_color_fallido',
-      descripcion: error instanceof Error ? error.message : 'Error desconocido',
+      descripcion: {
+        mensaje: 'Error al eliminar color',
+        accion: 'ERROR_ELIMINAR_COLOR',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          stack: error instanceof Error ? error.stack : undefined,
+          id: id,
+          tieneProductosAsociados: tieneProductosAsociados
+        }
+      },
       ip: req.ip,
       entidadTipo: 'color',
       entidadId: id,

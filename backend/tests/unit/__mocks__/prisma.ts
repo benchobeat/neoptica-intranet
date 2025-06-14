@@ -7,13 +7,27 @@ import { jest } from '@jest/globals';
 // Definir tipos básicos para los mocks
 type MockFn = jest.Mock;
 
+// Tipos para los mocks
+type UpdateArgs = {
+  data: Record<string, any>;
+  where: Record<string, any>;
+};
+
 // Funciones mock básicas para cada entidad
 const mockEntityFunctions = {
   create: jest.fn().mockImplementation(() => Promise.resolve({})),
   findMany: jest.fn().mockImplementation(() => Promise.resolve([])),
   findUnique: jest.fn().mockImplementation(() => Promise.resolve(null)),
   findFirst: jest.fn().mockImplementation(() => Promise.resolve(null)),
-  update: jest.fn().mockImplementation(() => Promise.resolve({})),
+  update: jest.fn().mockImplementation((args: any) => {
+    // Handle both direct object and function arguments
+    const data = args?.data || {};
+    return Promise.resolve({
+      ...data,
+      id: '1',
+      ultimoAcceso: new Date()
+    });
+  }),
   updateMany: jest.fn().mockImplementation(() => Promise.resolve({ count: 0 })),
   delete: jest.fn().mockImplementation(() => Promise.resolve({})),
   count: jest.fn().mockImplementation(() => Promise.resolve(0)),
@@ -35,7 +49,16 @@ const prismaMock: any = {
   marca: { ...mockEntityFunctions },
   producto: { ...mockEntityFunctions },
   sucursal: { ...mockEntityFunctions },
-  usuario: { ...mockEntityFunctions },
+  usuario: {
+    ...mockEntityFunctions,
+    update: jest.fn().mockImplementation((args: any) => {
+      return Promise.resolve({
+        ...(args?.data || {}),
+        id: '1',
+        ultimoAcceso: new Date()
+      });
+    })
+  },
   rol: { ...mockEntityFunctions },
   usuarioRol: { ...mockEntityFunctions },
   // Agregar otros modelos según sea necesario
@@ -60,8 +83,5 @@ const resetPrismaMocks = () => {
   prismaMock.$transaction.mockImplementation(<T>(ops: Promise<T>[]) => Promise.all(ops));
 };
 
-// Exportar el mock y la función de reseteo para usar en tests
-module.exports = {
-  prismaMock,
-  resetPrismaMocks,
-};
+// Export the mock and reset function for use in tests
+export { prismaMock, resetPrismaMocks };

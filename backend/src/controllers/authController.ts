@@ -22,7 +22,12 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     await registrarAuditoria({
       usuarioId: null,
       accion: 'forgot_password_fallido',
-      descripcion: 'Email es requerido',
+      descripcion: {
+        mensaje: 'Solicitud de restablecimiento de contraseña fallida',
+        error: 'Email es requerido',
+        email: null,
+        timestamp: new Date().toISOString()
+      },
       ip: req.ip,
       entidadTipo: 'usuario',
       modulo: 'auth',
@@ -43,7 +48,12 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       await registrarAuditoria({
         usuarioId: null,
         accion: 'forgot_password_fallido',
-        descripcion: `Email no encontrado: ${email}`,
+        descripcion: {
+          mensaje: 'Intento de restablecimiento con email no registrado',
+          email: email,
+          timestamp: new Date().toISOString(),
+          accion: 'EMAIL_NO_ENCONTRADO'
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         modulo: 'auth',
@@ -100,11 +110,21 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       html: mailHtml,
     });
 
-    // Registrar en auditoría
+    // Registrar auditoría de éxito
     await registrarAuditoria({
       usuarioId: usuario.id,
-      accion: 'forgot_password',
-      descripcion: `Solicitud de restablecimiento de contraseña para ${email}`,
+      accion: 'forgot_password_solicitud',
+      descripcion: {
+        mensaje: 'Solicitud de restablecimiento de contraseña procesada',
+        email: email,
+        usuarioId: usuario.id,
+        tokenGenerado: true,
+        timestamp: new Date().toISOString(),
+        detalles: {
+          metodo: 'email',
+          expiracion: expiresAt.toISOString()
+        }
+      },
       ip: req.ip,
       entidadTipo: 'usuario',
       entidadId: usuario.id,
@@ -116,14 +136,25 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
         'Si tu email está registrado, recibirás instrucciones para restablecer tu contraseña.'
       )
     );
-  } catch (err) {
-    mensajeError = err instanceof Error ? err.message : 'Error desconocido';
-    console.error('Error en forgot password:', mensajeError);
-
+  } catch (error) {
+    console.error('Error en forgot password:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorName = error instanceof Error ? error.name : 'ErrorDesconocido';
+    
     await registrarAuditoria({
       usuarioId: null,
-      accion: 'forgot_password_fallido',
-      descripcion: mensajeError,
+      accion: 'forgot_password_error',
+      descripcion: {
+        mensaje: 'Error al procesar la solicitud de restablecimiento de contraseña',
+        error: errorMessage,
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
+        email: email,
+        timestamp: new Date().toISOString(),
+        detalles: {
+          tipoError: errorName
+        }
+      },
       ip: req.ip,
       entidadTipo: 'usuario',
       modulo: 'auth',
@@ -150,7 +181,16 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     await registrarAuditoria({
       usuarioId: null,
       accion: 'reset_password_fallido',
-      descripcion: 'Token, email y password son requeridos',
+      descripcion: {
+        mensaje: 'Faltan campos requeridos para restablecer la contraseña',
+        error: 'Token, email y password son requeridos',
+        camposFaltantes: [
+          !token ? 'token' : null,
+          !email ? 'email' : null,
+          !password ? 'password' : null
+        ].filter(Boolean),
+        timestamp: new Date().toISOString()
+      },
       ip: req.ip,
       entidadTipo: 'usuario',
       modulo: 'auth',
@@ -169,7 +209,12 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       await registrarAuditoria({
         usuarioId: null,
         accion: 'reset_password_fallido',
-        descripcion: `Email no encontrado: ${email}`,
+        descripcion: {
+          mensaje: 'Intento de restablecimiento con email no registrado',
+          email: email,
+          accion: 'USUARIO_NO_ENCONTRADO',
+          timestamp: new Date().toISOString()
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         modulo: 'auth',
@@ -195,7 +240,17 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       await registrarAuditoria({
         usuarioId: usuario.id,
         accion: 'reset_password_fallido',
-        descripcion: `Token no encontrado o expirado para ${email}`,
+        descripcion: {
+          mensaje: 'Intento de restablecimiento con token inválido o expirado',
+          email: email,
+          usuarioId: usuario.id,
+          accion: 'TOKEN_INVALIDO_O_EXPIRADO',
+          timestamp: new Date().toISOString(),
+          detalles: {
+            razon: 'No se encontró un token activo o ha expirado',
+            tiempoRestante: '0 segundos'
+          }
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         entidadId: usuario.id,
@@ -211,7 +266,17 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       await registrarAuditoria({
         usuarioId: usuario.id,
         accion: 'reset_password_fallido',
-        descripcion: `Token inválido para ${email}`,
+        descripcion: {
+          mensaje: 'Intento de restablecimiento con token inválido',
+          email: email,
+          usuarioId: usuario.id,
+          accion: 'TOKEN_INVALIDO',
+          timestamp: new Date().toISOString(),
+          detalles: {
+            razon: 'El token proporcionado no coincide con ningún token válido',
+            longitudToken: token.length
+          }
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         entidadId: usuario.id,
@@ -226,7 +291,22 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       await registrarAuditoria({
         usuarioId: usuario.id,
         accion: 'reset_password_fallido',
-        descripcion: `Password débil para ${email}`,
+        descripcion: {
+          mensaje: 'Intento de restablecimiento con contraseña débil',
+          email: email,
+          usuarioId: usuario.id,
+          accion: 'PASSWORD_DEBIL',
+          timestamp: new Date().toISOString(),
+          detalles: {
+            requisitosCumplidos: {
+              longitudMinima: password.length >= 8,
+              contieneMayuscula: /[A-Z]/.test(password),
+              contieneMinuscula: /[a-z]/.test(password),
+              contieneNumero: /\d/.test(password)
+            },
+            longitud: password.length
+          }
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         entidadId: usuario.id,
@@ -266,8 +346,24 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     // Registrar en auditoría
     await registrarAuditoria({
       usuarioId: usuario.id,
-      accion: 'reset_password',
-      descripcion: `Contraseña restablecida exitosamente para ${email}`,
+      accion: 'reset_password_exitoso',
+      descripcion: {
+        mensaje: 'Contraseña restablecida exitosamente',
+        email: email,
+        usuarioId: usuario.id,
+        accion: 'CONTRASENA_RESTABLECIDA',
+        timestamp: new Date().toISOString(),
+        detalles: {
+          metodo: 'email',
+          longitudNuevaContrasena: password.length,
+          requisitosCumplidos: {
+            longitudMinima: password.length >= 8,
+            contieneMayuscula: /[A-Z]/.test(password),
+            contieneMinuscula: /[a-z]/.test(password),
+            contieneNumero: /\d/.test(password)
+          }
+        }
+      },
       ip: req.ip,
       entidadTipo: 'usuario',
       entidadId: usuario.id,
@@ -275,14 +371,27 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     });
 
     res.json(success('Contraseña restablecida correctamente'));
-  } catch (err) {
-    mensajeError = err instanceof Error ? err.message : 'Error desconocido';
-    console.error('Error en reset password:', mensajeError);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorName = error instanceof Error ? error.name : 'ErrorDesconocido';
+    
+    console.error('Error en reset password:', errorMessage);
 
     await registrarAuditoria({
       usuarioId: null,
-      accion: 'reset_password_fallido',
-      descripcion: mensajeError,
+      accion: 'reset_password_error',
+      descripcion: {
+        mensaje: 'Error al procesar el restablecimiento de contraseña',
+        error: errorMessage,
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
+        email: email,
+        timestamp: new Date().toISOString(),
+        detalles: {
+          tipoError: errorName,
+          accion: 'ERROR_RESTABLECIMIENTO_CONTRASENA'
+        }
+      },
       ip: req.ip,
       entidadTipo: 'usuario',
       modulo: 'auth',
@@ -308,7 +417,16 @@ export async function login(req: Request, res: Response): Promise<void> {
     await registrarAuditoria({
       usuarioId: null,
       accion: 'login_fallido',
-      descripcion: 'Email y password son requeridos',
+      descripcion: {
+        mensaje: 'Intento de inicio de sesión sin credenciales completas',
+        error: 'Email y password son requeridos',
+        camposFaltantes: [
+          !email ? 'email' : null,
+          !password ? 'password' : null
+        ].filter(Boolean),
+        timestamp: new Date().toISOString(),
+        ip: req.ip
+      },
       ip: req.ip,
       entidadTipo: 'usuario',
       modulo: 'auth',
@@ -333,9 +451,19 @@ export async function login(req: Request, res: Response): Promise<void> {
     if (!usuario) {
       mensajeError = 'Credenciales inválidas o usuario inactivo';
       await registrarAuditoria({
-        usuarioId: 'desconocido',
+        usuarioId: null,
         accion: 'login_fallido',
-        descripcion: `Intento de login fallido para email: ${email}`,
+        descripcion: {
+          mensaje: 'Intento de inicio de sesión fallido',
+          error: 'Usuario no encontrado',
+          email: email,
+          accion: 'USUARIO_NO_ENCONTRADO',
+          timestamp: new Date().toISOString(),
+          ip: req.ip,
+          detalles: {
+            razon: 'No existe un usuario con el email proporcionado'
+          }
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         modulo: 'auth',
@@ -348,7 +476,19 @@ export async function login(req: Request, res: Response): Promise<void> {
       await registrarAuditoria({
         usuarioId: usuario.id,
         accion: 'login_fallido',
-        descripcion: `Intento de login fallido (usuario inactivo): ${usuario.email}`,
+        descripcion: {
+          mensaje: 'Intento de inicio de sesión fallido - Usuario inactivo',
+          error: 'El usuario está inactivo',
+          email: usuario.email,
+          usuarioId: usuario.id,
+          accion: 'USUARIO_INACTIVO',
+          timestamp: new Date().toISOString(),
+          ip: req.ip,
+          detalles: {
+            estado: 'inactivo',
+            ultimoAcceso: 'No disponible' // Campo no existe en el modelo
+          }
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         entidadId: usuario.id,
@@ -362,7 +502,19 @@ export async function login(req: Request, res: Response): Promise<void> {
       await registrarAuditoria({
         usuarioId: usuario.id,
         accion: 'login_fallido',
-        descripcion: `Intento de login fallido (sin password local): ${usuario.email}`,
+        descripcion: {
+          mensaje: 'Intento de inicio de sesión fallido - Sin contraseña local',
+          error: 'El usuario no tiene contraseña local configurada',
+          email: usuario.email,
+          usuarioId: usuario.id,
+          accion: 'SIN_PASSWORD_LOCAL',
+          timestamp: new Date().toISOString(),
+          ip: req.ip,
+          detalles: {
+            metodosAlternativos: ['login_social', 'recuperar_cuenta'],
+            ultimoAcceso: 'No disponible' // Campo no existe en el modelo
+          }
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         entidadId: usuario.id,
@@ -379,7 +531,20 @@ export async function login(req: Request, res: Response): Promise<void> {
       await registrarAuditoria({
         usuarioId: usuario.id,
         accion: 'login_fallido',
-        descripcion: `Intento de login fallido (password incorrecto): ${usuario.email}`,
+        descripcion: {
+          mensaje: 'Intento de inicio de sesión fallido - Contraseña incorrecta',
+          error: 'Credenciales inválidas',
+          email: usuario.email,
+          usuarioId: usuario.id,
+          accion: 'PASSWORD_INCORRECTO',
+          timestamp: new Date().toISOString(),
+          ip: req.ip,
+          detalles: {
+            intentosFallidos: 'No disponible', // Campo no existe en el modelo
+            ultimoIntentoFallido: new Date().toISOString(),
+            bloqueoTemporal: 'No disponible' // No tenemos información de bloqueo
+          }
+        },
         ip: req.ip,
         entidadTipo: 'usuario',
         entidadId: usuario.id,
@@ -427,11 +592,49 @@ export async function login(req: Request, res: Response): Promise<void> {
       throw new Error('No se pudo generar el token JWT');
     }
 
-    // Registrar log de acceso exitoso
+    // Actualizar el usuario (usar modificadoEn como referencia de último acceso)
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { 
+        modificadoEn: new Date()
+      },
+    });
+
+    // Obtener roles del usuario para incluirlos en el log
+    const rolesUsuario = usuario.roles.map(ur => ({
+      id: ur.rol.id,
+      nombre: ur.rol.nombre,
+      descripcion: ur.rol.descripcion
+    }));
+
+    // Registrar login exitoso
     await registrarAuditoria({
       usuarioId: usuario.id,
       accion: 'login_exitoso',
-      descripcion: `Usuario accedió al sistema: ${usuario.email}`,
+      descripcion: {
+        mensaje: 'Inicio de sesión exitoso',
+        email: usuario.email,
+        usuarioId: usuario.id,
+        accion: 'LOGIN_EXITOSO',
+        timestamp: new Date().toISOString(),
+        ip: req.ip,
+        detalles: {
+          metodo: 'email',
+          usuario: {
+            nombre: usuario.nombreCompleto,
+            email: usuario.email,
+            activo: usuario.activo,
+            fechaCreacion: usuario.creadoEn?.toISOString(),
+            ultimoAcceso: new Date().toISOString(), // Usamos la fecha actual como último acceso
+            nota: 'Los campos de seguimiento de acceso no están implementados en el modelo de Usuario'
+          },
+          roles: rolesUsuario,
+          metadatos: {
+            userAgent: req.headers['user-agent'],
+            contentType: req.headers['content-type']
+          }
+        }
+      },
       ip: req.ip,
       entidadTipo: 'usuario',
       entidadId: usuario.id,
@@ -454,6 +657,25 @@ export async function login(req: Request, res: Response): Promise<void> {
     );
   } catch (err) {
     mensajeError = err instanceof Error ? err.message : 'Error desconocido';
-    res.status(500).json(fail(mensajeError));
+    
+    await registrarAuditoria({
+      usuarioId: null,
+      accion: 'login_error',
+      descripcion: {
+        mensaje: 'Error durante el proceso de inicio de sesión',
+        error: mensajeError,
+        stack: err instanceof Error ? err.stack : undefined,
+        timestamp: new Date().toISOString(),
+        detalles: {
+          emailIntentado: email,
+          ip: req.ip
+        }
+      },
+      ip: req.ip,
+      entidadTipo: 'usuario',
+      modulo: 'auth',
+    });
+    
+    res.status(500).json(fail('Error interno del servidor al procesar el inicio de sesión'));
   }
 }
