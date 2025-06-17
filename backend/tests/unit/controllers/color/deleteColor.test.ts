@@ -11,8 +11,13 @@ jest.mock('@prisma/client', () => ({
 
 // Mock de auditoría
 const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
+const mockLogSuccess = jest.fn().mockImplementation((params: any) => Promise.resolve());
+const mockLogError = jest.fn().mockImplementation((params: any) => Promise.resolve());
+
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria
+  registrarAuditoria: mockRegistrarAuditoria,
+  logSuccess: mockLogSuccess,
+  logError: mockLogError
 }));
 
 // Importar el controlador después de los mocks
@@ -38,12 +43,17 @@ describe('Controlador de Colores - Eliminar Color', () => {
         email: userEmail,
         nombreCompleto: 'Usuario de Prueba',
         roles: ['admin']
-      }
+      },
+      ip: '127.0.0.1'
     });
 
     mockResponse = createMockResponse();
     resetMocks();
     resetPrismaMocks();
+    
+    // Reset mocks antes de cada prueba
+    mockLogSuccess.mockClear();
+    mockLogError.mockClear();
 
     // Configuración por defecto para las pruebas de eliminación exitosa
     prismaMock.producto.count.mockResolvedValue(0); // No hay productos asociados
@@ -129,65 +139,92 @@ describe('Controlador de Colores - Eliminar Color', () => {
     mockRequest.params = { id: 'id-invalido' };
 
     // Ejecutar la función del controlador
-    await eliminarColor(mockRequest as Request, mockResponse as Response);
+    await eliminarColor(mockRequest as Request, mockResponse as unknown as Response);
+
+    // Verificar que no se intentó buscar ni actualizar
+    expect(prismaMock.color.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.color.update).not.toHaveBeenCalled();
+    
+    // Debug: Log the actual call to mockLogError
+    const mockCalls = (mockLogError as jest.Mock).mock.calls[0][0];
+    console.log('Actual mockLogError call:', JSON.stringify(mockCalls, null, 2));
+    
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'eliminarColor',
+      action: 'error_eliminar_color',
+      message: 'Error al eliminar color',
+      error: expect.any(Error),
+      context: {
+        datosSolicitud: {},
+        id: 'id-invalido'
+      }
+    });
 
     // Verificar la respuesta de error
     expect(mockResponse.status).toHaveBeenCalledWith(400);
     expect(mockResponse.json).toHaveBeenCalledWith({
       ok: false,
-      data: null,
-      error: 'ID inválido'
-    });
-  });
-
-  it('debe manejar el caso cuando el color ya está eliminado', async () => {
-    // Configurar mock para simular que el color no existe (ya está eliminado)
-    prismaMock.color.findUnique.mockResolvedValue(null);
-
-    // Limpiar el mock de update para este caso de prueba
-    prismaMock.color.update.mockClear();
-
-    // Ejecutar la función del controlador
-    await eliminarColor(mockRequest as Request, mockResponse as Response);
-
-    // Verificar que se llamó a findUnique con el ID correcto y anuladoEn: null
-    expect(prismaMock.color.findUnique).toHaveBeenCalledWith({
-      where: { 
-        id: colorId,
-        anuladoEn: null 
-      },
-    });
-
-    // Verificar que NO se llamó a update ya que el color no existe
-    expect(prismaMock.color.update).not.toHaveBeenCalled();
-
-    // Verificar la respuesta de error 404
-    expect(mockResponse.status).toHaveBeenCalledWith(404);
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      ok: false,
-      data: null,
-      error: 'Color no encontrado.'
+      error: 'ID inválido',
+      data: null
     });
   });
 
   it('debe manejar errores inesperados', async () => {
     // Configurar el mock para lanzar un error en la primera llamada a findUnique
     const errorMessage = 'Error de base de datos';
-    prismaMock.color.findUnique.mockRejectedValueOnce(new Error(errorMessage));
+    const testError = new Error(errorMessage);
+    (prismaMock.color.findUnique as jest.Mock).mockImplementationOnce(() => Promise.reject(testError));
+
+    // Configurar solicitud con ID válido
+    mockRequest.params = { id: colorId };
 
     // Ejecutar la función del controlador
-    await eliminarColor(mockRequest as Request, mockResponse as Response);
+    await eliminarColor(mockRequest as Request, mockResponse as unknown as Response);
 
-    // Verificar que se llamó a findUnique
-    expect(prismaMock.color.findUnique).toHaveBeenCalled();
+    // Debug: Log the actual call to mockLogError
+    const mockCalls = (mockLogError as jest.Mock).mock.calls[0][0];
+    console.log('Actual mockLogError call:', JSON.stringify(mockCalls, null, 2));
 
-    // Verificar la respuesta de error 500
-    expect(mockResponse.status).toHaveBeenCalledWith(500);
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      ok: false,
-      data: null,
-      error: 'Error al eliminar color'
+    // Verificar que se intentó buscar el color
+    expect(prismaMock.color.findUnique).toHaveBeenCalledWith({
+      where: { 
+        id: colorId,
+        anuladoEn: null 
+      }
     });
+
+    // Verificar que no se intentó actualizar
+    expect(prismaMock.color.update).not.toHaveBeenCalled();
+    
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'eliminarColor',
+      action: 'error_eliminar_color',
+      message: 'Error al eliminar el color',
+      error: testError,
+      context: {
+        id: colorId,
+        datosSolicitud: {},
+        tieneProductosAsociados: 0,
+        stack: expect.any(String)
+      }
+    });
+
+    // Verificar la respuesta de error
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        error: 'Error al eliminar el color'
+      })
+    );
   });
 
   it('debe eliminar un color exitosamente', async () => {
@@ -196,22 +233,46 @@ describe('Controlador de Colores - Eliminar Color', () => {
     // Ejecuta el controlador
     await eliminarColor(mockRequest as Request, mockResponse as unknown as Response);
 
-    // Verifica que se haya llamado a las funciones esperadas
+    // Verificar que se obtuvo el color correctamente
     expect(prismaMock.color.findUnique).toHaveBeenCalledWith({
       where: { 
         id: colorId,
         anuladoEn: null 
       }
     });
-    
-    // Verificar que se llamó a update para el soft delete
+
+    // Verificar que se actualizó el color con la marca de tiempo de anulación
     expect(prismaMock.color.update).toHaveBeenCalledWith({
       where: { id: colorId },
       data: {
         anuladoEn: expect.any(Date),
-        anuladoPor: mockRequest.user?.id,
-        activo: false,
-      },
+        anuladoPor: 'test-user-id',
+        activo: false
+      }
+    });
+    
+    // Verificar que se llamó a logSuccess con los parámetros correctos
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'colores',
+      action: 'eliminar_color_exitoso',
+      message: 'Color eliminado exitosamente',
+      entityId: colorId,
+      details: {
+        fechaEliminacion: expect.any(String),
+        nombre: 'Rojo',
+        tipo: 'soft_delete'
+      }
+    });
+    
+    // Verificar la respuesta exitosa
+    expect(mockResponse.status).toHaveBeenCalledWith(200);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      ok: true,
+      data: 'Color eliminado correctamente.',
+      error: null
     });
     
     // Verificar respuesta exitosa

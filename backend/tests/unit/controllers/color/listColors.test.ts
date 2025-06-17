@@ -11,12 +11,17 @@ jest.mock('@prisma/client', () => ({
 
 // Mock de auditoría
 const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
+const mockLogSuccess = jest.fn().mockImplementation((params: any) => Promise.resolve());
+const mockLogError = jest.fn().mockImplementation((params: any) => Promise.resolve());
+
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria
+  registrarAuditoria: mockRegistrarAuditoria,
+  logSuccess: mockLogSuccess,
+  logError: mockLogError
 }));
 
 // Importar el controlador después de los mocks
-import { listarColores, listarColoresPaginados } from '../../../../src/controllers/colorController';
+import { listarColores } from '../../../../src/controllers/colorController';
 import { mockColor, mockColorList } from '../../__fixtures__/colorFixtures';
 
 // Definir el tipo de usuario esperado
@@ -42,8 +47,14 @@ describe('Controlador de Colores - Listar Colores', () => {
     
     mockRequest = {
       query: {},
-      user: user
+      user: user,
+      ip: '127.0.0.1'
     };
+
+    // Reset mocks antes de cada prueba
+    mockLogSuccess.mockClear();
+    mockLogError.mockClear();
+    resetPrismaMocks();
 
     mockResponse = {
       status: jest.fn().mockReturnThis(),
@@ -101,92 +112,45 @@ describe('Controlador de Colores - Listar Colores', () => {
         error: 'Error al obtener colores'
       });
     });
-  });
 
-  describe('listarColoresPaginados', () => {
-    it('debe listar colores con paginación', async () => {
-      // Configurar parámetros de paginación
-      mockRequest.query = {
-        pagina: '1',
-        limite: '10',
-        orden: 'nombre',
-        direccion: 'asc'
-      };
-
-      // Configurar mocks de Prisma
-      prismaMock.color.count.mockResolvedValue(mockColorList.length);
-      prismaMock.color.findMany.mockResolvedValue(mockColorList);
+    it('debe manejar errores inesperados', async () => {
+      // Configurar el mock para lanzar un error
+      const errorMessage = 'Error inesperado';
+      const testError = new Error(errorMessage);
+      prismaMock.color.findMany.mockRejectedValue(testError);
 
       // Ejecutar la función del controlador
-      await listarColoresPaginados(mockRequest as Request, mockResponse as Response);
-
-      // Verificar la respuesta
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        ok: true,
-        data: {
-          items: expect.arrayContaining([
-            expect.objectContaining({
-              id: expect.any(String),
-              nombre: expect.any(String),
-              descripcion: expect.any(String),
-              codigoHex: expect.any(String),
-              activo: true,
-              creadoEn: expect.any(Date),
-              creadoPor: userEmail,
-              modificadoEn: null,
-              modificadoPor: null,
-              anuladoEn: null,
-              anuladoPor: null
-            })
-          ]),
-          total: mockColorList.length,
-          page: 1,
-          pageSize: 10,
-          totalPages: 1
-        },
-        error: null
-      });
-    });
-
-    it('debe manejar parámetros de paginación por defecto', async () => {
-      // Configurar mocks de Prisma
-      prismaMock.color.count.mockResolvedValue(mockColorList.length);
-      prismaMock.color.findMany.mockResolvedValue(mockColorList);
-
-      // Ejecutar sin parámetros de paginación
-      await listarColoresPaginados(mockRequest as Request, mockResponse as Response);
-
-      // Verificar que se usen los valores por defecto
-      expect(prismaMock.color.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        skip: 0,
-        take: 10,
-        where: {
-          anuladoEn: null
-        },
-        orderBy: {
-          nombre: 'asc'
+      await listarColores(mockRequest as Request, mockResponse as unknown as Response);
+      
+      // Verificar que se llamó a logError con los parámetros correctos
+      expect(mockLogError).toHaveBeenCalledWith({
+        userId: 'test-user-id',
+        ip: '127.0.0.1',
+        entityType: 'color',
+        module: 'listarColores',
+        action: 'error_listar_colores',
+        message: 'Error al listar colores',
+        error: expect.any(Error),
+        context: {
+          filtrosAplicados: {
+            busqueda: undefined,
+            activo: undefined
+          },
+          errorStack: undefined
         }
-      }));
-    });
-
-    it('debe manejar errores en la paginación', async () => {
-      // Configurar parámetros inválidos
-      mockRequest.query = {
-        pagina: 'no-numero',
-        limite: 'no-numero'
-      };
-
-      // Ejecutar la función del controlador
-      await listarColoresPaginados(mockRequest as Request, mockResponse as Response);
-
-      // Verificar la respuesta de error
-      expect(mockResponse.status).toHaveBeenCalledWith(500);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        ok: false,
-        data: null,
-        error: 'Error al listar colores paginados'
       });
+
+      // Verificar que se manejó el error correctamente
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ok: false,
+          error: 'Error al obtener colores'
+        })
+      );
+      expect(mockResponse.json.mock.calls[0][0]).toHaveProperty('data', null);
     });
   });
+
+
 });

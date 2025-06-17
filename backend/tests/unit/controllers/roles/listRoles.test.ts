@@ -24,8 +24,18 @@ jest.mock('../../../../src/utils/response', () => ({
   fail: mockFail,
 }));
 
+// Mocks para las funciones de auditoría
+const mockLogSuccess = jest.fn().mockResolvedValue(undefined);
+const mockLogError = jest.fn().mockResolvedValue(undefined);
+
+// Mock completo del módulo de auditoría
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: (...args: any[]) => mockRegistrarAuditoria(...args),
+  registrarAuditoria: jest.fn().mockResolvedValue(undefined),
+  logSuccess: mockLogSuccess,
+  logError: mockLogError,
+  // Otras funciones que puedan ser necesarias
+  obtenerRegistrosAuditoria: jest.fn(),
+  limpiarRegistrosAntiguos: jest.fn(),
 }));
 
 // Importar después de configurar los mocks
@@ -132,15 +142,67 @@ describe('Controlador de Roles - Listar Roles', () => {
 
   // Nota: Este controlador no implementa auditoría, a diferencia de otros controladores
   // Se mantiene el test para verificar que no se registre auditoría
-  it('no debe registrar auditoría ya que no está implementada en el controlador', async () => {
+  it('debe registrar auditoría exitosa al listar roles', async () => {
     // Configurar el mock para devolver la lista de roles
     mockRolMethods.findMany.mockResolvedValueOnce(mockRolesList);
     
-    // Resetear el mock de registrarAuditoria
-    mockRegistrarAuditoria.mockClear();
+    // Resetear los mocks
+    mockLogSuccess.mockClear();
+    mockLogError.mockClear();
 
     // Ejecutar la función del controlador
     await listarRoles(mockRequest as Request, mockResponse as Response);
+
+    // Verificar que se llamó a logSuccess con los parámetros correctos
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'rol',
+      module: 'roles',
+      action: 'listar_roles',
+      message: 'Roles listados exitosamente',
+      details: expect.objectContaining({
+        roles: expect.arrayContaining([
+          expect.objectContaining({
+            id: expect.any(String),
+            nombre: expect.any(String),
+            descripcion: expect.any(String)
+          })
+        ])
+      })
+    });
+    
+    // Verificar que no se llamó a logError
+    expect(mockLogError).not.toHaveBeenCalled();
+  });
+
+  it('debe registrar error de auditoría cuando falla la consulta', async () => {
+    // Simular un error en la base de datos
+    const errorMessage = 'Error de base de datos';
+    const error = new Error(errorMessage);
+    mockRolMethods.findMany.mockRejectedValueOnce(error);
+    
+    // Resetear los mocks
+    mockLogSuccess.mockClear();
+    mockLogError.mockClear();
+
+    // Ejecutar la función del controlador
+    await listarRoles(mockRequest as Request, mockResponse as Response);
+
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'rol',
+      module: 'listarRoles',
+      action: 'listar_roles',
+      message: 'Error al listar roles',
+      error: errorMessage,
+      context: expect.any(Object)
+    });
+    
+    // Verificar que no se llamó a logSuccess
+    expect(mockLogSuccess).not.toHaveBeenCalled();
 
     // Verificar que NO se registró auditoría
     expect(mockRegistrarAuditoria).not.toHaveBeenCalled();

@@ -1,0 +1,677 @@
+// Import mocks first
+import { prismaMock } from '../../../../tests/unit/__mocks__/prisma';
+import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
+
+// Helper function to create a properly typed mock user
+const createMockUser = (overrides: any = {}) => ({
+  id: '1',
+  email: 'test@example.com',
+  nombreCompleto: 'Test User',
+  password: 'hashedpassword',
+  activo: true,
+  creadoEn: new Date(),
+  creadoPor: 'system',
+  modificadoEn: new Date(),
+  modificadoPor: 'system',
+  anuladoEn: null,
+  anuladoPor: null,
+  ultimoAcceso: null,
+  ultimoIp: null,
+  intentosFallidos: 0,
+  roles: [
+    { 
+      rol: { 
+        id: '1', 
+        nombre: 'usuario', 
+        descripcion: 'Usuario estándar',
+        $on: jest.fn(),
+        $transaction: jest.fn()
+      },
+      $on: jest.fn(),
+      $transaction: jest.fn()
+    }
+  ],
+  // Add Prisma client methods
+  $on: jest.fn(),
+  $transaction: jest.fn(),
+  ...overrides
+});
+
+// Important: Mock Prisma first, before importing controller
+jest.mock('@/utils/prisma', () => ({
+  __esModule: true,
+  default: {
+    usuario: {
+      findUnique: jest.fn().mockImplementation(() => Promise.resolve(null)),
+      update: jest.fn().mockImplementation(() => Promise.resolve({})),
+      findMany: jest.fn().mockImplementation(() => Promise.resolve([]))
+    },
+    usuarioRol: {
+      findMany: jest.fn().mockImplementation(() => Promise.resolve([]))
+    },
+    $transaction: jest.fn().mockImplementation(fn => fn())
+  }
+}));
+
+// Import the controller and other dependencies
+import prisma from '@/utils/prisma';
+import { login } from '../../../../src/controllers/authController';
+
+// Mock dependencies
+jest.mock('bcrypt');
+jest.mock('jsonwebtoken');
+
+// Mock audit functions
+const mockLogSuccess = jest.fn().mockResolvedValue(undefined);
+const mockLogError = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('@/utils/audit', () => ({
+  logSuccess: (params: any) => mockLogSuccess(params),
+  logError: (params: any) => mockLogError(params),
+}));
+
+// Mock bcrypt
+jest.mock('bcrypt', () => ({
+  compare: jest.fn().mockResolvedValue(false),
+}));
+
+// Mock jwt
+jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn().mockReturnValue('mock-jwt-token'),
+}));
+
+// Mock environment variables
+const OLD_ENV = process.env;
+
+// Test user data
+const mockUser = {
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  email: 'test@example.com',
+  nombreCompleto: 'Test User',
+  activo: true,
+  password: '$2b$10$examplehashedpassword', // bcrypt hash for 'password'
+  creadoEn: new Date(),
+  modificadoEn: new Date(),
+  roles: []
+};
+
+describe('Auth Controller - Login', () => {
+  let req: Partial<Request>;
+  let res: Partial<Response>;
+  let jsonMock: jest.Mock;
+  let statusMock: jest.Mock;
+  
+  // Clear all mocks before each test
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // Reset request and response mocks
+    jsonMock = jest.fn();
+    statusMock = jest.fn().mockReturnThis();
+    
+    req = {
+      body: {},
+      ip: '127.0.0.1',
+    };
+    
+    res = {
+      status: statusMock,
+      json: jsonMock,
+    };
+    
+    // Reset mock implementations
+    mockLogSuccess.mockClear();
+    mockLogError.mockClear();
+  });
+  let sendMock: jest.Mock;
+
+  beforeEach(() => {
+    // Reset mocks and environment
+    jest.clearAllMocks();
+    process.env = { ...OLD_ENV };
+    process.env.JWT_SECRET = 'test-secret';
+
+    // Reset all mocks before each test
+    jest.clearAllMocks();
+  
+    // Reset Prisma mock implementations
+    prismaMock.usuario = {
+      findUnique: jest.fn().mockResolvedValue(null),
+    };
+    prismaMock.usuarioRol = {
+      findMany: jest.fn().mockResolvedValue([]),
+    };
+    prismaMock.$transaction = jest.fn().mockImplementation(async (callback: any) => {
+      return await callback({
+        usuario: {
+          update: jest.fn().mockImplementation((data: any) => 
+            Promise.resolve({ ...mockUser, ...data.data })
+          ),
+        },
+      });
+    });
+  
+    // Reset mocks
+    (bcrypt.compare as jest.Mock).mockClear();
+    (jwt.sign as jest.Mock).mockClear();
+    mockLogSuccess.mockClear();
+    mockLogError.mockClear();
+
+    // Configuración de req y res
+    req = {
+      body: {},
+      ip: '127.0.0.1',
+      headers: {},
+    };
+
+    jsonMock = jest.fn();
+    statusMock = jest.fn().mockReturnThis();
+    sendMock = jest.fn();
+
+    res = {
+      status: statusMock,
+      json: jsonMock,
+      send: sendMock,
+    };
+
+    // Set default mock implementations for bcrypt and jwt
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+    (jwt.sign as jest.Mock).mockReturnValue('mock-jwt-token');
+
+    // Add console spy for debugging
+    jest.spyOn(console, 'log').mockImplementation((message) => {
+      process.stdout.write(`DEBUG: ${message}\n`);
+    });
+    
+    jest.spyOn(console, 'error').mockImplementation((message) => {
+      process.stdout.write(`ERROR: ${message}\n`);
+    });
+    
+    // Reset prisma mocks before each test
+    jest.mocked(prisma.usuario.findUnique).mockReset();
+    jest.mocked(prisma.usuario.update).mockReset();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('debe retornar error si faltan credenciales', async () => {
+    // Arrange
+    req.body = {}; // No credentials provided
+
+    // Act
+    await login(req as Request, res as Response);
+
+    // Assert
+    expect(statusMock).toHaveBeenCalledWith(400);
+    expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({
+      ok: false,
+      error: 'Email y password son requeridos'
+    }));
+
+    // Verify audit log was created for the error
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: null,
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'login',
+      action: 'login_fallido',
+      message: 'Intento de inicio de sesión sin credenciales completas',
+      error: expect.any(Error),
+      context: expect.objectContaining({
+        camposFaltantes: expect.any(Array),
+        email: null
+      })
+    });
+  });
+
+  it('debe manejar usuario no encontrado', async () => {
+    // Arrange
+    req.body = { email: 'nonexistent@example.com', password: 'password' };
+    (prismaMock.usuario.findUnique as jest.Mock).mockResolvedValue(null);
+
+    // Act
+    await login(req as Request, res as Response);
+
+    // Assert
+    expect(statusMock).toHaveBeenCalledWith(401);
+    expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({
+      ok: false,
+      error: 'Credenciales inválidas o usuario inactivo'
+    }));
+
+    // Verify error was logged
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: null,
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'login',
+      action: 'login_fallido',
+      message: 'Intento de inicio de sesión fallido - Usuario no encontrado',
+      error: expect.any(Error),
+      context: {
+        email: 'nonexistent@example.com',
+      },
+    });
+  });
+
+  it('debe retornar error si el usuario está inactivo', async () => {
+    // Arrange
+    const inactiveUser = createMockUser({
+      id: '2',
+      email: 'inactive@example.com',
+      nombreCompleto: 'Inactive User',
+      activo: false,
+      password: 'hashedpassword',
+      roles: [{
+        rol: {
+          id: '1',
+          nombre: 'usuario',
+          descripcion: 'Usuario estándar'
+        }
+      }]
+    });
+    
+    req.body = { email: 'inactive@example.com', password: 'password' };
+    (prismaMock.usuario.findUnique as jest.Mock).mockResolvedValue(inactiveUser);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+    // Act
+    await login(req as Request, res as Response);
+
+    // Assert
+    expect(statusMock).toHaveBeenCalledWith(401);
+    expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({
+      ok: false,
+      error: 'Credenciales inválidas o usuario inactivo'
+    }));
+
+    // Verify audit log
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+      userId: '2',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'login',
+      action: 'login_fallido',
+      message: 'Intento de inicio de sesión fallido - Usuario inactivo',
+      error: expect.any(Error),
+      context: {
+        email: 'inactive@example.com'
+      }
+    }));
+  });
+
+  it('debe retornar error si la contraseña es incorrecta', async () => {
+    // Arrange
+    const user = createMockUser({ 
+      id: '1',
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      activo: true,
+      password: 'hashedpassword',
+      roles: [{
+        rol: {
+          id: '1',
+          nombre: 'usuario',
+          descripcion: 'Usuario estándar'
+        }
+      }]
+    });
+    
+    req.body = { email: 'test@example.com', password: 'wrongpassword' };
+    (prismaMock.usuario.findUnique as jest.Mock).mockResolvedValue(user);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+    // Act
+    await login(req as Request, res as Response);
+
+    // Assert
+    expect(statusMock).toHaveBeenCalledWith(401);
+    expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({
+      ok: false,
+      error: 'Credenciales inválidas o usuario inactivo'
+    }));
+
+    // Verify audit log
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+      userId: '1',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'login',
+      action: 'login_fallido',
+      message: 'Intento de inicio de sesión fallido - Contraseña incorrecta',
+      error: expect.any(Error),
+      context: expect.objectContaining({
+        email: 'test@example.com'
+      })
+    }));
+  });
+
+  it('debe iniciar sesión correctamente con credenciales válidas', async () => {
+    // Arrange
+    const mockUserData = {
+      id: '1',
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      activo: true,
+      password: 'hashedpassword',
+      creadoEn: new Date(),
+      modificadoEn: new Date(),
+      roles: [
+        { 
+          rol: { 
+            id: '1', 
+            nombre: 'usuario', 
+            descripcion: 'Usuario estándar',
+            $on: jest.fn(),
+            $transaction: jest.fn()
+          },
+          $on: jest.fn(),
+          $transaction: jest.fn()
+        }
+      ]
+    };
+    
+    const mockUserWithRole = createMockUser(mockUserData);
+    
+    req.body = { email: 'test@example.com', password: 'password' };
+    req.headers = { 'user-agent': 'test-agent' };
+    
+    (prismaMock.usuario.findUnique as jest.Mock).mockResolvedValue(mockUserWithRole);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    (jwt.sign as jest.Mock).mockImplementation(() => 'mock-jwt-token');
+    
+    // Mock the update call
+    const updatedUser = {
+      ...mockUserWithRole,
+      roles: [
+        {
+          rol: {
+            id: '1',
+            nombre: 'usuario',
+            descripcion: 'Usuario estándar'
+          }
+        }
+      ]
+    };
+    
+    (prismaMock.usuario.update as jest.Mock).mockResolvedValue(updatedUser);
+
+    // Act
+    await login(req as Request, res as Response);
+
+    // Assert
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({
+      ok: true,
+      data: expect.objectContaining({
+        token: 'mock-jwt-token',
+        usuario: expect.objectContaining({
+          id: '1',
+          email: 'test@example.com',
+          nombreCompleto: 'Test User',
+          roles: ['usuario']
+        })
+      })
+    }));
+    
+    // Verify user update was called
+    expect(prismaMock.usuario.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: { 
+        ultimoAcceso: expect.any(Date),
+        ultimoIp: '127.0.0.1',
+        intentosFallidos: 0
+      },
+      include: {
+        roles: {
+          include: {
+            rol: true
+          }
+        }
+      }
+    });
+    
+    // Verify audit log
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      userId: '1',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      entityId: '1',
+      module: 'login',
+      action: 'login_exitoso',
+      message: 'Inicio de sesión exitoso',
+      details: {
+        email: 'test@example.com',
+        metodo: 'email',
+        usuario: {
+          nombre: 'Test User',
+          email: 'test@example.com',
+          activo: true,
+          fechaCreacion: expect.any(String),
+          ultimoAcceso: expect.any(String)
+        },
+        roles: [
+          {
+            id: '1',
+            nombre: 'usuario',
+            descripcion: 'Usuario estándar'
+          }
+        ],
+        metadatos: {
+          userAgent: 'test-agent',
+          'content-type': undefined
+        }
+      }
+    }));
+  });
+
+  it('debe manejar múltiples roles correctamente', async () => {
+    // Arrange
+    const mockUserData = {
+      id: '1',
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      activo: true,
+      password: 'hashedpassword',
+      roles: [
+        { 
+          rol: { 
+            id: '1', 
+            nombre: 'admin', 
+            descripcion: 'Administrador del sistema',
+            $on: jest.fn(),
+            $transaction: jest.fn()
+          },
+          $on: jest.fn(),
+          $transaction: jest.fn()
+        },
+        { 
+          rol: { 
+            id: '2', 
+            nombre: 'vendedor', 
+            descripcion: 'Vendedor',
+            $on: jest.fn(),
+            $transaction: jest.fn()
+          },
+          $on: jest.fn(),
+          $transaction: jest.fn()
+        }
+      ]
+    };
+    
+    const mockUserWithRoles = createMockUser(mockUserData);
+    const updatedUser = {
+      ...mockUserWithRoles,
+      ultimoAcceso: new Date(),
+      ultimoIp: '127.0.0.1',
+      intentosFallidos: 0
+    };
+    
+    req.body = { email: 'test@example.com', password: 'password' };
+    Object.defineProperty(req, 'ip', {
+      value: '127.0.0.1',
+      configurable: true
+    });
+    
+    // Mock Prisma calls
+    (prismaMock.usuario.findUnique as jest.Mock).mockResolvedValue(mockUserWithRoles);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    (jwt.sign as jest.Mock).mockReturnValue('mock-jwt-token');
+    
+    // Mock the update method
+    (prismaMock.usuario.update as jest.Mock).mockResolvedValue(updatedUser);
+
+    // Act
+    await login(req as Request, res as Response);
+
+    // Assert
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({
+      ok: true,
+      data: expect.objectContaining({
+        token: 'mock-jwt-token',
+        usuario: expect.objectContaining({
+          id: '1',
+          email: 'test@example.com',
+          nombreCompleto: 'Test User',
+          roles: expect.arrayContaining(['admin', 'vendedor'])
+        })
+      })
+    }));
+    
+    // Verify JWT token was generated with correct roles
+    expect(jwt.sign).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: '1',
+        email: 'test@example.com',
+        nombreCompleto: 'Test User',
+        roles: expect.arrayContaining(['admin', 'vendedor'])
+      }),
+      expect.any(String),
+      { expiresIn: '8h' }
+    );
+
+    // Verify user update was called
+    expect(prismaMock.usuario.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: { 
+        modificadoEn: expect.any(Date)
+      },
+    });
+
+    // Verify audit log
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      userId: '1',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      entityId: '1',
+      module: 'login',
+      action: 'login_exitoso',
+      message: 'Inicio de sesión exitoso',
+      context: {
+        email: 'test@example.com',
+        roles: expect.arrayContaining(['admin', 'vendedor'])
+      }
+    }));
+
+    // Verify user update
+    expect(prismaMock.usuario.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: {
+        ultimoAcceso: expect.any(Date),
+        ultimoIp: '127.0.0.1',
+        intentosFallidos: 0
+      },
+      include: {
+        roles: {
+          include: {
+            rol: true
+          }
+        }
+      }
+    });
+  });
+
+  it('debe manejar errores inesperados', async () => {
+    // Arrange
+    const email = 'test@example.com';
+    req.body = { email, password: 'password' };
+    const errorMessage = 'Database connection failed';
+    const error = new Error(errorMessage);
+    (prismaMock.usuario.findUnique as jest.Mock).mockRejectedValue(error);
+
+    // Mock console.error to prevent test output pollution
+    const originalError = console.error;
+    console.error = jest.fn();
+
+    try {
+      // Act
+      await login(req as Request, res as Response);
+
+      // Assert - Should return 401 for unexpected errors during authentication
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ok: false,
+          error: 'Credenciales inválidas o usuario inactivo'
+        })
+      );
+      
+      // Verify error was logged
+      expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+        userId: null,
+        ip: '127.0.0.1',
+        entityType: 'usuario',
+        module: 'login',
+        action: 'login_fallido',
+        message: 'Intento de inicio de sesión fallido - Error inesperado',
+        error: expect.any(Error),
+        context: {
+          email: email
+        }
+      }));
+    } finally {
+      // Restore console.error
+      console.error = originalError;
+    }
+  });
+
+  it('debe manejar usuario no encontrado', async () => {
+    // Arrange
+    const email = 'nonexistent@example.com';
+    req.body = { email, password: 'password' };
+    (prismaMock.usuario.findUnique as jest.Mock).mockResolvedValue(null);
+
+    // Act
+    await login(req as Request, res as Response);
+
+    // Assert - Should return 401 for user not found
+    expect(statusMock).toHaveBeenCalledWith(401);
+    expect(jsonMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        error: 'Credenciales inválidas o usuario inactivo'
+      })
+    );
+    
+    // Verify error was logged
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: null,
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'login',
+      action: 'login_fallido',
+      message: 'Intento de inicio de sesión fallido - Usuario no encontrado',
+      error: expect.any(Error),
+      context: {
+        email,
+        camposFaltantes: ['email']
+      }
+    });
+  });
+});

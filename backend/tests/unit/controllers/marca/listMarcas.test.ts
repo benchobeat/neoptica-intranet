@@ -4,7 +4,8 @@ const mockMarcaMethods = {
   count: jest.fn(),
 };
 
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
+const mockLogSuccess = jest.fn().mockResolvedValue(undefined);
+const mockLogError = jest.fn().mockResolvedValue(undefined);
 
 // Configurar los mocks antes de importar los módulos que los usan
 jest.mock('@prisma/client', () => ({
@@ -15,7 +16,8 @@ jest.mock('@prisma/client', () => ({
 }));
 
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: (...args: any[]) => mockRegistrarAuditoria(...args),
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+  logError: (...args: any[]) => mockLogError(...args),
 }));
 
 // Importar después de configurar los mocks
@@ -111,6 +113,27 @@ describe('Controlador de Marcas - Listar Marcas', () => {
       ]),
       error: null,
     });
+    
+    // Verificar que se llamó a logSuccess con los parámetros correctos
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      module: 'listarMarcas',
+      action: 'listar_marcas',
+      message: 'Listado de marcas obtenido exitosamente',
+      details: {
+        totalRegistros: mockMarcaList.length,
+        filtrosAplicados: {
+          id: null,
+          nombre: null,
+          activo: null
+        }
+      }
+    });
+    
+    // Verificar que no se llamó a logError
+    expect(mockLogError).not.toHaveBeenCalled();
   });
 
   it('debe filtrar marcas por nombre cuando se proporciona el parámetro', async () => {
@@ -173,7 +196,8 @@ describe('Controlador de Marcas - Listar Marcas', () => {
   it('debe manejar errores inesperados', async () => {
     // Configurar el mock para lanzar un error
     const errorMessage = 'Error inesperado';
-    mockMarcaMethods.findMany.mockRejectedValue(new Error(errorMessage));
+    const testError = new Error(errorMessage);
+    mockMarcaMethods.findMany.mockRejectedValue(testError);
 
     // Ejecutar la función del controlador
     await listarMarcas(mockRequest as Request, mockResponse as Response);
@@ -186,27 +210,30 @@ describe('Controlador de Marcas - Listar Marcas', () => {
       error: 'Error interno del servidor al listar marcas'
     });
     
-    // Verificar que se registró la auditoría de error con el formato JSON esperado
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(expect.objectContaining({
-      usuarioId: 'usuario-test-id',
-      accion: 'listar_marcas_fallido',
-      descripcion: {
-        mensaje: 'Error al listar marcas',
-        accion: 'ERROR_LISTAR_MARCAS',
-        error: 'Error inesperado',
-        // stack puede ser undefined o string
-      },
-      ip: '127.0.0.1',
-      entidadTipo: 'marca',
-      modulo: 'marcas',
-    }));
-    
-    // Verificar que la descripción tiene la estructura correcta
-    const auditoriaCall = mockRegistrarAuditoria.mock.calls[0][0];
-    expect(auditoriaCall.descripcion).toMatchObject({
-      mensaje: 'Error al listar marcas',
-      accion: 'ERROR_LISTAR_MARCAS',
-      error: 'Error inesperado',
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      module: 'listarMarcas',
+      action: 'error_listar_marcas',
+      message: 'Error al listar las marcas',
+      error: testError,
+      context: expect.objectContaining({
+        filtrosAplicados: {
+          id: null,
+          nombre: null,
+          activo: null
+        },
+        error: 'Error inesperado'
+      })
     });
+    
+    // Verificar que el stack está incluido en el contexto
+    const logErrorCall = mockLogError.mock.calls[0][0];
+    expect(logErrorCall.context.stack).toContain('Error: Error inesperado');
+    
+    // Verificar que no se llamó a logSuccess en caso de error
+    expect(mockLogSuccess).not.toHaveBeenCalled();
   });
 });

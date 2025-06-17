@@ -9,12 +9,84 @@ interface JsonArray extends Array<JsonValue> {}
 export type AuditoriaParams = {
   accion: string;
   entidadTipo?: string;
-  entidadId?: string;
+  entidadId?: string | null;
   descripcion: string | Record<string, unknown>;
   ip?: string;
   modulo: string;
   usuarioId?: string;
+  mensajeError?: string;
+  resultado?: 'exitoso' | 'fallido' | 'pendiente';
   datosAdicionales?: Record<string, unknown>;
+};
+
+type SuccessAuditParams = {
+  userId?: string;
+  ip?: string;
+  entityType: string;
+  entityId?: string | null;
+  module: string;
+  action: string;
+  message: string;
+  details?: Record<string, unknown>;
+};
+
+type ErrorAuditParams = {
+  userId?: string;
+  ip?: string;
+  entityType: string;
+  entityId?: string | null;
+  module: string;
+  action: string;
+  message: string;
+  error: unknown;
+  context?: Record<string, unknown>;
+};
+
+/**
+ * Helper function to log successful operations
+ */
+export const logSuccess = async (params: SuccessAuditParams): Promise<void> => {
+  const { userId, ip, entityType, entityId, module, action, message, details } = params;
+  
+  await registrarAuditoria({
+    usuarioId: userId,
+    accion: action,
+    resultado: 'exitoso',
+    descripcion: {
+      mensaje: message,
+      timestamp: new Date().toISOString(),
+      ...(details && { detalles: details })
+    },
+    ip,
+    entidadTipo: entityType,
+    entidadId: entityId,
+    modulo: module
+  });
+};
+
+/**
+ * Helper function to log errors
+ */
+export const logError = async (params: ErrorAuditParams): Promise<void> => {
+  const { userId, ip, entityType, entityId, module, action, message, error, context } = params;
+  const errorObj = error as Error;
+  
+  await registrarAuditoria({
+    usuarioId: userId,
+    accion: action,
+    resultado: 'fallido',
+    mensajeError: errorObj.message,
+    descripcion: {
+      mensaje: message,
+      timestamp: new Date().toISOString(),
+      ...(context && { contexto: context }),
+      ...(process.env.NODE_ENV === 'development' && { stack: errorObj.stack })
+    },
+    ip,
+    entidadTipo: entityType,
+    entidadId: entityId,
+    modulo: module
+  });
 };
 
 /**
@@ -24,6 +96,7 @@ export type AuditoriaParams = {
 export const registrarAuditoria = async (params: AuditoriaParams): Promise<void> => {
   const {
     accion,
+    resultado,
     entidadTipo,
     entidadId,
     descripcion,
@@ -46,6 +119,7 @@ export const registrarAuditoria = async (params: AuditoriaParams): Promise<void>
     await prisma.logAuditoria.create({
       data: {
         accion,
+        resultado,
         entidadTipo: entidadTipo || null,
         entidadId: entidadId || null,
         descripcion: descripcionJson,
@@ -71,6 +145,8 @@ export const obtenerRegistrosAuditoria = async (filtros: {
   usuarioId?: string;
   fechaInicio?: Date;
   fechaFin?: Date;
+  mensajeError?: string;
+  ip?: string;
   pagina?: number;
   porPagina?: number;
 }) => {

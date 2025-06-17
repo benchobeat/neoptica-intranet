@@ -19,11 +19,13 @@ jest.mock('@prisma/client', () => {
 });
 
 // Mock the audit module
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
-
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria,
+  logSuccess: jest.fn().mockResolvedValue(undefined),
+  logError: jest.fn().mockResolvedValue(undefined)
 }));
+
+// Import the mocks after setting them up
+const { logSuccess, logError } = require('../../../../src/utils/audit');
 
 // Import the controller only after mocking dependencies
 import { listarSucursales } from '../../../../src/controllers/sucursalController';
@@ -57,10 +59,13 @@ beforeEach(() => {
   
   // Reset mock implementations
   mockSucursalFindMany.mockReset();
-  mockRegistrarAuditoria.mockReset();
+  logSuccess.mockReset();
+  logError.mockReset();
   
   // Default mock implementation
   mockSucursalFindMany.mockResolvedValue(mockSucursales);
+  logSuccess.mockResolvedValue(undefined);
+  logError.mockResolvedValue(undefined);
 });
 
 describe('listarSucursales', () => {
@@ -90,15 +95,23 @@ describe('listarSucursales', () => {
       error: null,
     });
     
-    // Verify audit log was created
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
-      usuarioId: 'test-user-id',
-      accion: 'listar_sucursales',
-      descripcion: expect.stringContaining('Se listaron'),
+    // Verify success log was created
+    expect(logSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'test-user-id',
       ip: '127.0.0.1',
-      entidadTipo: 'sucursal',
-      modulo: 'sucursales',
-    });
+      entityType: 'sucursal',
+      module: 'listarSucursales',
+      action: 'listar_sucursales_exitoso',
+      message: 'Listado de sucursales obtenido exitosamente',
+      details: {
+        total: 3,
+        filtrosAplicados: {
+          estado: null,
+          soloActivas: true
+        },
+        ordenamiento: 'nombre (ascendente)'
+      }
+    }));
   });
 
   it('debe devolver un array vacío cuando no hay sucursales', async () => {
@@ -120,7 +133,8 @@ describe('listarSucursales', () => {
   it('debe manejar errores correctamente', async () => {
     // Arrange
     const errorMessage = 'Error de base de datos';
-    mockSucursalFindMany.mockRejectedValueOnce(new Error(errorMessage));
+    const dbError = new Error(errorMessage);
+    mockSucursalFindMany.mockRejectedValueOnce(dbError);
     
     // Act
     await listarSucursales(req as Request, res as Response);
@@ -130,17 +144,26 @@ describe('listarSucursales', () => {
     expect(jsonMock).toHaveBeenCalledWith({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al obtener el listado de sucursales.',
+      error: 'Error al listar sucursales: Error de base de datos',
     });
     
-    // Verify error audit log was created
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
-      usuarioId: 'test-user-id',
-      accion: 'listar_sucursales_fallido',
-      descripcion: errorMessage,
+    // Verify error log was created
+    expect(logError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
       ip: '127.0.0.1',
-      entidadTipo: 'sucursal',
-      modulo: 'sucursales',
+      entityType: 'sucursal',
+      module: 'listarSucursales',
+      action: 'error_listar_sucursales',
+      message: 'Error al listar sucursales',
+      error: dbError,
+      context: {
+        error: errorMessage,
+        filtrosAplicados: {
+          estado: null,
+          soloActivas: true
+        },
+        stack: expect.any(String)
+      }
     });
   });
 });

@@ -160,20 +160,6 @@ async function main() {
     console.log(`🌱 [SEED] Asociación cliente-rol "${rolCliente.nombre}" creada`);
   }
 
-  // 6. Registrar en log de auditoría
-  await prisma.logAuditoria.create({
-    data: {
-      usuarioId: adminUser.id,
-      accion: 'SEED',
-      descripcion: 'Inicialización del sistema con roles y usuarios base',
-      ip: '127.0.0.1',
-      entidadId: null, // Usamos null ya que no hay una entidad específica para esta acción
-      entidadTipo: 'SISTEMA',
-      modulo: 'SEED',
-      fecha: fechaActual,
-    }
-  });
-
   // 6. Crear usuario system para auditoría y operaciones del sistema
   console.log('🌱 [SEED] Creando usuario system...');
   
@@ -195,21 +181,6 @@ async function main() {
   });
 
   console.log(`🌱 [SEED] Usuario system creado: ${systemUser.id}`);
-
-  // 7. Registrar en log de auditoría la creación del usuario system
-  await prisma.logAuditoria.create({
-    data: {
-      usuarioId: adminUser.id,
-      accion: 'SEED',
-      descripcion: 'Creación del usuario de sistema para operaciones automáticas',
-      ip: '127.0.0.1',
-      entidadTipo: 'USUARIO',
-      entidadId: systemUser.id,
-      modulo: 'SEED',
-      fecha: fechaActual,
-    }
-  });
-
   console.log('✔️ Seed inicial multirol ejecutado correctamente');
   console.log('✔️ Usuarios creados:');
   console.log('   - Admin: admin@neoptica.com / Admin1234!');

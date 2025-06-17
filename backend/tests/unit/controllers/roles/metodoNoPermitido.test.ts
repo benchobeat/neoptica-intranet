@@ -1,5 +1,16 @@
-import { Request, Response } from 'express';
-import { metodoNoPermitido } from '../../../../src/controllers/rolesController';
+// Mocks para las funciones de auditoría
+const mockLogError = jest.fn().mockResolvedValue(undefined);
+const mockLogSuccess = jest.fn().mockResolvedValue(undefined);
+
+// Mock del módulo de auditoría
+jest.mock('../../../../src/utils/audit', () => ({
+  logError: (...args: any[]) => mockLogError(...args),
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+  // Otras funciones que puedan ser necesarias
+  registrarAuditoria: jest.fn().mockResolvedValue(undefined),
+  obtenerRegistrosAuditoria: jest.fn(),
+  limpiarRegistrosAntiguos: jest.fn(),
+}));
 
 // Mock del módulo de respuesta
 jest.mock('../../../../src/utils/response', () => {
@@ -18,7 +29,9 @@ jest.mock('../../../../src/utils/response', () => {
   };
 });
 
-// Importamos el módulo después de definir el mock
+// Importamos los módulos después de definir los mocks
+import { Request, Response } from 'express';
+import { metodoNoPermitido } from '../../../../src/controllers/rolesController';
 import * as responseModule from '../../../../src/utils/response';
 
 // Obtenemos el mockFail del módulo mockeado
@@ -91,5 +104,35 @@ describe('Controlador de Roles - Método No Permitido', () => {
     expect(responseObject).toHaveProperty('ok', false);
     expect(responseObject).toHaveProperty('data', null);
     expect(responseObject).toHaveProperty('error', errorMessage);
+  });
+
+  it('debe registrar un error de auditoría cuando se llama a un método no permitido', () => {
+    // Configurar el mock de la solicitud
+    const testRequest = {
+      ...mockRequest,
+      method: 'POST',
+      path: '/api/roles',
+      ip: '127.0.0.1',
+      user: { id: 'test-user-id' },
+      usuario: { id: 'test-user-id' }
+    };
+
+    // Ejecutar la función del controlador
+    metodoNoPermitido(testRequest as Request, mockResponse as Response);
+
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'rol',
+      module: 'metodoNoPermitido',
+      action: 'metodo_no_permitido',
+      message: 'Método no permitido',
+      error: 'Método no permitido. 405',
+      context: expect.any(Object)
+    });
+
+    // Verificar que no se llamó a logSuccess
+    expect(mockLogSuccess).not.toHaveBeenCalled();
   });
 });

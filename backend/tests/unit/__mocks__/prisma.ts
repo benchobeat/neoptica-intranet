@@ -45,6 +45,19 @@ const prismaMock: any = {
   $queryRaw: jest.fn(),
 
   // Inicializar mocks para cada modelo
+  usuario: {
+    ...mockEntityFunctions,
+    update: jest.fn().mockImplementation((args: any) => {
+      return Promise.resolve({
+        ...args.data,
+        id: args.where?.id || '1',
+        ultimoAcceso: new Date(),
+        ultimoIp: '127.0.0.1',
+        intentosFallidos: 0,
+        roles: []
+      });
+    })
+  },
   color: { ...mockEntityFunctions },
   marca: { ...mockEntityFunctions },
   producto: { ...mockEntityFunctions },

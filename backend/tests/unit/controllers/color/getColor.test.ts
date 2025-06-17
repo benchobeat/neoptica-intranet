@@ -11,8 +11,13 @@ jest.mock('@prisma/client', () => ({
 
 // Mock de auditoría
 const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
+const mockLogSuccess = jest.fn().mockImplementation((params: any) => Promise.resolve());
+const mockLogError = jest.fn().mockImplementation((params: any) => Promise.resolve());
+
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria
+  registrarAuditoria: mockRegistrarAuditoria,
+  logSuccess: mockLogSuccess,
+  logError: mockLogError
 }));
 
 // Importar el controlador después de los mocks
@@ -43,8 +48,14 @@ describe('Controlador de Colores - Obtener Color por ID', () => {
     
     mockRequest = {
       params: { id: colorId },
-      user: user
+      user: user,
+      ip: '127.0.0.1'
     };
+
+    // Reset mocks antes de cada prueba
+    mockLogSuccess.mockClear();
+    mockLogError.mockClear();
+    resetPrismaMocks();
 
     mockResponse = {
       status: jest.fn().mockReturnThis(),
@@ -78,29 +89,68 @@ describe('Controlador de Colores - Obtener Color por ID', () => {
       error: null
     });
     
-    // Verificar que se llamó a findUnique con el ID correcto y el filtro anuladoEn: null
+    // Verificar que se llamó a findUnique con el ID correcto y anuladoEn: null
     expect(prismaMock.color.findUnique).toHaveBeenCalledWith({
       where: { 
         id: colorId,
-        anuladoEn: null
-      },
+        anuladoEn: null 
+      }
+    });
+    
+    // Verificar que se llamó a logSuccess con los parámetros correctos
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'obtenerColorPorId',
+      action: 'obtener_color_exitoso',
+      message: 'Color obtenido exitosamente',
+      entityId: colorId,
+      details: {
+        nombre: mockColor.nombre,
+        activo: mockColor.activo,
+        tieneCodigoHex: !!mockColor.codigoHex
+      }
     });
   });
 
-  it('debe retornar error 404 si el color no existe', async () => {
+  it('debe manejar el caso cuando el color no existe', async () => {
     // Configurar el mock para simular que no se encontró el color
-    prismaMock.color.findUnique.mockResolvedValue(null);
+    (prismaMock.color.findUnique as jest.Mock).mockImplementation(() => Promise.resolve(null));
 
     // Ejecutar la función del controlador
     await obtenerColorPorId(mockRequest as Request, mockResponse as Response);
 
+    // Verificar que se buscó el color con anuladoEn: null
+    expect(prismaMock.color.findUnique).toHaveBeenCalledWith({
+      where: { 
+        id: colorId,
+        anuladoEn: null 
+      }
+    });
+
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'obtenerColorPorId',
+      action: 'error_obtener_color_por_id',
+      message: 'Se presento un error durante la obtencion del color',
+      error: expect.any(Error),
+      context: {
+        id: colorId
+      }
+    });
+
     // Verificar la respuesta de error
     expect(mockResponse.status).toHaveBeenCalledWith(404);
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      ok: false,
-      data: null,
-      error: 'Color no encontrado.'
-    });
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        error: 'Color no encontrado.'
+      })
+    );
   });
 
   it('debe validar que el ID sea un UUID válido', async () => {
@@ -122,19 +172,40 @@ describe('Controlador de Colores - Obtener Color por ID', () => {
   });
 
   it('debe manejar errores inesperados', async () => {
-    // Configurar un error inesperado
+    // Configurar el mock para lanzar un error inesperado
     const errorMessage = 'Error inesperado';
-    prismaMock.color.findUnique.mockRejectedValue(new Error(errorMessage));
+    const testError = new Error(errorMessage);
+    (prismaMock.color.findUnique as jest.Mock).mockImplementation(() => Promise.reject(testError));
 
     // Ejecutar la función del controlador
     await obtenerColorPorId(mockRequest as Request, mockResponse as Response);
 
-    // Verificar la respuesta de error
-    expect(mockResponse.status).toHaveBeenCalledWith(500);
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      ok: false,
-      data: null,
-      error: 'Error al obtener color'
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'obtenerColorPorId',
+      action: 'error_obtener_color',
+      message: 'Error al obtener el color',
+      error: testError,
+      context: {
+        idSolicitado: colorId,
+        errorCode: undefined
+      }
     });
+
+    // Verificar que se manejó el error correctamente
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        error: 'Error al obtener color'
+      })
+    );
+    
+    // Verificar que se incluyó la propiedad data: null
+    const [[response]] = mockResponse.json.mock.calls;
+    expect(response).toHaveProperty('data', null);
   });
 });

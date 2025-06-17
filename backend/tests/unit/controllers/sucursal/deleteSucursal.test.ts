@@ -4,14 +4,12 @@ import { v4 as uuidv4 } from 'uuid';
 
 // 1. First mock the audit module
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: jest.fn().mockImplementation((params) => {
-    return Promise.resolve({
-      id: '123e4567-e89b-12d3-a456-426614174000',
-      ...params,
-      creadoEn: new Date(),
-    });
-  })
+  logSuccess: jest.fn().mockResolvedValue(undefined),
+  logError: jest.fn().mockResolvedValue(undefined)
 }));
+
+// Import the mocks after setting them up
+const { logSuccess, logError } = require('../../../../src/utils/audit');
 
 // Helper function for consistent UUIDs
 const generateValidUuid = () => '123e4567-e89b-12d3-a456-426614174000';
@@ -184,8 +182,11 @@ describe('eliminarSucursal', () => {
     expect(statusMock).toHaveBeenCalledWith(200);
     expect(jsonMock).toHaveBeenCalledWith({
       ok: true,
-      data: 'Sucursal eliminada correctamente.'
-      // Note: Controller doesn't include error field in success responses
+      data: { 
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        mensaje: 'Sucursal eliminada exitosamente' 
+      },
+      error: null
     });
 
     // Verify the update was called with the correct parameters
@@ -198,16 +199,31 @@ describe('eliminarSucursal', () => {
       },
     });
 
-    // Verify audit log was called with correct parameters
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
-      usuarioId: 'test-user-id',
-      accion: 'eliminar_sucursal',
-      descripcion: expect.stringContaining('Se eliminó (soft delete) la sucursal con ID:'),
-      ip: expect.any(String),
-      entidadTipo: 'sucursal',
-      entidadId: '123e4567-e89b-12d3-a456-426614174000',
-      modulo: 'sucursales',
-    });
+    // Verify the audit log was created with the correct parameters
+    expect(logSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      userId: testUserId,
+      ip: '127.0.0.1',
+      entityType: 'sucursal',
+      entityId: existingSucursal.id,
+      module: 'eliminarSucursal',
+      action: 'eliminar_sucursal_exitoso',
+      message: 'Sucursal eliminada exitosamente (soft delete)',
+      details: {
+        id: existingSucursal.id,
+        nombre: 'Sucursal Test',
+        razon: 'Eliminación lógica (soft delete)',
+        estadoAnterior: {
+          estado: true,
+          anuladoEn: null,
+          anuladoPor: null
+        },
+        estadoNuevo: expect.objectContaining({
+          estado: false,
+          anuladoEn: expect.any(String),
+          anuladoPor: testUserId
+        })
+      }
+    }));
   });
 
   it('debe devolver error 404 si la sucursal no existe', async () => {

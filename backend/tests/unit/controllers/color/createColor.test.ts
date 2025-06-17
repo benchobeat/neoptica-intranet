@@ -11,8 +11,13 @@ jest.mock('@prisma/client', () => ({
 
 // Mock de auditoría
 const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
+const mockLogSuccess = jest.fn().mockImplementation(() => Promise.resolve());
+const mockLogError = jest.fn().mockImplementation(() => Promise.resolve());
+
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria
+  registrarAuditoria: mockRegistrarAuditoria,
+  logSuccess: mockLogSuccess,
+  logError: mockLogError
 }));
 
 // Importar el controlador después de los mocks
@@ -29,12 +34,18 @@ describe('Controlador de Colores - Crear Color', () => {
   beforeEach(() => {
     // Configuración inicial para cada prueba
     mockRequest = createMockRequest({
-      body: { ...validColorData }
+      body: { ...validColorData },
+      user: { id: 'test-user-id' },
+      ip: '127.0.0.1'
     });
 
     mockResponse = createMockResponse();
     resetMocks();
     resetPrismaMocks();
+    
+    // Reset mocks antes de cada prueba
+    mockLogSuccess.mockClear();
+    mockLogError.mockClear();
   });
 
   it('debe crear un color exitosamente', async () => {
@@ -48,6 +59,22 @@ describe('Controlador de Colores - Crear Color', () => {
     // Verifica que se haya llamado a las funciones esperadas
     expect(prismaMock.color.findFirst).toHaveBeenCalled();
     expect(prismaMock.color.create).toHaveBeenCalled();
+    
+    // Verifica que se llamó a logSuccess con los parámetros correctos
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'crearColor',
+      action: 'crear_color_exitoso',
+      message: 'Color creado exitosamente',
+      entityId: mockColor.id,
+      details: expect.objectContaining({
+        nombre: validColorData.nombre,
+        codigoHex: validColorData.codigoHex,
+        descripcion: validColorData.descripcion
+      })
+    });
 
     // Verifica la respuesta
     expect(mockResponse.status).toHaveBeenCalledWith(201);
@@ -60,22 +87,47 @@ describe('Controlador de Colores - Crear Color', () => {
   });
 
   it('debe devolver error si ya existe un color con el mismo nombre', async () => {
-    // Configura el mock para simular un color existente
-    (prismaMock.color.findFirst as jest.Mock).mockImplementation(() => Promise.resolve({...mockColor}));
+    // Configura el mock para simular que ya existe un color con el mismo nombre
+    (prismaMock.color.findFirst as jest.Mock).mockImplementation(() => 
+      Promise.resolve({ ...mockColor })
+    );
 
     // Ejecuta el controlador
     await crearColor(mockRequest as Request, mockResponse as unknown as Response);
 
-    // Verifica que se haya llamado a la función esperada
+    // Verifica que se haya llamado a la función de búsqueda
     expect(prismaMock.color.findFirst).toHaveBeenCalled();
+    
+    // Verifica que no se haya intentado crear el color
     expect(prismaMock.color.create).not.toHaveBeenCalled();
 
-    // Verifica la respuesta de error adecuada
+    // Debug: Log the actual call to mockLogError
+    const mockCalls = (mockLogError as jest.Mock).mock.calls[0][0];
+    
+    // Verifica que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'crearColor',
+      action: 'error_crear_color',
+      message: 'Se presento un error durante la creacion del color',
+      error: expect.any(Error),
+      context: {
+        nombre: 'Rojo',
+        descripcion: 'Color rojo estándar',
+        activo: true,
+        codigoHex: '#FF0000',
+        colorExistenteId: '550e8400-e29b-41d4-a716-446655440000'
+      }
+    });
+
+    // Verifica la respuesta de error
     expect(mockResponse.status).toHaveBeenCalledWith(409);
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         ok: false,
-        error: 'Ya existe un color con ese nombre.',
+        error: 'Ya existe un color con ese nombre.'
       })
     );
   });

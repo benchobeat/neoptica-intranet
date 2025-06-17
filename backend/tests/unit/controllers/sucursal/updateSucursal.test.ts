@@ -17,10 +17,13 @@ jest.mock('@prisma/client', () => ({
 }));
 
 // Mock audit module
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria,
+  logSuccess: jest.fn().mockResolvedValue(undefined),
+  logError: jest.fn().mockResolvedValue(undefined)
 }));
+
+// Import the mocks after setting them up
+const { logSuccess, logError } = require('../../../../src/utils/audit');
 
 // Import the controller after setting up mocks
 import { actualizarSucursal } from '../../../../src/controllers/sucursalController';
@@ -127,7 +130,8 @@ describe('actualizarSucursal', () => {
     mockPrisma.sucursal.findUnique.mockReset();
     mockPrisma.sucursal.findFirst.mockReset();
     mockPrisma.sucursal.update.mockReset();
-    mockRegistrarAuditoria.mockReset();
+    logSuccess.mockReset();
+    logError.mockReset();
     
     // Default mock implementations
     mockPrisma.sucursal.findUnique.mockImplementation(({ where }) => {
@@ -139,7 +143,8 @@ describe('actualizarSucursal', () => {
     
     mockPrisma.sucursal.findFirst.mockResolvedValue(null);
     mockPrisma.sucursal.update.mockResolvedValue(updatedSucursal);
-    mockRegistrarAuditoria.mockResolvedValue(undefined);
+    logSuccess.mockResolvedValue(undefined);
+    logError.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -180,15 +185,42 @@ describe('actualizarSucursal', () => {
       }),
     });
 
-    // Verificar que se registró la auditoría
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
-      usuarioId: 'test-user-id',
-      accion: 'actualizar_sucursal',
-      descripcion: expect.any(String),
+    // Verify success audit log was created
+    expect(logSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'test-user-id',
       ip: '127.0.0.1',
-      entidadTipo: 'sucursal',
-      entidadId: '123e4567-e89b-12d3-a456-426614174000',
-      modulo: 'sucursales',
+      entityType: 'sucursal',
+      entityId: '123e4567-e89b-12d3-a456-426614174000',
+      module: 'actualizarSucursal',
+      action: 'actualizar_sucursal_exitoso',
+      message: 'Sucursal actualizada exitosamente',
+      details: expect.objectContaining({
+        estadoAnterior: expect.objectContaining({
+          nombre: 'Sucursal Original',
+          direccion: 'Dirección Original',
+          telefono: '1234567890',
+          email: 'original@example.com'
+        }),
+        estadoNuevo: expect.objectContaining({
+          nombre: 'Sucursal Actualizada',
+          direccion: 'Nueva Dirección',
+          telefono: '0987654321',
+          email: 'actualizado@example.com'
+        })
+      })
+    }));
+    // Verify success response format
+    expect(jsonMock).toHaveBeenCalledWith({
+      ok: true,
+      error: null,
+      data: expect.objectContaining({
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        nombre: 'Sucursal Actualizada',
+        direccion: 'Nueva Dirección',
+        telefono: '0987654321',
+        email: 'actualizado@example.com',
+        estado: false
+      })
     });
   });
 
@@ -262,19 +294,27 @@ describe('actualizarSucursal', () => {
     expect(jsonMock).toHaveBeenCalledWith({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al actualizar la sucursal.',
+      error: 'Error al actualizar la sucursal: Error inesperado',
     });
 
-    // Verificar que se registró la auditoría de error
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
-      usuarioId: 'test-user-id',
-      accion: 'actualizar_sucursal_fallido',
-      descripcion: expect.stringContaining(errorMessage),
+    // Verify error log was created
+    expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'test-user-id',
       ip: '127.0.0.1',
-      entidadTipo: 'sucursal',
-      entidadId: '123e4567-e89b-12d3-a456-426614174000',
-      modulo: 'sucursales',
-    });
+      entityType: 'sucursal',
+      entityId: '123e4567-e89b-12d3-a456-426614174000',
+      module: 'actualizarSucursal',
+      action: 'error_actualizar_sucursal',
+      message: 'Error al actualizar la sucursal',
+      error: expect.any(Error),
+      context: expect.objectContaining({
+        idSucursal: '123e4567-e89b-12d3-a456-426614174000',
+        error: errorMessage,
+        tipoError: 'Error',
+        codigoError: 'NO_CODE',
+        datosSolicitados: expect.any(Object)
+      })
+    }));
   });
 
   it('debe validar que el ID sea un UUID válido', async () => {

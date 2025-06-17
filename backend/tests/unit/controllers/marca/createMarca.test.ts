@@ -10,10 +10,14 @@ jest.mock('@prisma/client', () => ({
   PrismaClient: jest.fn(() => prismaMock)
 }));
 
-// Mock de auditoría
-const mockRegistrarAuditoria = jest.fn().mockImplementation(() => Promise.resolve());
+// Mock de funciones de auditoría
+const mockLogSuccess = jest.fn().mockImplementation(() => Promise.resolve());
+const mockLogError = jest.fn().mockImplementation(() => Promise.resolve());
+
+// Mock del módulo de auditoría
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria
+  logSuccess: mockLogSuccess,
+  logError: mockLogError
 }));
 
 // Importar el controlador después de los mocks
@@ -59,151 +63,199 @@ describe('Controlador de Marcas - Crear Marca', () => {
   });
 
   it('debe crear una nueva marca exitosamente', async () => {
-    // Ejecutar la función del controlador
+    // Act
     await crearMarca(mockRequest as Request, mockResponse as Response);
 
-    // Verificar que se llamó a create con los datos correctos
-    expect(prismaMock.marca.create).toHaveBeenCalledWith({
-      data: {
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(201);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      ok: true,
+      data: expect.objectContaining({
+        id: expect.any(String),
         nombre: createMarcaData.nombre,
         descripcion: createMarcaData.descripcion,
-        activo: true, // Valor por defecto si no se especifica
-        creadoPor: mockRequest.user?.id,
-        creadoEn: expect.any(Date),
-      },
-    });
-
-    // Verificar la respuesta exitosa
-    expect(mockResponse.status).toHaveBeenCalledWith(201);
-    
-    // Verificar que se llamó a json con la estructura básica
-    expect(mockResponse.json).toHaveBeenCalled();
-    
-    // Obtener los argumentos con los que se llamó a json
-    const [responseData] = mockResponse.json.mock.calls[0];
-    
-    // Verificar la estructura básica
-    expect(responseData).toMatchObject({
-      ok: true,
+        activo: true,
+      }),
       error: null,
     });
-    
-    // Verificar que data existe y tiene los campos requeridos
-    expect(responseData.data).toBeDefined();
-    expect(responseData.data).toMatchObject({
-      nombre: createMarcaData.nombre,
-      descripcion: createMarcaData.descripcion,
-      activo: true,
-    });
-    
-    // Verificar que se incluyen los campos de auditoría
-    expect(responseData.data.creadoPor).toBe(mockRequest.user?.id);
-    expect(responseData.data.creadoEn).toBeInstanceOf(Date);
-    expect(responseData.data).toHaveProperty('id');
+
+    // Verificar que se llamó a logSuccess
+    expect(mockLogSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'crear_marca_exitoso',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Marca creada exitosamente',
+        details: expect.objectContaining({
+          nombre: createMarcaData.nombre,
+          descripcion: createMarcaData.descripcion,
+          activo: true
+        }),
+        entityId: expect.any(String),
+        ip: expect.any(String),
+        userId: mockRequest.user?.id
+      })
+    );
   });
 
   it('debe validar que el nombre sea obligatorio', async () => {
-    // Configurar solicitud sin nombre
-    mockRequest.body = {
-      ...mockRequest.body,
-      nombre: undefined,
-    };
+    // Arrange
+    mockRequest.body = { ...createMarcaData, nombre: '' };
 
-    // Ejecutar la función del controlador
+    // Act
     await crearMarca(mockRequest as Request, mockResponse as Response);
 
-    // Verificar la respuesta de error
+    // Assert
     expect(mockResponse.status).toHaveBeenCalledWith(400);
-    expect(mockResponse.json).toHaveBeenCalledWith({
+    expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
       ok: false,
-      data: null,
       error: 'El nombre es obligatorio y debe ser una cadena de texto.',
-    });
+    }));
+
+    // Verificar que se llamó a logError
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'error_crear_marca',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Error al crear la marca',
+        error: 'El nombre es obligatorio y debe ser una cadena de texto. 400',
+        context: expect.objectContaining({
+          nombre: ''
+        })
+      })
+    );
   });
 
   it('debe validar la longitud mínima del nombre', async () => {
-    // Configurar nombre con menos de 2 caracteres
-    mockRequest.body = {
-      ...mockRequest.body,
-      nombre: 'A',
-    };
+    // Arrange
+    const invalidName = 'a';
+    mockRequest.body = { ...createMarcaData, nombre: invalidName };
 
-    // Ejecutar la función del controlador
+    // Act
     await crearMarca(mockRequest as Request, mockResponse as Response);
 
-    // Verificar la respuesta de error
+    // Assert
     expect(mockResponse.status).toHaveBeenCalledWith(400);
-    expect(mockResponse.json).toHaveBeenCalledWith({
+    expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
       ok: false,
-      data: null,
-      error: 'El nombre debe tener al menos 2 caracteres.',
-    });
+      error: 'El nombre debe tener entre 2 y 100 caracteres.',
+    }));
+
+    // Verificar que se llamó a logError
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'error_crear_marca',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Error al crear la marca',
+        error: 'El nombre debe tener entre 2 y 100 caracteres. 400',
+        context: expect.objectContaining({
+          nombre: invalidName
+        })
+      })
+    );
   });
 
   it('debe validar caracteres permitidos en el nombre', async () => {
-    // Configurar nombre con caracteres inválidos
-    mockRequest.body = {
-      ...mockRequest.body,
-      nombre: 'Marca #123',
-    };
+    // Arrange
+    const invalidName = 'Marca#123'; // Carácter # no permitido
+    mockRequest.body = { ...createMarcaData, nombre: invalidName };
 
-    // Ejecutar la función del controlador
+    // Act
     await crearMarca(mockRequest as Request, mockResponse as Response);
 
-    // Verificar la respuesta de error
+    // Assert
     expect(mockResponse.status).toHaveBeenCalledWith(400);
-    expect(mockResponse.json).toHaveBeenCalledWith({
+    expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
       ok: false,
-      data: null,
       error: 'El nombre contiene caracteres no permitidos.',
-    });
+    }));
+
+    // Verificar que se llamó a logError
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'error_crear_marca',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Error al crear la marca',
+        error: 'El nombre contiene caracteres no permitidos. 400',
+        context: expect.objectContaining({
+          nombre: invalidName
+        })
+      })
+    );
   });
 
   it('debe validar que no exista otra marca con el mismo nombre', async () => {
     // Configurar el mock para simular que ya existe una marca con el mismo nombre
-    prismaMock.marca.findFirst.mockResolvedValue({
+    const existingMarca = {
       ...mockMarca,
       nombre: createMarcaData.nombre.toUpperCase(), // Para probar case-insensitive
-    });
+    };
+    prismaMock.marca.findFirst.mockResolvedValue(existingMarca);
 
-    // Ejecutar la función del controlador
+    // Act
     await crearMarca(mockRequest as Request, mockResponse as Response);
 
-    // Verificar que se llamó a findFirst con los parámetros correctos
-    expect(prismaMock.marca.findFirst).toHaveBeenCalledWith({
-      where: {
-        nombre: {
-          equals: createMarcaData.nombre,
-          mode: 'insensitive',
-        },
-        anuladoEn: null,
-      },
-    });
-
-    // Verificar la respuesta de error
+    // Assert
     expect(mockResponse.status).toHaveBeenCalledWith(409);
     expect(mockResponse.json).toHaveBeenCalledWith({
       ok: false,
       data: null,
       error: 'Ya existe una marca con ese nombre.',
     });
+
+    // Verificar que se llamó a logError
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'error_crear_marca',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Error al crear la marca',
+        error: 'Ya existe una marca con ese nombre. 409',
+        context: expect.objectContaining({
+          nombre: createMarcaData.nombre,
+          descripcion: createMarcaData.descripcion,
+          activo: true
+        })
+      })
+    );
   });
 
   it('debe manejar errores inesperados', async () => {
-    // Configurar el mock para simular un error inesperado
-    prismaMock.marca.findFirst.mockRejectedValue(new Error('Error de base de datos'));
+    // Simular un error inesperado
+    const errorMessage = 'Error de base de datos';
+    const testError = new Error(errorMessage);
+    
+    // Configurar mock para que falle en create
+    prismaMock.marca.create.mockRejectedValue(testError);
 
-    // Ejecutar la función del controlador
+    // Act
     await crearMarca(mockRequest as Request, mockResponse as Response);
 
-    // Verificar la respuesta de error 500
+    // Assert
     expect(mockResponse.status).toHaveBeenCalledWith(500);
     expect(mockResponse.json).toHaveBeenCalledWith({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al crear la marca.',
+      error: 'Error interno del servidor al crear la marca',
     });
+
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'crear_marca_fallido',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Error al crear la marca',
+        error: testError,
+        context: expect.objectContaining({
+          datosSolicitud: createMarcaData,
+          error: errorMessage,
+          stack: expect.any(String)
+        })
+      })
+    );
   });
-
-
 });

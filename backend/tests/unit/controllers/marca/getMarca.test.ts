@@ -3,7 +3,10 @@ import { jest } from '@jest/globals';
 
 // 1. Primero definimos los mocks locales
 const mockFindUnique = jest.fn() as any;
-const mockRegistrarAuditoria = jest.fn().mockImplementation(async () => {
+const mockLogSuccess = jest.fn().mockImplementation(async () => {
+  return Promise.resolve();
+});
+const mockLogError = jest.fn().mockImplementation(async () => {
   return Promise.resolve();
 });
 
@@ -20,7 +23,8 @@ jest.mock('@prisma/client', () => ({
 }));
 
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria,
+  logSuccess: mockLogSuccess,
+  logError: mockLogError
 }));
 
 // 4. Ahora importamos los módulos que usan los mocks
@@ -50,9 +54,8 @@ describe('Controlador de Marcas - Obtener Marca por ID', () => {
     
     // Configurar implementaciones por defecto
     mockFindUnique.mockResolvedValue({ ...mockMarca });
-    mockRegistrarAuditoria.mockImplementation(async (auditoria: any) => {
-      return Promise.resolve();
-    });
+    mockLogSuccess.mockImplementation(async () => Promise.resolve());
+    mockLogError.mockImplementation(async () => Promise.resolve());
   });
 
   it('debe devolver una marca cuando existe', async () => {
@@ -80,6 +83,27 @@ describe('Controlador de Marcas - Obtener Marca por ID', () => {
       }),
       error: null,
     });
+
+    // Verificar que se llamó a logSuccess con los parámetros correctos
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      entityId: mockMarca.id,
+      module: 'obtenerMarcaPorId',
+      action: 'obtener_marca_exitoso',
+      message: 'Marca obtenida exitosamente',
+      details: expect.objectContaining({
+        id: mockMarca.id,
+        nombre: mockMarca.nombre,
+        activo: true,
+        creadoEn: expect.any(String),
+        modificadoEn: null
+      })
+    });
+    
+    // Verificar que no se llamó a logError
+    expect(mockLogError).not.toHaveBeenCalled();
   });
 
   it('debe devolver error 404 si la marca no existe', async () => {
@@ -96,6 +120,24 @@ describe('Controlador de Marcas - Obtener Marca por ID', () => {
       data: null,
       error: 'Marca no encontrada'
     });
+
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      entityId: null,
+      module: 'obtenerMarcaPorId',
+      action: 'error_obtener_marca_por_id',
+      message: 'Error al obtener la marca',
+      error: 'Marca no encontrada. 404',
+      context: {
+        id: mockMarca.id
+      }
+    });
+    
+    // Verificar que no se llamó a logSuccess
+    expect(mockLogSuccess).not.toHaveBeenCalled();
   });
 
   it('debe devolver error 400 si el ID no es válido', async () => {
@@ -112,6 +154,24 @@ describe('Controlador de Marcas - Obtener Marca por ID', () => {
       data: null,
       error: 'ID inválido',
     });
+
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      entityId: null,
+      module: 'obtenerMarcaPorId',
+      action: 'error_obtener_marca_por_id',
+      message: 'Error al obtener la marca',
+      error: 'ID inválido. 400',
+      context: {
+        id: 'id-invalido'
+      }
+    });
+    
+    // Verificar que no se llamó a logSuccess
+    expect(mockLogSuccess).not.toHaveBeenCalled();
   });
 
   it('debe manejar errores inesperados', async () => {
@@ -130,13 +190,36 @@ describe('Controlador de Marcas - Obtener Marca por ID', () => {
       data: null,
       error: 'Ocurrió un error al obtener la marca.',
     });
+
+    // Verificar que se llamó a logError con los parámetros correctos
+    const dbError = new Error('Database error');
+    (dbError as any).code = 'P2002';
     
-    // Probar con otro tipo de error
-    mockFindUnique.mockRejectedValueOnce(new Error('Error inesperado'));
+    // Verificar que se llamó a logError con el error original
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      entityId: mockMarca.id,
+      module: 'obtenerMarcaPorId',
+      action: 'error_obtener_marca_por_id',
+      message: 'Error al obtener la marca',
+      error: dbError,
+      context: {
+        idSolicitado: mockMarca.id,
+        error: 'Database error',
+        stack: expect.any(String)
+      }
+    });
     
     // Limpiar llamadas anteriores
     mockResponse.status.mockClear();
     mockResponse.json.mockClear();
+    mockLogError.mockClear();
+
+    // Probar con otro tipo de error
+    const unexpectedError = new Error('Error inesperado');
+    mockFindUnique.mockRejectedValueOnce(unexpectedError);
 
     await obtenerMarcaPorId(mockRequest as Request, mockResponse as Response);
 
@@ -146,6 +229,23 @@ describe('Controlador de Marcas - Obtener Marca por ID', () => {
       ok: false,
       data: null,
       error: 'Ocurrió un error al obtener la marca.',
+    });
+
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: mockRequest.user?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      entityId: mockMarca.id,
+      module: 'obtenerMarcaPorId',
+      action: 'error_obtener_marca_por_id',
+      message: 'Error al obtener la marca',
+      error: unexpectedError,
+      context: {
+        idSolicitado: mockMarca.id,
+        error: 'Error inesperado',
+        stack: expect.any(String)
+      }
     });
   });
 });

@@ -5,7 +5,8 @@ const mockMarcaMethods = {
   update: jest.fn(),
 };
 
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
+const mockLogSuccess = jest.fn().mockResolvedValue(undefined);
+const mockLogError = jest.fn().mockResolvedValue(undefined);
 
 // Configurar mocks antes de importar los módulos que los usan
 jest.mock('@prisma/client', () => ({
@@ -16,7 +17,8 @@ jest.mock('@prisma/client', () => ({
 }));
 
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: (...args: any[]) => mockRegistrarAuditoria(...args),
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+  logError: (...args: any[]) => mockLogError(...args),
 }));
 
 // Importar después de configurar los mocks
@@ -81,8 +83,8 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
     mockMarcaMethods.update.mockResolvedValue({
       ...mockMarca,
       ...updateMarcaData,
-      modificado_por: mockRequest.usuario?.id,
-      modificado_en: new Date(),
+      modificadoPor: mockRequest.usuario?.id,
+      modificadoEn: new Date(),
     });
 
     // Limpiar todos los mocks antes de cada prueba
@@ -100,10 +102,41 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
         nombre: updateMarcaData.nombre,
         descripcion: updateMarcaData.descripcion,
         activo: updateMarcaData.activo,
-        modificado_por: mockRequest.usuario?.id,
-        modificado_en: expect.any(Date),
+        modificadoPor: mockRequest.usuario?.id,
+        modificadoEn: expect.any(Date),
       },
     });
+
+    // Verificar que se llamó a logSuccess con los parámetros correctos
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      userId: mockRequest.usuario?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      module: 'actualizarMarca',
+      action: 'actualizar_marca',
+      message: 'Marca actualizada exitosamente',
+      entityId: mockMarca.id,
+      details: expect.objectContaining({
+        id: mockMarca.id,
+        cambios: expect.objectContaining({
+          nombre: expect.objectContaining({
+            anterior: mockMarca.nombre,
+            nuevo: updateMarcaData.nombre
+          }),
+          descripcion: expect.objectContaining({
+            anterior: mockMarca.descripcion,
+            nuevo: updateMarcaData.descripcion
+          }),
+          activo: expect.objectContaining({
+            anterior: mockMarca.activo,
+            nuevo: updateMarcaData.activo
+          })
+        })
+      })
+    }));
+    
+    // Verificar que no se llamó a logError
+    expect(mockLogError).not.toHaveBeenCalled()
 
     // Verificar la respuesta exitosa
     expect(mockStatus).toHaveBeenCalledWith(200);
@@ -139,8 +172,8 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
     // Configurar el mock para simular que la marca no existe
     mockMarcaMethods.findUnique.mockResolvedValue(null);
 
-    // Limpiar llamadas previas al mock de auditoría
-    mockRegistrarAuditoria.mockClear();
+    // Limpiar llamadas previas a los mocks
+    jest.clearAllMocks();
 
     // Ejecutar la función del controlador
     await actualizarMarca(mockRequest as Request, mockResponse as Response);
@@ -153,9 +186,23 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
       error: 'Marca no encontrada.',
     });
     
-    // Verificar que NO se registró la auditoría de error
-    // ya que el controlador actual no registra auditoría cuando la marca no existe
-    expect(mockRegistrarAuditoria).not.toHaveBeenCalled();
+    // Verificar que se llamó a logError con el error de recurso no encontrado
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+      userId: mockRequest.usuario?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      module: 'actualizarMarca',
+      action: 'error_actualizar_marca',
+      message: 'Error al actualizar la marca',
+      error: 'Marca no encontrada. 404',
+      entityId: mockMarca.id,
+      context: {
+        idSolicitado: mockMarca.id
+      }
+    }));
+    
+    // Verificar que no se llamó a logSuccess
+    expect(mockLogSuccess).not.toHaveBeenCalled();
   });
 
   it('debe validar que no exista otra marca con el mismo nombre', async () => {
@@ -183,10 +230,8 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
   it('debe manejar errores inesperados', async () => {
     // Configurar el mock para lanzar un error
     const errorMessage = 'Error inesperado';
-    mockMarcaMethods.findUnique.mockRejectedValue(new Error(errorMessage));
-    
-    // Configurar el mock para la auditoría de error
-    mockRegistrarAuditoria.mockResolvedValue(undefined);
+    const testError = new Error(errorMessage);
+    mockMarcaMethods.findUnique.mockRejectedValue(testError);
 
     // Ejecutar la función del controlador
     await actualizarMarca(mockRequest as Request, mockResponse as Response);
@@ -196,7 +241,32 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
     expect(responseObject).toEqual({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al actualizar la marca.',
+      error: 'Error interno del servidor al actualizar la marca',
     });
+    
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+      userId: mockRequest.usuario?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      module: 'actualizarMarca',
+      action: 'error_actualizar_marca',
+      message: 'Error al actualizar la marca. 500',
+      entityId: mockMarca.id,
+      error: testError,
+      context: expect.objectContaining({
+        idSolicitado: mockMarca.id,
+        datosSolicitud: expect.objectContaining({
+          nombre: updateMarcaData.nombre,
+          descripcion: updateMarcaData.descripcion,
+          activo: updateMarcaData.activo
+        }),
+        error: 'Error inesperado',
+        stack: expect.stringContaining('Error: Error inesperado')
+      })
+    }));
+    
+    // Verificar que no se llamó a logSuccess
+    expect(mockLogSuccess).not.toHaveBeenCalled();
   });
 });

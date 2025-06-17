@@ -4,21 +4,16 @@ import { v4 as uuidv4 } from 'uuid';
 
 // 1. First mock the audit module
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: jest.fn().mockImplementation((params) => {
-    return Promise.resolve({
-      id: '123e4567-e89b-12d3-a456-426614174000',
-      ...params,
-      creadoEn: new Date(),
-    });
-  })
+  logSuccess: jest.fn().mockResolvedValue(undefined),
+  logError: jest.fn().mockResolvedValue(undefined)
 }));
 
 // 2. Then import the controller after setting up mocks
 import { crearSucursal } from '../../../../src/controllers/sucursalController';
 import { PrismaClient } from '@prisma/client';
 
-// 3. Get the mock function reference
-const mockRegistrarAuditoria = jest.requireMock('../../../../src/utils/audit').registrarAuditoria;
+// 3. Get the mock function references
+const { logSuccess, logError } = jest.requireMock('../../../../src/utils/audit');
 
 // Helper function to generate valid UUIDs
 const generateValidUuid = () => '123e4567-e89b-12d3-a456-426614174000';
@@ -139,14 +134,9 @@ describe('crearSucursal', () => {
     // Reset all mocks before each test
     jest.clearAllMocks();
     
-    // Reset the mock implementation to the default
-    (mockRegistrarAuditoria as jest.Mock).mockImplementation((params) => {
-      return Promise.resolve({
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        ...params,
-        creadoEn: new Date(),
-      });
-    });
+    // Reset the mock implementations to the default
+    logSuccess.mockResolvedValue(undefined);
+    logError.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -195,16 +185,23 @@ describe('crearSucursal', () => {
     });
     
     // Verify audit log was called with correct parameters
-    expect(mockRegistrarAuditoria).toHaveBeenCalled();
-    const auditCall = (mockRegistrarAuditoria as jest.Mock).mock.calls[0][0];
-    expect(auditCall).toMatchObject({
-      accion: 'crear_sucursal_exitoso',
-      descripcion: expect.stringContaining('Sucursal creada:'),
-      entidadId: '123e4567-e89b-12d3-a456-426614174000',
-      entidadTipo: 'sucursal',
-      modulo: 'sucursales',
-      usuarioId: 'test-user-id',
-      ip: expect.any(String),
+    expect(logSuccess).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'sucursal',
+      entityId: '123e4567-e89b-12d3-a456-426614174000',
+      module: 'crearSucursal',
+      action: 'crear_sucursal_exitoso',
+      message: 'Sucursal creada exitosamente',
+      details: {
+        direccion: 'Calle Falsa 123',
+        email: 'test@example.com',
+        estado: true,
+        latitud: null,
+        longitud: null,
+        nombre: 'Sucursal Test',
+        telefono: '1234567890',
+      }
     });
   });
 
@@ -296,8 +293,26 @@ describe('crearSucursal', () => {
     // Verify create was not called
     expect(prisma.sucursal.create).not.toHaveBeenCalled();
     
-    // Verify audit log was not called for duplicate name check
-    expect(mockRegistrarAuditoria).not.toHaveBeenCalled();
+    // Verify error log was called for duplicate name check
+    expect(logError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'sucursal',
+      module: 'crearSucursal',
+      action: 'error_crear_sucursal',
+      error: 'Ya existe una sucursal con ese nombre.',
+      message: 'Error al crear la sucursal',
+      context: {
+        nombre: 'Sucursal Duplicada',
+        direccion: 'Calle Falsa 123',
+        telefono: '1234567890',
+        email: 'duplicada@test.com',
+        estado: true,
+        latitud: undefined,
+        longitud: undefined,
+        error: 'Ya existe una sucursal con ese nombre.'
+      }
+    });
   });
 
   it('debe manejar errores inesperados', async () => {
@@ -309,8 +324,8 @@ describe('crearSucursal', () => {
     expect(statusMock).toHaveBeenCalledWith(500);
     expect(jsonMock).toHaveBeenCalledWith({
       ok: false,
-      error: 'Ocurrió un error al crear la sucursal.',
-      data: null
+      data: null,
+      error: 'Error al crear sucursal: Error inesperado'
     });
   });
 });

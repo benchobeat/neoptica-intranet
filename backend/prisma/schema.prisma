@@ -431,6 +431,12 @@ model Inventario {
   @@map("inventario")
 }
 
+enum ResultadoAuditoria {
+  exitoso
+  pendiente
+  fallido
+}
+
 model LogAuditoria {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -453,6 +459,7 @@ model LogAuditoria {
   intentos        Int?     @default(1)
   modulo          String?
   movimientoId    String?  @map("movimiento_id") @db.Uuid
+  resultado       ResultadoAuditoria @default(pendiente)
 
   // Relaciones
   usuario          Usuario?            @relation(fields: [usuarioId], references: [id])
@@ -460,6 +467,7 @@ model LogAuditoria {
 
   // Mapeo a la tabla original
   @@map("log_auditoria")
+  @@index([resultado])
 }
 
 model AsientoContable {

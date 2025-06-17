@@ -19,8 +19,12 @@ jest.mock('@prisma/client', () => {
 
 // Mock the audit module
 jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: jest.fn().mockResolvedValue(undefined),
+  logSuccess: jest.fn().mockResolvedValue(undefined),
+  logError: jest.fn().mockResolvedValue(undefined)
 }));
+
+// Import the mocks after setting them up
+const { logSuccess, logError } = require('../../../../src/utils/audit');
 
 // Import the controller only after mocking dependencies
 import { obtenerSucursalPorId } from '../../../../src/controllers/sucursalController';

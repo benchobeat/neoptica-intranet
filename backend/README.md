@@ -2,26 +2,33 @@
 
 ---
 
-## 🟢 **Actualización de Progreso y Estado Fase 1** (29/05/2025)
+## 🟢 **Actualización de Progreso y Estado Fase 1** (14/06/2025)
 
 ### Avances Realizados
 - **Módulos CRUD completos** para Productos, Colores, Marcas, Sucursales, Usuarios e Inventario, con endpoints REST y validación robusta.
 - **Gestión de Inventario**: CRUD completo implementado, incluyendo movimientos de stock, validaciones, transacciones atómicas y registro histórico para auditoría.
 - **Adjuntos de Inventario**: API para subir, listar, descargar y eliminar archivos adjuntos de inventario implementada y testeada. Resolución de problemas de middleware de autenticación y validación.
 - **Autenticación**: Login JWT y OAuth (Google, Facebook, Instagram) funcionando, recuperación de contraseña implementada y validada.
-- **Auditoría**: Sistema de auditoría completo, registra todas las operaciones CRUD relevantes y errores para todos los módulos, incluyendo inventario.
+- **Auditoría Mejorada**: 
+  - Sistema de auditoría basado en JSON para mayor flexibilidad
+  - Helpers `logSuccess` y `logError` para registro estandarizado
+  - Registros detallados con contexto completo de cada acción
+  - Búsqueda avanzada en campos JSON
+  - Migración de registros antiguos al nuevo formato
 - **Roles y permisos**: Sistema multirol que permite a usuarios tener múltiples roles simultáneos (ej: vendedor y optometrista), con middleware JWT para proteger rutas según permisos.
-- **Testing**: 238 tests automáticos (Jest) cubriendo autenticación, usuarios, roles, productos, sucursales, colores, marcas, inventario y adjuntos. Todos los tests pasan y la salida está limpia de logs innecesarios.
-- **Documentación**: Swagger/OpenAPI documentando todos los endpoints principales.
-- **Seed y migraciones**: Scripts de seed y migraciones Prisma funcionando correctamente.
+- **Testing**: 250+ tests automáticos (Jest) cubriendo autenticación, usuarios, roles, productos, sucursales, colores, marcas. Todos los tests pasan y la salida está limpia de logs innecesarios.
+- **Documentación**: Swagger/OpenAPI documentando todos los endpoints principales, incluyendo los nuevos de auditoría.
+- **Seed y migraciones**: Scripts de seed y migraciones Prisma funcionando correctamente, incluyendo datos de prueba para el nuevo sistema de auditoría.
 
 ### Pendientes para Finalizar Fase 1
+- [x] **Migración del sistema de auditoría**: Completada la migración a JSON para todos los controladores
 - [ ] **Modelos y endpoints de Stock y Pedido**: Faltan implementar modelos y endpoints básicos para stock y pedidos (ver checklist en README).
 - [ ] **Gestión de clientes**: La gestión de clientes se realiza mediante el modelo `usuario` (no existe modelo cliente independiente). Gracias al sistema multirol implementado, un usuario puede ser simultáneamente cliente y tener otros roles adicionales. Asegúrate de que los endpoints y roles permitan registrar y distinguir usuarios por sus múltiples roles.
-- [ ] **Diagrama de base de datos actualizado**: Agregar/exportar el diagrama ERD actualizado.
-- [ ] **Ejemplos de uso en Postman**: Exportar y documentar colecciones de pruebas para facilitar QA/UAT.
+- [ ] **Diagrama de base de datos actualizado**: Agregar/exportar el diagrama ERD actualizado, incluyendo el nuevo esquema de auditoría.
+- [ ] **Ejemplos de uso en Postman**: Exportar y documentar colecciones de pruebas para facilitar QA/UAT, incluyendo ejemplos de auditoría.
 - [ ] **Variables de entorno de producción**: Revisar y definir .env para despliegue (seguridad, emails, OAuth, etc).
-- [ ] **Logs de errores para producción**: Configurar logging robusto para errores críticos y advertencias.
+- [ ] **Logs de errores para producción**: Configurar logging robusto para errores críticos y advertencias, integrado con el nuevo sistema de auditoría.
+- [ ] **Documentación de auditoría**: Completar la documentación de la API de auditoría y ejemplos de uso.
 - [ ] **(Opcional) Dockerización y CI/CD**: Mejorar despliegue y portabilidad.
 
 ### Recomendaciones

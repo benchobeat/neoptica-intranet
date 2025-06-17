@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
 
-import { registrarAuditoria } from '../utils/audit';
+import { logSuccess, logError } from '../utils/audit';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -23,6 +23,21 @@ export const crearMarca = async (req: Request, res: Response) => {
 
     // Validación estricta y avanzada de datos de entrada
     if (!nombre || typeof nombre !== 'string') {
+      await logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: null,
+        module: 'crearMarca',
+        action: 'error_crear_marca',
+        message: 'Error al crear la marca',
+        error: 'El nombre es obligatorio y debe ser una cadena de texto. 400',
+        context: {
+          nombre: nombre,
+          descripcion: descripcion,
+          activo: activo,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
@@ -33,16 +48,46 @@ export const crearMarca = async (req: Request, res: Response) => {
     // Validar longitud y caracteres permitidos
     const nombreLimpio = nombre.trim();
     if (nombreLimpio.length < 2 || nombreLimpio.length > 100) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: null,
+        module: 'crearMarca',
+        action: 'error_crear_marca',
+        message: 'Error al crear la marca',
+        error: 'El nombre debe tener entre 2 y 100 caracteres. 400',
+        context: {
+          nombre: nombre,
+          descripcion: descripcion,
+          activo: activo,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
-        error: 'El nombre debe tener al menos 2 caracteres.',
+        error: 'El nombre debe tener entre 2 y 100 caracteres.',
       });
     }
 
     // Validar caracteres permitidos: alfanuméricos, espacios y algunos especiales
     const nombreRegex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\.,'&()]+$/;
     if (!nombreRegex.test(nombreLimpio)) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: null,
+        module: 'crearMarca',
+        action: 'error_crear_marca',
+        message: 'Error al crear la marca',
+        error: 'El nombre contiene caracteres no permitidos. 400',
+        context: {
+          nombre: nombre,
+          descripcion: descripcion,
+          activo: activo,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
@@ -62,6 +107,21 @@ export const crearMarca = async (req: Request, res: Response) => {
     });
 
     if (marcaExistente) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: null,
+        module: 'crearMarca',
+        action: 'error_crear_marca',
+        message: 'Error al crear la marca',
+        error: 'Ya existe una marca con ese nombre. 409',
+        context: {
+          nombre: nombre,
+          descripcion: descripcion,
+          activo: activo,
+        }
+      });
       return res.status(409).json({
         ok: false,
         data: null,
@@ -81,24 +141,20 @@ export const crearMarca = async (req: Request, res: Response) => {
     });
 
     // Registrar auditoría de creación exitosa
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'crear_marca_exitoso',
-      descripcion: {
-        mensaje: 'Marca creada exitosamente',
-        accion: 'MARCA_CREADA',
-        detalles: {
-          nombre: nuevaMarca.nombre,
-          descripcion: nuevaMarca.descripcion || null,
-          activo: nuevaMarca.activo
-        }
-      },
+    logSuccess({  
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      entidadId: nuevaMarca.id,
-      modulo: 'marcas',
+      entityType: 'marca',
+      entityId: nuevaMarca.id,
+      module: 'crearMarca',
+      action: 'crear_marca_exitoso',
+      message: 'Marca creada exitosamente',
+      details: {
+        nombre: nuevaMarca.nombre,
+        descripcion: nuevaMarca.descripcion || null,
+        activo: nuevaMarca.activo
+      }
     });
-
     return res.status(201).json({
       ok: true,
       data: nuevaMarca,
@@ -107,29 +163,26 @@ export const crearMarca = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al crear marca:', error);
 
-    // Registrar auditoría de error
-    const mensajeError = error.message || 'Error desconocido';
-    await registrarAuditoria({
-      usuarioId: (req as any).usuario?.id || (req as any).user?.id,
-      accion: 'crear_marca_fallido',
-      descripcion: JSON.stringify({
-        mensaje: 'Error al crear marca',
-        accion: 'ERROR_CREAR_MARCA',
-        timestamp: new Date().toISOString(),
-        detalles: {
-          error: mensajeError,
-          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        }
-      }),
+    // Registrar error usando logError
+    await logError({
+      userId: (req as any).usuario?.id || (req as any).user?.id,
       ip: req.ip,
-      entidadTipo: 'marca',
-      modulo: 'marcas',
+      entityType: 'marca',
+      module: 'crearMarca',
+      action: 'crear_marca_fallido',
+      message: 'Error al crear la marca',
+      error: error,
+      context: {
+        datosSolicitud: req.body,
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
+      }
     });
 
     return res.status(500).json({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al crear la marca.',
+      error: 'Error interno del servidor al crear la marca',
     });
   }
 };
@@ -193,13 +246,22 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
     });
 
     // Registrar auditoría de listado exitoso
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'listar_marcas_paginadas',
-      descripcion: `Se listaron ${marcas.length} marcas (página ${page})`,
+    await logSuccess({
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      modulo: 'marcas',
+      entityType: 'marca',
+      module: 'listarMarcasPaginadas',
+      action: 'listar_marcas_paginadas_exitoso',
+      message: 'Listado de marcas paginado obtenido exitosamente',
+      details: {
+        totalRegistros: marcas.length,
+        paginaActual: page,
+        totalPaginas: Math.ceil(total / pageSize),
+        filtrosAplicados: {
+          activo: req.query.activo !== undefined ? req.query.activo === 'true' : null,
+          busqueda: req.query.search || null
+        }
+      }
     });
 
     return res.status(200).json({
@@ -215,20 +277,28 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al listar marcas paginadas:', error);
 
-    // Registrar auditoría de error
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'listar_marcas_paginadas_fallido',
-      descripcion: error.message || 'Error desconocido',
+    // Registrar error usando logError
+    await logError({
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      modulo: 'marcas',
+      entityType: 'marca',
+      module: 'listarMarcasPaginadas',
+      action: 'listar_marcas_paginadas',
+      message: 'Error al obtener el listado paginado de marcas',
+      error: error,
+      context: {
+        pagina: req.query.page || 1,
+        pageSize: req.query.pageSize || 10,
+        searchText: req.query.searchText || null,
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
+      }
     });
 
     return res.status(500).json({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al obtener el listado paginado de marcas.',
+      error: 'Error interno del servidor al obtener el listado de marcas',
     });
   }
 };
@@ -275,13 +345,21 @@ export const listarMarcas = async (req: Request, res: Response) => {
     });
 
     // Registrar auditoría de listado exitoso
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'listar_marcas',
-      descripcion: `Se listaron ${marcas.length} marcas`,
+    await logSuccess({
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      modulo: 'marcas',
+      entityType: 'marca',
+      module: 'listarMarcas',
+      action: 'listar_marcas',
+      message: 'Listado de marcas obtenido exitosamente',
+      details: {
+        totalRegistros: marcas.length,
+        filtrosAplicados: {
+          id: req.query.id || null,
+          nombre: req.query.nombre || null,
+          activo: req.query.activo !== undefined ? req.query.activo === 'true' : null
+        }
+      }
     });
 
     return res.status(200).json({
@@ -292,19 +370,24 @@ export const listarMarcas = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al listar marcas:', error);
     
-    // Registrar auditoría de error
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'listar_marcas_fallido',
-      descripcion: {
-        mensaje: 'Error al listar marcas',
-        accion: 'ERROR_LISTAR_MARCAS',
-        error: error.message || 'Error desconocido',
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      },
+    // Registrar error usando logError
+    await logError({
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      modulo: 'marcas',
+      entityType: 'marca',
+      module: 'listarMarcas',
+      action: 'error_listar_marcas',
+      message: 'Error al listar las marcas',
+      error: error,
+      context: {
+        filtrosAplicados: {
+          id: req.query.id || null,
+          nombre: req.query.nombre || null,
+          activo: req.query.activo !== undefined ? req.query.activo === 'true' : null
+        },
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
+      }
     });
 
     return res.status(500).json({
@@ -330,6 +413,19 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: null,
+        module: 'obtenerMarcaPorId',
+        action: 'error_obtener_marca_por_id',
+        message: 'Error al obtener la marca',
+        error: 'ID inválido. 400',
+        context: {
+          id: id,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
@@ -347,6 +443,19 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
 
     // Verificar si se encontró la marca
     if (!marca) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: null,
+        module: 'obtenerMarcaPorId',
+        action: 'error_obtener_marca_por_id',
+        message: 'Error al obtener la marca',
+        error: 'Marca no encontrada. 404',
+        context: {
+          id: id,
+        }
+      });
       return res.status(404).json({
         ok: false,
         data: null,
@@ -355,21 +464,21 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
     }
 
     // Registrar auditoría de consulta exitosa
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'obtener_marca',
-      descripcion: {
-        mensaje: 'Consulta de marca exitosa',
-        accion: 'CONSULTA_MARCA',
-        detalles: {
-          id: marca.id,
-          nombre: marca.nombre
-        }
-      },
+    await logSuccess({
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      entidadId: id,
-      modulo: 'marcas',
+      entityType: 'marca',
+      entityId: id,
+      module: 'obtenerMarcaPorId',
+      action: 'obtener_marca_exitoso',
+      message: 'Marca obtenida exitosamente',
+      details: {
+        id: marca.id,
+        nombre: marca.nombre,
+        activo: marca.activo,
+        creadoEn: marca.creadoEn.toISOString(),
+        modificadoEn: marca.modificadoEn?.toISOString() || null
+      }
     });
 
     return res.status(200).json({
@@ -380,24 +489,40 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al obtener marca por ID:', error);
 
-    // Registrar auditoría de error
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'obtener_marca_fallido',
-      descripcion: {
-        mensaje: `Error al obtener marca: ${error.message || 'Error desconocido'}`,
-        accion: 'ERROR_OBTENER_MARCA',
-        error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      },
+    // Registrar error usando logError
+    await logError({
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      entidadId: req.params.id,
-      modulo: 'marcas',
+      entityType: 'marca',
+      entityId: req.params.id,
+      module: 'obtenerMarcaPorId',
+      action: 'error_obtener_marca_por_id',
+      message: 'Error al obtener la marca',
+      error: error,
+      context: {
+        idSolicitado: req.params.id,
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
+      }
     });
 
     // Manejo detallado de errores
     if (error.code === 'P2023') {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: req.params.id,
+        module: 'obtenerMarcaPorId',
+        action: 'error_obtener_marca_por_id',
+        message: 'Error al obtener la marca',
+        error: error,
+        context: {
+          idSolicitado: req.params.id,
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
@@ -405,6 +530,21 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
       });
     }
 
+    logError({
+      userId,
+      ip: req.ip,
+      entityType: 'marca',
+      entityId: req.params.id,
+      module: 'obtenerMarcaPorId',
+      action: 'error_obtener_marca_por_id',
+      message: 'Error al obtener la marca',
+      error: error,
+      context: {
+        idSolicitado: req.params.id,
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
+      }
+    });
     return res.status(500).json({
       ok: false,
       data: null,
@@ -429,6 +569,19 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: id,
+        module: 'actualizarMarca',
+        action: 'error_actualizar_marca',
+        message: 'Error al actualizar la marca',
+        error: 'ID inválido. 400',
+        context: {
+          idSolicitado: id,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
@@ -445,6 +598,19 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     });
 
     if (!marcaExistente) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: id,
+        module: 'actualizarMarca',
+        action: 'error_actualizar_marca',
+        message: 'Error al actualizar la marca',
+        error: 'Marca no encontrada. 404',
+        context: {
+          idSolicitado: id,
+        }
+      });
       return res.status(404).json({
         ok: false,
         data: null,
@@ -458,6 +624,20 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     // Validar y procesar nombre si se proporcionó
     if (nombre !== undefined) {
       if (!nombre || typeof nombre !== 'string') {
+        logError({
+          userId,
+          ip: req.ip,
+          entityType: 'marca',
+          entityId: id,
+          module: 'actualizarMarca',
+          action: 'error_actualizar_marca',
+          message: 'Error al actualizar la marca',
+          error: 'El nombre debe ser una cadena de texto válida. 400',
+          context: {
+            idSolicitado: id,
+            nombre: nombre,
+          }
+        });
         return res.status(400).json({
           ok: false,
           data: null,
@@ -469,6 +649,20 @@ export const actualizarMarca = async (req: Request, res: Response) => {
 
       // Validar longitud
       if (nombreLimpio.length < 2 || nombreLimpio.length > 100) {
+        logError({
+          userId,
+          ip: req.ip,
+          entityType: 'marca',
+          entityId: id,
+          module: 'actualizarMarca',
+          action: 'error_actualizar_marca',
+          message: 'Error al actualizar la marca',
+          error: 'El nombre debe tener al menos 2 caracteres. 400',
+          context: {
+            idSolicitado: id,
+            nombre: nombre,
+          }
+        });
         return res.status(400).json({
           ok: false,
           data: null,
@@ -479,6 +673,20 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       // Validar caracteres permitidos
       const nombreRegex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\.,'&()]+$/;
       if (!nombreRegex.test(nombreLimpio)) {
+        logError({
+          userId,
+          ip: req.ip,
+          entityType: 'marca',
+          entityId: id,
+          module: 'actualizarMarca',
+          action: 'error_actualizar_marca',
+          message: 'Error al actualizar la marca',
+          error: 'El nombre contiene caracteres no permitidos. 400',
+          context: {
+            idSolicitado: id,
+            nombre: nombre,
+          }
+        });
         return res.status(400).json({
           ok: false,
           data: null,
@@ -501,6 +709,20 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       });
 
       if (nombreDuplicado) {
+        logError({
+          userId,
+          ip: req.ip,
+          entityType: 'marca',
+          entityId: id,
+          module: 'actualizarMarca',
+          action: 'error_actualizar_marca',
+          message: 'Error al actualizar la marca',
+          error: 'Ya existe otra marca con ese nombre. 409',
+          context: {
+            idSolicitado: id,
+            nombre: nombre,
+          }
+        });
         return res.status(409).json({
           ok: false,
           data: null,
@@ -523,6 +745,19 @@ export const actualizarMarca = async (req: Request, res: Response) => {
 
     // Si no hay datos para actualizar, retornar error
     if (Object.keys(datosActualizados).length === 0) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: id,
+        module: 'actualizarMarca',
+        action: 'error_actualizar_marca',
+        message: 'Error al actualizar la marca',
+        error: 'No se proporcionaron datos para actualizar. 400',
+        context: {
+          idSolicitado: id,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
@@ -531,8 +766,8 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     }
 
     // Agregar información de auditoría
-    datosActualizados.modificado_en = new Date();
-    datosActualizados.modificado_por = userId || null;
+    datosActualizados.modificadoEn = new Date();
+    datosActualizados.modificadoPor = userId || null;
 
     // Actualizar la marca en la base de datos
     const marcaActualizada = await prisma.marca.update({
@@ -541,23 +776,26 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     });
 
     // Registrar auditoría de actualización exitosa
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'actualizar_marca',
-      descripcion: {
-        mensaje: 'Marca actualizada exitosamente',
-        accion: 'MARCA_ACTUALIZADA',
-        detalles: {
-          id: marcaActualizada.id,
-          nombre: marcaActualizada.nombre,
-          cambios: Object.keys(datosActualizados).filter(k => !k.endsWith('_en') && !k.endsWith('_por')),
-          activo: marcaActualizada.activo
-        }
-      },
+    await logSuccess({
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      entidadId: id,
-      modulo: 'marcas',
+      entityType: 'marca',
+      entityId: id,
+      module: 'actualizarMarca',
+      action: 'actualizar_marca',
+      message: 'Marca actualizada exitosamente',
+      details: {
+        id: marcaActualizada.id,
+        cambios: Object.keys(datosActualizados)
+          .filter(key => !['modificadoPor', 'modificadoEn'].includes(key))
+          .reduce((obj, key) => ({
+            ...obj,
+            [key]: {
+              anterior: marcaExistente[key as keyof typeof marcaExistente],
+              nuevo: marcaActualizada[key as keyof typeof marcaActualizada]
+            }
+          }), {})
+      }
     });
 
     return res.status(200).json({
@@ -568,35 +806,62 @@ export const actualizarMarca = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al actualizar marca:', error);
 
-    // Registrar auditoría de error
-    await registrarAuditoria({
-      usuarioId: (req as any).usuario?.id || (req as any).user?.id,
-      accion: 'actualizar_marca_fallido',
-      descripcion: {
-        mensaje: `Error al actualizar marca: ${error.message || 'Error desconocido'}`,
-        accion: 'ERROR_ACTUALIZAR_MARCA',
-        error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      },
+    // Registrar error usando logError
+    await logError({
+      userId: (req as any).usuario?.id || (req as any).user?.id,
       ip: req.ip,
-      entidadTipo: 'marca',
-      entidadId: req.params.id,
-      modulo: 'marcas',
+      entityType: 'marca',
+      entityId: req.params.id,
+      module: 'actualizarMarca',
+      action: 'error_actualizar_marca',
+      message: 'Error al actualizar la marca. 500',
+      error: error,
+      context: {
+        idSolicitado: req.params.id,
+        datosSolicitud: req.body,
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
+      }
     });
 
     // Manejo detallado de errores de Prisma
     if (error.code === 'P2023') {
+      logError({
+        userId: (req as any).usuario?.id || (req as any).user?.id,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: req.params.id,
+        module: 'actualizarMarca',
+        action: 'error_actualizar_marca',
+        message: 'ID inválido',
+        error: 'ID inválido. 400',
+        context: {
+          idSolicitado: req.params.id,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
         error: 'ID inválido',
       });
     }
-
+    logError({
+      userId: (req as any).usuario?.id || (req as any).user?.id,
+      ip: req.ip,
+      entityType: 'marca',
+      entityId: req.params.id,
+      module: 'actualizarMarca',
+      action: 'error_actualizar_marca',
+      message: 'Error al actualizar la marca',
+      error: 'Error interno del servidor al actualizar la marca. 500',
+      context: {
+        idSolicitado: req.params.id,
+      }
+    });
     return res.status(500).json({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al actualizar la marca.',
+      error: 'Error interno del servidor al actualizar la marca',
     });
   }
 };
@@ -617,6 +882,19 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: id,
+        module: 'eliminarMarca',
+        action: 'error_eliminar_marca',
+        message: 'Error al eliminar la marca',
+        error: 'ID inválido. 400',
+        context: {
+          idSolicitado: id,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
@@ -633,6 +911,19 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     });
 
     if (!marcaExistente) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: id,
+        module: 'eliminarMarca',
+        action: 'error_eliminar_marca',
+        message: 'Error al eliminar la marca',
+        error: 'Marca no encontrada. 404',
+        context: {
+          idSolicitado: id,
+        }
+      });
       return res.status(404).json({
         ok: false,
         data: null,
@@ -649,6 +940,19 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     });
 
     if (productosAsociados > 0) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: id,
+        module: 'eliminarMarca',
+        action: 'error_eliminar_marca',
+        message: 'Error al eliminar la marca',
+        error: 'No se puede eliminar la marca porque tiene productos asociados. 409',
+        context: {
+          idSolicitado: id,
+        }
+      });
       return res.status(409).json({
         ok: false,
         data: null,
@@ -668,23 +972,19 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     });
 
     // Registrar auditoría de eliminación exitosa
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'eliminar_marca',
-      descripcion: {
-        mensaje: 'Marca eliminada exitosamente',
-        accion: 'MARCA_ELIMINADA',
-        detalles: {
-          id: id,
-          tipo: 'soft_delete',
-          anuladoEn: fechaActual.toISOString(),
-          anuladoPor: userId
-        }
-      },
+    await logSuccess({
+      userId,
       ip: req.ip,
-      entidadTipo: 'marca',
-      entidadId: id,
-      modulo: 'marcas',
+      entityType: 'marca',
+      entityId: id,
+      module: 'eliminarMarca',
+      action: 'eliminar_marca',
+      message: 'Marca eliminada exitosamente',
+      details: {
+        id: id,
+        tipo: 'soft_delete',
+        anuladoEn: fechaActual.toISOString()
+      }
     });
 
     return res.status(200).json({
@@ -695,24 +995,38 @@ export const eliminarMarca = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error al eliminar marca:', error);
 
-    // Registrar auditoría de error
-    await registrarAuditoria({
-      usuarioId: (req as any).usuario?.id || (req as any).user?.id,
-      accion: 'eliminar_marca_fallido',
-      descripcion: {
-        mensaje: `Error al eliminar marca: ${error.message || 'Error desconocido'}`,
-        accion: 'ERROR_ELIMINAR_MARCA',
-        error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      },
+    // Registrar error usando logError
+    await logError({
+      userId: (req as any).usuario?.id || (req as any).user?.id,
       ip: req.ip,
-      entidadTipo: 'marca',
-      entidadId: req.params.id,
-      modulo: 'marcas',
+      entityType: 'marca',
+      entityId: req.params.id,
+      module: 'marcas',
+      action: 'error_eliminar_marca',
+      message: 'Error al eliminar la marca',
+      error: error,
+      context: {
+        idSolicitado: req.params.id,
+        error: error instanceof Error ? error.message : 'Error desconocido P2023',
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
+      }
     });
 
     // Manejo detallado de errores de Prisma
     if (error.code === 'P2023') {
+      logError({
+        userId: (req as any).usuario?.id || (req as any).user?.id,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: req.params.id,
+        module: 'eliminarMarca',
+        action: 'error_eliminar_marca',
+        message: 'Error al eliminar la marca',
+        error: 'ID inválido. 400',
+        context: {
+          idSolicitado: req.params.id,
+        }
+      });
       return res.status(400).json({
         ok: false,
         data: null,
@@ -720,10 +1034,23 @@ export const eliminarMarca = async (req: Request, res: Response) => {
       });
     }
 
+    logError({
+      userId: (req as any).usuario?.id || (req as any).user?.id,
+      ip: req.ip,
+      entityType: 'marca',
+      entityId: req.params.id,
+      module: 'eliminarMarca',
+      action: 'error_eliminar_marca',
+      message: 'Error al eliminar la marca',
+      error: 'Error interno del servidor al eliminar la marca. 500',
+      context: {
+        idSolicitado: req.params.id,
+      }
+    });
     return res.status(500).json({
       ok: false,
       data: null,
-      error: 'Ocurrió un error al eliminar la marca.',
+      error: 'Error interno del servidor al eliminar la marca',
     });
   }
 };

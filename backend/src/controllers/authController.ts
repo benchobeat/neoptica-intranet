@@ -6,7 +6,7 @@ import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 import prisma from '@/utils/prisma';
-import { registrarAuditoria } from '@/utils/audit';
+import { logSuccess, logError } from '@/utils/audit';
 import { sendMail } from '@/utils/mailer';
 import { success, fail } from '@/utils/response';
 
@@ -19,18 +19,17 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
   let mensajeError = '';
 
   if (!email) {
-    await registrarAuditoria({
-      usuarioId: null,
-      accion: 'forgot_password_fallido',
-      descripcion: {
-        mensaje: 'Solicitud de restablecimiento de contraseña fallida',
-        error: 'Email es requerido',
-        email: null,
-        timestamp: new Date().toISOString()
-      },
+    await logError({
+      userId: null,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'auth',
+      entityType: 'usuario',
+      module: 'forgotPassword',
+      action: 'error_forgot_password',
+      message: 'Solicitud de restablecimiento de contraseña fallida - Email es requerido',
+      error: new Error('Email es requerido. 400'),
+      context: {
+        email: null
+      }
     });
     res.status(400).json(fail('Email es requerido'));
     return;
@@ -45,18 +44,17 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     // Por seguridad, no revelamos si el email existe o no
     // Siempre devolvemos un mensaje genérico de éxito
     if (!usuario) {
-      await registrarAuditoria({
-        usuarioId: null,
-        accion: 'forgot_password_fallido',
-        descripcion: {
-          mensaje: 'Intento de restablecimiento con email no registrado',
-          email: email,
-          timestamp: new Date().toISOString(),
-          accion: 'EMAIL_NO_ENCONTRADO'
-        },
+      await logError({
+        userId: null,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        modulo: 'auth',
+        entityType: 'usuario',
+        module: 'forgotPassword',
+        action: 'error_forgot_password',
+        message: 'Intento de restablecimiento con email no registrado',
+        error: new Error('Email no encontrado'),
+        context: {
+          email,
+        }
       });
 
       // Mensaje genérico por seguridad
@@ -111,24 +109,20 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     });
 
     // Registrar auditoría de éxito
-    await registrarAuditoria({
-      usuarioId: usuario.id,
-      accion: 'forgot_password_solicitud',
-      descripcion: {
-        mensaje: 'Solicitud de restablecimiento de contraseña procesada',
-        email: email,
-        usuarioId: usuario.id,
-        tokenGenerado: true,
-        timestamp: new Date().toISOString(),
-        detalles: {
-          metodo: 'email',
-          expiracion: expiresAt.toISOString()
-        }
-      },
+    await logSuccess({
+      userId: usuario.id,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuario.id,
-      modulo: 'auth',
+      entityType: 'usuario',
+      entityId: usuario.id,
+      module: 'forgotPassword',
+      action: 'forgot_password_solicitud_exitoso',
+      message: 'Solicitud de restablecimiento de contraseña procesada',
+      details: {
+        email,
+        tokenGenerado: true,
+        metodo: 'email',
+        expiracion: expiresAt.toISOString()
+      }
     });
 
     res.json(
@@ -142,22 +136,19 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     const errorStack = error instanceof Error ? error.stack : undefined;
     const errorName = error instanceof Error ? error.name : 'ErrorDesconocido';
     
-    await registrarAuditoria({
-      usuarioId: null,
-      accion: 'forgot_password_error',
-      descripcion: {
-        mensaje: 'Error al procesar la solicitud de restablecimiento de contraseña',
-        error: errorMessage,
-        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
-        email: email,
-        timestamp: new Date().toISOString(),
-        detalles: {
-          tipoError: errorName
-        }
-      },
+    await logError({
+      userId: null,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'auth',
+      entityType: 'usuario',
+      module: 'auth',
+      action: 'error_forgot_password',
+      message: 'Error al procesar la solicitud de restablecimiento de contraseña',
+      error: error instanceof Error ? error : new Error(errorMessage),
+      context: {
+        email,
+        tipoError: errorName,
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined
+      }
     });
 
     // Mensaje genérico por seguridad
@@ -178,22 +169,23 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
   let mensajeError = '';
 
   if (!token || !email || !password) {
-    await registrarAuditoria({
-      usuarioId: null,
-      accion: 'reset_password_fallido',
-      descripcion: {
-        mensaje: 'Faltan campos requeridos para restablecer la contraseña',
-        error: 'Token, email y password son requeridos',
-        camposFaltantes: [
-          !token ? 'token' : null,
-          !email ? 'email' : null,
-          !password ? 'password' : null
-        ].filter(Boolean),
-        timestamp: new Date().toISOString()
-      },
+    const camposFaltantes = [
+      !token ? 'token' : null,
+      !email ? 'email' : null,
+      !password ? 'password' : null
+    ].filter(Boolean);
+    
+    await logError({
+      userId: null,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'auth',
+      entityType: 'usuario',
+      module: 'resetPassword',
+      action: 'error_reset_password',
+      message: 'Faltan campos requeridos para restablecer la contraseña',
+      error: new Error('Token, email y password son requeridos. 400'),
+      context: {
+        camposFaltantes
+      }
     });
     res.status(400).json(fail('Token, email y password son requeridos'));
     return;
@@ -206,18 +198,17 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     });
 
     if (!usuario) {
-      await registrarAuditoria({
-        usuarioId: null,
-        accion: 'reset_password_fallido',
-        descripcion: {
-          mensaje: 'Intento de restablecimiento con email no registrado',
-          email: email,
-          accion: 'USUARIO_NO_ENCONTRADO',
-          timestamp: new Date().toISOString()
-        },
+      await logError({
+        userId: null,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        modulo: 'auth',
+        entityType: 'usuario',
+        module: 'resetPassword',
+        action: 'error_reset_password',
+        message: 'Intento de restablecimiento con email no registrado',
+        error: new Error('Usuario no encontrado. 404'),
+        context: {
+          email
+        }
       });
       res.status(404).json(fail('Usuario no encontrado'));
       return;
@@ -237,24 +228,20 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     });
 
     if (!resetTokenRecord) {
-      await registrarAuditoria({
-        usuarioId: usuario.id,
-        accion: 'reset_password_fallido',
-        descripcion: {
-          mensaje: 'Intento de restablecimiento con token inválido o expirado',
-          email: email,
-          usuarioId: usuario.id,
-          accion: 'TOKEN_INVALIDO_O_EXPIRADO',
-          timestamp: new Date().toISOString(),
-          detalles: {
-            razon: 'No se encontró un token activo o ha expirado',
-            tiempoRestante: '0 segundos'
-          }
-        },
+      await logError({
+        userId: usuario.id,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: usuario.id,
-        modulo: 'auth',
+        entityType: 'usuario',
+        entityId: usuario.id,
+        module: 'resetPassword',
+        action: 'error_reset_password',
+        message: 'Intento de restablecimiento con token inválido o expirado',
+        error: new Error('Token inválido o expirado. 400'),
+        context: {
+          email,
+          razon: 'No se encontró un token activo o ha expirado',
+          tiempoRestante: '0 segundos'
+        }
       });
       res.status(400).json(fail('Token inválido o expirado'));
       return;
@@ -263,24 +250,20 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     // Verificar token
     const isValidToken = await bcrypt.compare(token, resetTokenRecord.token);
     if (!isValidToken) {
-      await registrarAuditoria({
-        usuarioId: usuario.id,
-        accion: 'reset_password_fallido',
-        descripcion: {
-          mensaje: 'Intento de restablecimiento con token inválido',
-          email: email,
-          usuarioId: usuario.id,
-          accion: 'TOKEN_INVALIDO',
-          timestamp: new Date().toISOString(),
-          detalles: {
-            razon: 'El token proporcionado no coincide con ningún token válido',
-            longitudToken: token.length
-          }
-        },
+      await logError({
+        userId: usuario.id,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: usuario.id,
-        modulo: 'auth',
+        entityType: 'usuario',
+        entityId: usuario.id,
+        module: 'resetPassword',
+        action: 'reset_password_fallido',
+        message: 'Intento de restablecimiento con token inválido',
+        error: new Error('Token inválido. 400'),
+        context: {
+          email,
+          razon: 'El token proporcionado no coincide con ningún token válido',
+          longitudToken: token.length
+        }
       });
       res.status(400).json(fail('Token inválido'));
       return;
@@ -288,37 +271,32 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 
     // Validar fuerza del password
     if (!passwordFuerte(password)) {
-      await registrarAuditoria({
-        usuarioId: usuario.id,
-        accion: 'reset_password_fallido',
-        descripcion: {
-          mensaje: 'Intento de restablecimiento con contraseña débil',
-          email: email,
-          usuarioId: usuario.id,
-          accion: 'PASSWORD_DEBIL',
-          timestamp: new Date().toISOString(),
-          detalles: {
-            requisitosCumplidos: {
-              longitudMinima: password.length >= 8,
-              contieneMayuscula: /[A-Z]/.test(password),
-              contieneMinuscula: /[a-z]/.test(password),
-              contieneNumero: /\d/.test(password)
-            },
-            longitud: password.length
-          }
-        },
+      const requisitosCumplidos = {
+        longitudMinima: password.length >= 8,
+        contieneMayuscula: /[A-Z]/.test(password),
+        contieneMinuscula: /[a-z]/.test(password),
+        contieneNumero: /\d/.test(password)
+      };
+      
+      await logError({
+        userId: usuario.id,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: usuario.id,
-        modulo: 'auth',
+        entityType: 'usuario',
+        entityId: usuario.id,
+        module: 'resetPassword',
+        action: 'error_reset_password',
+        message: 'Intento de restablecimiento con contraseña débil',
+        error: new Error('Contraseña no cumple con los requisitos de seguridad. 400'),
+        context: {
+          email,
+          requisitosCumplidos,
+          longitud: password.length
+        }
       });
-      res
-        .status(400)
-        .json(
-          fail(
-            'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número'
-          )
-        );
+      
+      res.status(400).json(
+        fail('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número')
+      );
       return;
     }
 
@@ -344,57 +322,47 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     });
 
     // Registrar en auditoría
-    await registrarAuditoria({
-      usuarioId: usuario.id,
-      accion: 'reset_password_exitoso',
-      descripcion: {
-        mensaje: 'Contraseña restablecida exitosamente',
-        email: email,
-        usuarioId: usuario.id,
-        accion: 'CONTRASENA_RESTABLECIDA',
-        timestamp: new Date().toISOString(),
-        detalles: {
-          metodo: 'email',
-          longitudNuevaContrasena: password.length,
-          requisitosCumplidos: {
-            longitudMinima: password.length >= 8,
-            contieneMayuscula: /[A-Z]/.test(password),
-            contieneMinuscula: /[a-z]/.test(password),
-            contieneNumero: /\d/.test(password)
-          }
-        }
-      },
+    const requisitosCumplidos = {
+      longitudMinima: password.length >= 8,
+      contieneMayuscula: /[A-Z]/.test(password),
+      contieneMinuscula: /[a-z]/.test(password),
+      contieneNumero: /\d/.test(password)
+    };
+    
+    await logSuccess({
+      userId: usuario.id,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuario.id,
-      modulo: 'auth',
+      entityType: 'usuario',
+      entityId: usuario.id,
+      module: 'resetPassword',
+      action: 'reset_password_exitoso',
+      message: 'Contraseña restablecida exitosamente',
+      details: {
+        email,
+        metodo: 'email',
+        longitudNuevaContrasena: password.length,
+        requisitosCumplidos
+      }
     });
 
     res.json(success('Contraseña restablecida correctamente'));
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    const errorName = error instanceof Error ? error.name : 'ErrorDesconocido';
-    
-    console.error('Error en reset password:', errorMessage);
+    const errorObj = error instanceof Error ? error : new Error('Error desconocido durante el restablecimiento de contraseña');
+    console.error('Error en reset password:', errorObj.message);
 
-    await registrarAuditoria({
-      usuarioId: null,
-      accion: 'reset_password_error',
-      descripcion: {
-        mensaje: 'Error al procesar el restablecimiento de contraseña',
-        error: errorMessage,
-        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
-        email: email,
-        timestamp: new Date().toISOString(),
-        detalles: {
-          tipoError: errorName,
-          accion: 'ERROR_RESTABLECIMIENTO_CONTRASENA'
-        }
-      },
+    await logError({
+      userId: null,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'auth',
+      entityType: 'usuario',
+      module: 'resetPassword',
+      action: 'reset_password_error',
+      message: 'Error al procesar el restablecimiento de contraseña',
+      error: errorObj,
+      context: {
+        email,
+        tipoError: errorObj.name,
+        stack: process.env.NODE_ENV === 'development' ? errorObj.stack : undefined
+      }
     });
 
     res.status(500).json(fail('Error al restablecer la contraseña'));
@@ -414,23 +382,25 @@ export async function login(req: Request, res: Response): Promise<void> {
   let mensajeError = '';
 
   if (!email || !password) {
-    await registrarAuditoria({
-      usuarioId: null,
-      accion: 'login_fallido',
-      descripcion: {
-        mensaje: 'Intento de inicio de sesión sin credenciales completas',
-        error: 'Email y password son requeridos',
-        camposFaltantes: [
-          !email ? 'email' : null,
-          !password ? 'password' : null
-        ].filter(Boolean),
-        timestamp: new Date().toISOString(),
-        ip: req.ip
-      },
+    const camposFaltantes = [
+      !email ? 'email' : null,
+      !password ? 'password' : null
+    ].filter(Boolean);
+    
+    await logError({
+      userId: null,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'auth',
+      entityType: 'usuario',
+      module: 'login',
+      action: 'login_fallido',
+      message: 'Intento de inicio de sesión sin credenciales completas',
+      error: new Error('Email y password son requeridos. 400'),
+      context: {
+        camposFaltantes,
+        email: email || null
+      }
     });
+    
     res.status(400).json(fail('Email y password son requeridos'));
     return;
   }
@@ -450,105 +420,73 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     if (!usuario) {
       mensajeError = 'Credenciales inválidas o usuario inactivo';
-      await registrarAuditoria({
-        usuarioId: null,
-        accion: 'login_fallido',
-        descripcion: {
-          mensaje: 'Intento de inicio de sesión fallido',
-          error: 'Usuario no encontrado',
-          email: email,
-          accion: 'USUARIO_NO_ENCONTRADO',
-          timestamp: new Date().toISOString(),
-          ip: req.ip,
-          detalles: {
-            razon: 'No existe un usuario con el email proporcionado'
-          }
-        },
+      await logError({
+        userId: null,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        modulo: 'auth',
+        entityType: 'usuario',
+        module: 'login',
+        action: 'login_fallido',
+        message: 'Intento de inicio de sesión fallido - Usuario no encontrado',
+        error: new Error('Usuario no encontrado. 401'),
+        context: {
+          email
+        }
       });
       res.status(401).json(fail(mensajeError));
       return;
     }
 
     if (usuario.activo === false) {
-      await registrarAuditoria({
-        usuarioId: usuario.id,
-        accion: 'login_fallido',
-        descripcion: {
-          mensaje: 'Intento de inicio de sesión fallido - Usuario inactivo',
-          error: 'El usuario está inactivo',
-          email: usuario.email,
-          usuarioId: usuario.id,
-          accion: 'USUARIO_INACTIVO',
-          timestamp: new Date().toISOString(),
-          ip: req.ip,
-          detalles: {
-            estado: 'inactivo',
-            ultimoAcceso: 'No disponible' // Campo no existe en el modelo
-          }
-        },
+      await logError({
+        userId: usuario.id,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: usuario.id,
-        modulo: 'auth',
+        entityType: 'usuario',
+        entityId: usuario.id,
+        module: 'login',
+        action: 'login_fallido',
+        message: 'Intento de inicio de sesión fallido - Usuario inactivo',
+        error: new Error('El usuario está inactivo. 403'),
+        context: {
+          email: usuario.email
+        }
       });
       res.status(403).json(fail('El usuario está inactivo. Contacte al administrador.'));
       return;
     }
 
     if (!usuario.password) {
-      await registrarAuditoria({
-        usuarioId: usuario.id,
-        accion: 'login_fallido',
-        descripcion: {
-          mensaje: 'Intento de inicio de sesión fallido - Sin contraseña local',
-          error: 'El usuario no tiene contraseña local configurada',
-          email: usuario.email,
-          usuarioId: usuario.id,
-          accion: 'SIN_PASSWORD_LOCAL',
-          timestamp: new Date().toISOString(),
-          ip: req.ip,
-          detalles: {
-            metodosAlternativos: ['login_social', 'recuperar_cuenta'],
-            ultimoAcceso: 'No disponible' // Campo no existe en el modelo
-          }
-        },
+      await logError({
+        userId: usuario.id,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: usuario.id,
-        modulo: 'auth',
+        entityType: 'usuario',
+        entityId: usuario.id,
+        module: 'login',
+        action: 'login_fallido',
+        message: 'Intento de inicio de sesión fallido - Sin contraseña local',
+        error: new Error('El usuario no tiene contraseña local configurada. 401'),
+        context: {
+          email: usuario.email
+        }
       });
-      res
-        .status(401)
-        .json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
+      res.status(401).json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
       return;
     }
 
     const passwordOk = await bcrypt.compare(password, usuario.password);
     if (!passwordOk) {
-      await registrarAuditoria({
-        usuarioId: usuario.id,
-        accion: 'login_fallido',
-        descripcion: {
-          mensaje: 'Intento de inicio de sesión fallido - Contraseña incorrecta',
-          error: 'Credenciales inválidas',
-          email: usuario.email,
-          usuarioId: usuario.id,
-          accion: 'PASSWORD_INCORRECTO',
-          timestamp: new Date().toISOString(),
-          ip: req.ip,
-          detalles: {
-            intentosFallidos: 'No disponible', // Campo no existe en el modelo
-            ultimoIntentoFallido: new Date().toISOString(),
-            bloqueoTemporal: 'No disponible' // No tenemos información de bloqueo
-          }
-        },
+      await logError({
+        userId: usuario.id,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: usuario.id,
-        modulo: 'auth',
+        entityType: 'usuario',
+        entityId: usuario.id,
+        module: 'login',
+        action: 'login_fallido',
+        message: 'Intento de inicio de sesión fallido - Contraseña incorrecta',
+        error: new Error('Credenciales inválidas. 401'),
+        context: {
+          email: usuario.email,
+          ultimoIntentoFallido: new Date().toISOString()
+        }
       });
       mensajeError = 'Credenciales inválidas';
       res.status(401).json(fail(mensajeError));
@@ -608,37 +546,30 @@ export async function login(req: Request, res: Response): Promise<void> {
     }));
 
     // Registrar login exitoso
-    await registrarAuditoria({
-      usuarioId: usuario.id,
-      accion: 'login_exitoso',
-      descripcion: {
-        mensaje: 'Inicio de sesión exitoso',
-        email: usuario.email,
-        usuarioId: usuario.id,
-        accion: 'LOGIN_EXITOSO',
-        timestamp: new Date().toISOString(),
-        ip: req.ip,
-        detalles: {
-          metodo: 'email',
-          usuario: {
-            nombre: usuario.nombreCompleto,
-            email: usuario.email,
-            activo: usuario.activo,
-            fechaCreacion: usuario.creadoEn?.toISOString(),
-            ultimoAcceso: new Date().toISOString(), // Usamos la fecha actual como último acceso
-            nota: 'Los campos de seguimiento de acceso no están implementados en el modelo de Usuario'
-          },
-          roles: rolesUsuario,
-          metadatos: {
-            userAgent: req.headers['user-agent'],
-            contentType: req.headers['content-type']
-          }
-        }
-      },
+    await logSuccess({
+      userId: usuario.id,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuario.id,
-      modulo: 'auth',
+      entityType: 'usuario',
+      entityId: usuario.id,
+      module: 'login',
+      action: 'login_exitoso',
+      message: 'Inicio de sesión exitoso',
+      details: {
+        email: usuario.email,
+        metodo: 'email',
+        usuario: {
+          nombre: usuario.nombreCompleto,
+          email: usuario.email,
+          activo: usuario.activo,
+          fechaCreacion: usuario.creadoEn?.toISOString(),
+          ultimoAcceso: new Date().toISOString(),
+        },
+        roles: rolesUsuario,
+        metadatos: {
+          userAgent: req.headers['user-agent'],
+          contentType: req.headers['content-type']
+        }
+      }
     });
 
     // La respuesta ya está siendo limpiada en el objeto de retorno
@@ -656,24 +587,20 @@ export async function login(req: Request, res: Response): Promise<void> {
       })
     );
   } catch (err) {
-    mensajeError = err instanceof Error ? err.message : 'Error desconocido';
+    const error = err instanceof Error ? err : new Error('Error desconocido durante el inicio de sesión');
+    mensajeError = error.message;
     
-    await registrarAuditoria({
-      usuarioId: null,
-      accion: 'login_error',
-      descripcion: {
-        mensaje: 'Error durante el proceso de inicio de sesión',
-        error: mensajeError,
-        stack: err instanceof Error ? err.stack : undefined,
-        timestamp: new Date().toISOString(),
-        detalles: {
-          emailIntentado: email,
-          ip: req.ip
-        }
-      },
+    await logError({
+      userId: null,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'auth',
+      entityType: 'usuario',
+      module: 'login',
+      action: 'login_error',
+      message: 'Error durante el proceso de inicio de sesión',
+      error,
+      context: {
+        emailIntentado: email
+      }
     });
     
     res.status(500).json(fail('Error interno del servidor al procesar el inicio de sesión'));
