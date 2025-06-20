@@ -58,10 +58,36 @@ const prismaMock: any = {
       });
     }),
   },
-  color: { ...mockEntityFunctions },
+  color: { 
+    ...mockEntityFunctions,
+    findFirst: jest.fn().mockImplementation(() => Promise.resolve(null)),
+    create: jest.fn().mockImplementation((args: any) => {
+      return Promise.resolve({
+        ...args.data,
+        id: args.id || '1',
+      });
+    }),
+  },
   marca: { ...mockEntityFunctions },
   producto: { ...mockEntityFunctions },
-  sucursal: { ...mockEntityFunctions },
+  sucursal: { 
+    ...mockEntityFunctions,
+    create: jest.fn().mockImplementation((args: any) => {
+      return Promise.resolve({
+        ...args.data,
+        id: args.id || '123e4567-e89b-12d3-a456-426614174000',
+        activo: args.data.activo !== undefined ? args.data.activo : true,
+        creadoEn: new Date(),
+        creadoPor: 'test-user-id',
+      });
+    }),
+    update: jest.fn().mockImplementation((args: any) => {
+      return Promise.resolve({
+        ...args.data,
+        id: args.where?.id || '123e4567-e89b-12d3-a456-426614174000',
+      });
+    }),
+  },
   rol: { ...mockEntityFunctions },
   usuarioRol: { ...mockEntityFunctions },
   // Agregar otros modelos según sea necesario

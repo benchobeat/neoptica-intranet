@@ -62,7 +62,7 @@ describe('crearSucursal', () => {
     direccion: 'Calle Falsa 123',
     telefono: '1234567890',
     email: 'test@example.com',
-    estado: true,
+    activo: true,
     creadoEn: new Date(),
     creadoPor: 'test-user-id',
     modificadoEn: null,
@@ -83,7 +83,7 @@ describe('crearSucursal', () => {
         direccion: 'Calle Falsa 123',
         telefono: '1234567890',
         email: 'test@example.com',
-        estado: true,
+        activo: true,
         latitud: null,
         longitud: null
       }
@@ -121,7 +121,7 @@ describe('crearSucursal', () => {
         email: data.email ? data.email.toLowerCase() : null,
         latitud: data.latitud || null,
         longitud: data.longitud || null,
-        estado: data.estado !== undefined ? data.estado : true,
+        activo: data.activo !== undefined ? data.activo : true,
         creadoEn: new Date(),
         creadoPor: data.creadoPor || 'system',
         modificadoEn: null,
@@ -156,7 +156,7 @@ describe('crearSucursal', () => {
         direccion: 'Calle Falsa 123',
         telefono: '1234567890',
         email: 'test@example.com',
-        estado: true,
+        activo: true,
       }),
       error: null,
     }));
@@ -176,7 +176,7 @@ describe('crearSucursal', () => {
         direccion: 'Calle Falsa 123',
         telefono: '1234567890',
         email: 'test@example.com',
-        estado: true,
+        activo: true,
         creadoPor: 'test-user-id',
         creadoEn: expect.any(Date),
         latitud: null,
@@ -196,7 +196,7 @@ describe('crearSucursal', () => {
       details: {
         direccion: 'Calle Falsa 123',
         email: 'test@example.com',
-        estado: true,
+        activo: true,
         latitud: null,
         longitud: null,
         nombre: 'Sucursal Test',
@@ -255,7 +255,7 @@ describe('crearSucursal', () => {
         direccion: 'Calle Falsa 123',
         telefono: '1234567890',
         email: 'duplicada@test.com',
-        estado: true,
+        activo: true,
       },
       user: { id: 'test-user-id' },
     });
@@ -274,7 +274,7 @@ describe('crearSucursal', () => {
       direccion: 'Otra dirección',
       telefono: '0987654321',
       email: 'otro@email.com',
-      estado: true,
+      activo: true,
       creadoEn: new Date(),
       creadoPor: 'another-user',
     });
@@ -307,7 +307,7 @@ describe('crearSucursal', () => {
         direccion: 'Calle Falsa 123',
         telefono: '1234567890',
         email: 'duplicada@test.com',
-        estado: true,
+        activo: true,
         latitud: undefined,
         longitud: undefined,
         error: 'Ya existe una sucursal con ese nombre.'

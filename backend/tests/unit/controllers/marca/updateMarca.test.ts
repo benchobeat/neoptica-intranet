@@ -24,7 +24,7 @@ jest.mock('../../../../src/utils/audit', () => ({
 // Importar después de configurar los mocks
 import { Request, Response } from 'express';
 import { actualizarMarca } from '../../../../src/controllers/marcaController';
-import { mockMarca, updateMarcaData } from '../../__fixtures__/marcaFixtures';
+import { mockMarca, updateMarcaData as originalUpdateMarcaData } from '../../__fixtures__/marcaFixtures';
 
 // Extender la interfaz Request para incluir la propiedad usuario
 declare global {
@@ -50,10 +50,17 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
   let mockJson: jest.Mock;
   let mockStatus: jest.Mock;
   let responseObject: any;
+  
+  // Create a version of updateMarcaData without activo field
+  const updateMarcaData = {
+    nombre: originalUpdateMarcaData.nombre,
+    descripcion: originalUpdateMarcaData.descripcion
+  };
 
   beforeEach(() => {
     mockJson = jest.fn();
     mockStatus = jest.fn().mockReturnThis();
+    
     
     mockRequest = {
       params: { id: mockMarca.id },
@@ -82,7 +89,9 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
     mockMarcaMethods.findFirst.mockResolvedValue(null);
     mockMarcaMethods.update.mockResolvedValue({
       ...mockMarca,
-      ...updateMarcaData,
+      nombre: updateMarcaData.nombre,
+      descripcion: updateMarcaData.descripcion,
+      // activo field remains unchanged
       modificadoPor: mockRequest.usuario?.id,
       modificadoEn: new Date(),
     });
@@ -95,13 +104,13 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
     // Ejecutar la función del controlador
     await actualizarMarca(mockRequest as Request, mockResponse as Response);
 
-    // Verificar que se llamó a update con los datos correctos (usando snake_case para los campos de la base de datos)
+    // Verificar que se llamó a update con los datos correctos (sin el campo activo)
     expect(mockMarcaMethods.update).toHaveBeenCalledWith({
       where: { id: mockMarca.id },
       data: {
         nombre: updateMarcaData.nombre,
         descripcion: updateMarcaData.descripcion,
-        activo: updateMarcaData.activo,
+        // El campo activo ya no se incluye
         modificadoPor: mockRequest.usuario?.id,
         modificadoEn: expect.any(Date),
       },
@@ -126,11 +135,8 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
           descripcion: expect.objectContaining({
             anterior: mockMarca.descripcion,
             nuevo: updateMarcaData.descripcion
-          }),
-          activo: expect.objectContaining({
-            anterior: mockMarca.activo,
-            nuevo: updateMarcaData.activo
           })
+          // El campo activo ya no se actualiza
         })
       })
     }));
@@ -146,7 +152,7 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
         id: mockMarca.id,
         nombre: updateMarcaData.nombre,
         descripcion: updateMarcaData.descripcion,
-        activo: updateMarcaData.activo,
+        activo: mockMarca.activo // activo mantiene el valor original
       }),
       error: null,
     });
@@ -227,6 +233,37 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
     });
   });
 
+  it('debe rechazar la solicitud cuando se intenta modificar el campo activo', async () => {
+    // Configurar el body con el campo activo
+    mockRequest.body = { ...mockRequest.body, activo: false };
+
+    // Ejecutar la función del controlador
+    await actualizarMarca(mockRequest as Request, mockResponse as Response);
+
+    // Verificar la respuesta de error
+    expect(mockStatus).toHaveBeenCalledWith(400);
+    expect(responseObject).toEqual({
+      ok: false,
+      data: null,
+      error: 'No está permitido modificar el campo activo.',
+    });
+    
+    // Verificar que se llamó a logError con los parámetros correctos
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+      userId: mockRequest.usuario?.id,
+      ip: mockRequest.ip,
+      entityType: 'marca',
+      module: 'actualizarMarca',
+      action: 'error_actualizar_marca',
+      message: 'Error al actualizar la marca',
+      error: 'No está permitido modificar el campo activo. 400',
+      entityId: mockMarca.id,
+      context: expect.objectContaining({
+        idSolicitado: mockMarca.id
+      })
+    }));
+  });
+
   it('debe manejar errores inesperados', async () => {
     // Configurar el mock para lanzar un error
     const errorMessage = 'Error inesperado';
@@ -258,8 +295,7 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
         idSolicitado: mockMarca.id,
         datosSolicitud: expect.objectContaining({
           nombre: updateMarcaData.nombre,
-          descripcion: updateMarcaData.descripcion,
-          activo: updateMarcaData.activo
+          descripcion: updateMarcaData.descripcion
         }),
         error: 'Error inesperado',
         stack: expect.stringContaining('Error: Error inesperado')

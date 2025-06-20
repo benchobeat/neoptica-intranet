@@ -17,7 +17,8 @@ export const crearColor = async (req: Request, res: Response) => {
   const userId = (req as any).usuario?.id || (req as any).user?.id;
 
   try {
-    const { nombre, descripcion, activo, codigoHex } = req.body;
+    // No extraemos activo del req.body pues será ignorado
+    const { nombre, descripcion, codigoHex } = req.body;
 
     // Validación estricta y avanzada de datos de entrada
     if (!nombre || typeof nombre !== 'string') {
@@ -32,7 +33,6 @@ export const crearColor = async (req: Request, res: Response) => {
         context: {
           nombre,
           descripcion,
-          activo,
           codigoHex,
         },
       });
@@ -57,7 +57,6 @@ export const crearColor = async (req: Request, res: Response) => {
         context: {
           nombre,
           descripcion,
-          activo,
           codigoHex,
         },
       });
@@ -82,7 +81,6 @@ export const crearColor = async (req: Request, res: Response) => {
         context: {
           nombre,
           descripcion,
-          activo,
           codigoHex,
         },
       });
@@ -116,7 +114,6 @@ export const crearColor = async (req: Request, res: Response) => {
         context: {
           nombre,
           descripcion,
-          activo,
           codigoHex,
           colorExistenteId: colorExistente.id,
         },
@@ -143,7 +140,6 @@ export const crearColor = async (req: Request, res: Response) => {
           context: {
             nombre,
             codigoHex,
-            activo,
             descripcion,
           },
         });
@@ -176,7 +172,6 @@ export const crearColor = async (req: Request, res: Response) => {
           context: {
             nombre: nombreLimpio,
             codigoHex: codigoHexLimpio,
-            activo: activo !== undefined ? activo : true,
             descripcion: descripcion?.trim() || null,
           },
         });
@@ -189,13 +184,14 @@ export const crearColor = async (req: Request, res: Response) => {
     }
 
     // Crear el nuevo color en la base de datos directamente con los valores individuales
+    // Siempre establecemos activo como true sin importar lo que venga en el body
     const nuevoColor = await prisma.color.create({
       data: {
         nombre: nombreLimpio,
         // Garantizar que codigoHex se pase explícitamente
         codigoHex: codigoHexLimpio,
         descripcion: descripcion?.trim() || null,
-        activo: activo !== undefined ? activo : true,
+        activo: true, // Siempre verdadero al crear
         creadoPor: userId || null,
         creadoEn: new Date(),
       },
@@ -245,7 +241,6 @@ export const crearColor = async (req: Request, res: Response) => {
         errorStack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
         nombre: req.body.nombre || 'No disponible',
         codigoHex: req.body.codigoHex || 'No proporcionado',
-        activo: req.body.activo !== undefined ? req.body.activo : 'No especificado',
         descripcion: req.body.descripcion || 'No proporcionada',
       },
     });
@@ -673,7 +668,8 @@ export const actualizarColor = async (req: Request, res: Response) => {
   const userId = (req as any).usuario?.id || (req as any).user?.id;
   const { id } = req.params;
   try {
-    const { nombre, descripcion, activo, codigoHex } = req.body;
+    // No extraemos activo del req.body pues será ignorado
+    const { nombre, descripcion, codigoHex } = req.body;
 
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -913,10 +909,8 @@ export const actualizarColor = async (req: Request, res: Response) => {
       datosActualizados.descripcion = descripcion === null ? null : descripcion.trim();
     }
 
-    // Procesar estado activo si se proporcionó
-    if (activo !== undefined) {
-      datosActualizados.activo = activo;
-    }
+    // Ya no procesamos el estado activo desde el body
+    // El campo activo solo puede ser modificado por procesos internos como eliminación (soft delete)
 
     // Si no hay datos para actualizar, retornar error
     if (Object.keys(datosActualizados).length === 0) {

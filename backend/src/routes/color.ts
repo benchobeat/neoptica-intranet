@@ -34,9 +34,7 @@ const router = Router();
  *         codigoHex:
  *           type: string
  *           example: "#FF0000"
- *         activo:
- *           type: boolean
- *           example: true
+ *         # activo se establece automáticamente como true y no puede ser modificado via API
  *     Color:
  *       type: object
  *       properties:
@@ -108,6 +106,14 @@ const router = Router();
  *         description: No autorizado
  *       409:
  *         description: Conflicto (p. ej. nombre duplicado)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               ok: false
+ *               data: null
+ *               error: "Ya existe un color con el mismo nombre"
  *       500:
  *         description: Error interno del servidor
  */
@@ -329,6 +335,14 @@ router.get('/:id', authenticateJWT, requireRole('admin', 'vendedor'), obtenerCol
  *         description: Color no encontrado
  *       409:
  *         description: Conflicto (p. ej. nombre duplicado)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               ok: false
+ *               data: null
+ *               error: "Ya existe un color con el mismo nombre"
  *       500:
  *         description: Error interno del servidor
  */
@@ -343,7 +357,8 @@ router.put(
  * @swagger
  * /api/colores/{id}:
  *   delete:
- *     summary: Eliminar un color (soft delete)
+ *     summary: Eliminar un color
+ *     description: Realiza un soft delete del color (marcado como anulado). No se puede eliminar si tiene productos asociados.
  *     tags: [Colores]
  *     security:
  *       - bearerAuth: []

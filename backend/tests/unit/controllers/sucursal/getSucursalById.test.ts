@@ -41,7 +41,7 @@ describe('obtenerSucursalPorId', () => {
     direccion: 'Calle Falsa 123',
     telefono: '1234567890',
     email: 'test@example.com',
-    estado: true,
+    activo: true,
     latitud: null,
     longitud: null,
     anuladoEn: null,

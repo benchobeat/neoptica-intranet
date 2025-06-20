@@ -106,7 +106,7 @@ describe('listarSucursales', () => {
       details: {
         total: 3,
         filtrosAplicados: {
-          estado: null,
+          activo: null,
           soloActivas: true
         },
         ordenamiento: 'nombre (ascendente)'
@@ -159,7 +159,7 @@ describe('listarSucursales', () => {
       context: {
         error: errorMessage,
         filtrosAplicados: {
-          estado: null,
+          activo: null,
           soloActivas: true
         },
         stack: expect.any(String)

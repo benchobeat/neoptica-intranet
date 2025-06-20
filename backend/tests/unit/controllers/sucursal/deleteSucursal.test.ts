@@ -31,7 +31,7 @@ jest.mock('@prisma/client', () => {
             email: 'test@example.com',
             latitud: 0,
             longitud: 0,
-            estado: true,
+            activo: true,
             creadoEn: new Date(),
             creadoPor: 'system',
             modificadoEn: null,
@@ -51,7 +51,7 @@ jest.mock('@prisma/client', () => {
           email: 'test@example.com',
           latitud: 0,
           longitud: 0,
-          estado: false,
+          activo: false,
           creadoEn: new Date(),
           creadoPor: 'system',
           modificadoEn: null,
@@ -96,7 +96,7 @@ describe('eliminarSucursal', () => {
     email: 'test@example.com',
     latitud: 0,
     longitud: 0,
-    estado: true,
+    activo: true,
     creadoEn: new Date(),
     creadoPor: 'system',
     modificadoEn: null,
@@ -154,7 +154,7 @@ describe('eliminarSucursal', () => {
         return Promise.resolve({
           ...existingSucursal,
           anuladoEn: null,
-          estado: true
+          activo: true
         });
       }
       return Promise.resolve(null);
@@ -193,7 +193,7 @@ describe('eliminarSucursal', () => {
     expect(mockPrismaClient.sucursal.update).toHaveBeenCalledWith({
       where: { id: existingSucursal.id },
       data: {
-        estado: false,
+        activo: false,
         anuladoEn: expect.any(Date),
         anuladoPor: 'test-user-id',
       },
@@ -213,12 +213,12 @@ describe('eliminarSucursal', () => {
         nombre: 'Sucursal Test',
         razon: 'Eliminación lógica (soft delete)',
         estadoAnterior: {
-          estado: true,
+          activo: true,
           anuladoEn: null,
           anuladoPor: null
         },
         estadoNuevo: expect.objectContaining({
-          estado: false,
+          activo: false,
           anuladoEn: expect.any(String),
           anuladoPor: testUserId
         })

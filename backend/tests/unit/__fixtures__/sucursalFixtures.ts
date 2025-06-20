@@ -24,7 +24,7 @@ export const createSucursalData = {
   email: 'centro@example.com',
   latitud: -0.180653,
   longitud: -78.467834,
-  estado: true,
+  activo: true,
 };
 
 /**
@@ -37,7 +37,7 @@ export const updateSucursalData = {
   email: 'nuevo@example.com',
   latitud: -0.1807,
   longitud: -78.4679,
-  estado: false,
+  activo: false,
 };
 
 /**
@@ -97,7 +97,7 @@ export const mockSucursalList = [
     email: 'sur@example.com',
     latitud: -0.19,
     longitud: -78.47,
-    estado: false,
+    activo: false,
   },
   {
     ...mockSucursal,

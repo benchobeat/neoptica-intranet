@@ -22,12 +22,18 @@ jest.mock('../../../../src/utils/audit', () => ({
 
 // Importar el controlador después de los mocks
 import { crearMarca } from '../../../../src/controllers/marcaController';
-import { mockMarca, createMarcaData } from '../../__fixtures__/marcaFixtures';
+import { mockMarca, createMarcaData as originalCreateMarcaData } from '../../__fixtures__/marcaFixtures';
 
 describe('Controlador de Marcas - Crear Marca', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: any;
 
+  // Cree una version segura de los datos sin el campo activo
+  const createMarcaData = {
+    nombre: originalCreateMarcaData.nombre,
+    descripcion: originalCreateMarcaData.descripcion
+  };
+  
   beforeEach(() => {
     mockRequest = createMockRequest({
       body: {...createMarcaData},
@@ -51,7 +57,7 @@ describe('Controlador de Marcas - Crear Marca', () => {
         id: 'nuevo-id-generado',
         nombre: data.nombre,
         descripcion: data.descripcion,
-        activo: data.activo,
+        activo: true, // Siempre true
         creadoPor: data.creadoPor,
         creadoEn: data.creadoEn,
         anuladoEn: null,
@@ -60,6 +66,37 @@ describe('Controlador de Marcas - Crear Marca', () => {
         modificadoPor: null,
       });
     });
+  });
+
+  it('debe rechazar la solicitud cuando se intenta modificar el campo activo', async () => {
+    // Arrange - añadir campo activo a la solicitud
+    mockRequest.body = { ...mockRequest.body, activo: false };
+
+    // Act
+    await crearMarca(mockRequest as Request, mockResponse as Response);
+
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'No está permitido modificar el campo activo.',
+    });
+
+    // Verificar que se llamó a logError
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'error_crear_marca',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Error al crear la marca',
+        error: 'No está permitido modificar el campo activo. 400',
+        context: expect.objectContaining({
+          nombre: mockRequest.body.nombre,
+          descripcion: mockRequest.body.descripcion
+        })
+      })
+    );
   });
 
   it('debe crear una nueva marca exitosamente', async () => {
@@ -130,17 +167,18 @@ describe('Controlador de Marcas - Crear Marca', () => {
   it('debe validar la longitud mínima del nombre', async () => {
     // Arrange
     const invalidName = 'a';
-    mockRequest.body = { ...createMarcaData, nombre: invalidName };
+    mockRequest.body = { nombre: invalidName, descripcion: createMarcaData.descripcion };
 
     // Act
     await crearMarca(mockRequest as Request, mockResponse as Response);
 
     // Assert
     expect(mockResponse.status).toHaveBeenCalledWith(400);
-    expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockResponse.json).toHaveBeenCalledWith({
       ok: false,
+      data: null,
       error: 'El nombre debe tener entre 2 y 100 caracteres.',
-    }));
+    });
 
     // Verificar que se llamó a logError
     expect(mockLogError).toHaveBeenCalledWith(
@@ -160,17 +198,18 @@ describe('Controlador de Marcas - Crear Marca', () => {
   it('debe validar caracteres permitidos en el nombre', async () => {
     // Arrange
     const invalidName = 'Marca#123'; // Carácter # no permitido
-    mockRequest.body = { ...createMarcaData, nombre: invalidName };
+    mockRequest.body = { nombre: invalidName, descripcion: createMarcaData.descripcion };
 
     // Act
     await crearMarca(mockRequest as Request, mockResponse as Response);
 
     // Assert
     expect(mockResponse.status).toHaveBeenCalledWith(400);
-    expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockResponse.json).toHaveBeenCalledWith({
       ok: false,
+      data: null,
       error: 'El nombre contiene caracteres no permitidos.',
-    }));
+    });
 
     // Verificar que se llamó a logError
     expect(mockLogError).toHaveBeenCalledWith(
@@ -216,8 +255,7 @@ describe('Controlador de Marcas - Crear Marca', () => {
         error: 'Ya existe una marca con ese nombre. 409',
         context: expect.objectContaining({
           nombre: createMarcaData.nombre,
-          descripcion: createMarcaData.descripcion,
-          activo: true
+          descripcion: createMarcaData.descripcion
         })
       })
     );
@@ -251,7 +289,7 @@ describe('Controlador de Marcas - Crear Marca', () => {
         message: 'Error al crear la marca',
         error: testError,
         context: expect.objectContaining({
-          datosSolicitud: createMarcaData,
+          datosSolicitud: expect.any(Object),
           error: errorMessage,
           stack: expect.any(String)
         })

@@ -145,10 +145,6 @@ describe('Controlador de Colores - Eliminar Color', () => {
     expect(prismaMock.color.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.color.update).not.toHaveBeenCalled();
     
-    // Debug: Log the actual call to mockLogError
-    const mockCalls = (mockLogError as jest.Mock).mock.calls[0][0];
-    console.log('Actual mockLogError call:', JSON.stringify(mockCalls, null, 2));
-    
     // Verificar que se llamó a logError con los parámetros correctos
     expect(mockLogError).toHaveBeenCalledWith({
       userId: 'test-user-id',
@@ -184,10 +180,6 @@ describe('Controlador de Colores - Eliminar Color', () => {
 
     // Ejecutar la función del controlador
     await eliminarColor(mockRequest as Request, mockResponse as unknown as Response);
-
-    // Debug: Log the actual call to mockLogError
-    const mockCalls = (mockLogError as jest.Mock).mock.calls[0][0];
-    console.log('Actual mockLogError call:', JSON.stringify(mockCalls, null, 2));
 
     // Verificar que se intentó buscar el color
     expect(prismaMock.color.findUnique).toHaveBeenCalledWith({

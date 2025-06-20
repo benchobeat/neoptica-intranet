@@ -31,9 +31,8 @@ const router = Router();
  *         descripcion:
  *           type: string
  *           example: "Marca líder en gafas de sol y lentes oftálmicos"
- *         activo:
- *           type: boolean
- *           example: true
+ *         # Campo activo se gestiona automáticamente en el sistema
+ *         # y no se permite modificarlo manualmente
  *     Marca:
  *       type: object
  *       properties:
@@ -276,6 +275,17 @@ router.get('/:id', authenticateJWT, obtenerMarcaPorId);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               validation_error:
+ *                 value:
+ *                   ok: false
+ *                   data: null
+ *                   error: 'El nombre es obligatorio y debe ser una cadena de texto.'
+ *               activo_not_allowed:
+ *                 value:
+ *                   ok: false
+ *                   data: null
+ *                   error: 'No está permitido modificar el campo activo.'
  *       409:
  *         description: Conflicto - Marca ya existe
  *         content:
@@ -334,6 +344,17 @@ router.post('/', authenticateJWT, requireRole('admin'), crearMarca);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               validation_error:
+ *                 value:
+ *                   ok: false
+ *                   data: null
+ *                   error: 'El nombre debe ser una cadena de texto válida.'
+ *               activo_not_allowed:
+ *                 value:
+ *                   ok: false
+ *                   data: null
+ *                   error: 'No está permitido modificar el campo activo.'
  *       404:
  *         description: Marca no encontrada
  *         content:
@@ -387,8 +408,18 @@ router.put('/:id', authenticateJWT, requireRole('admin'), actualizarMarca);
  *                 error:
  *                   type: string
  *                   example: null
- *       400:
+ *       409:
  *         description: No se puede eliminar - tiene productos asociados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               ok: false
+ *               data: null
+ *               error: 'No se puede eliminar la marca porque tiene 5 producto(s) asociado(s).'
+ *       400:
+ *         description: ID inválido
  *         content:
  *           application/json:
  *             schema:

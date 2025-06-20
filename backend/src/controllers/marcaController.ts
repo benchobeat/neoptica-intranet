@@ -18,7 +18,29 @@ const prisma = new PrismaClient();
  */
 export const crearMarca = async (req: Request, res: Response) => {
   try {
-    const { nombre, descripcion, activo } = req.body;
+    const { nombre, descripcion } = req.body;
+    // Verificar si se intenta modificar el campo activo, que no está permitido
+    if (req.body.activo !== undefined) {
+      await logError({
+        userId: (req as any).usuario?.id || (req as any).user?.id,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: null,
+        module: 'crearMarca',
+        action: 'error_crear_marca',
+        message: 'Error al crear la marca',
+        error: 'No está permitido modificar el campo activo. 400',
+        context: {
+          nombre,
+          descripcion
+        },
+      });
+      return res.status(400).json({
+        ok: false,
+        data: null,
+        error: 'No está permitido modificar el campo activo.',
+      });
+    }
     const userId = (req as any).usuario?.id || (req as any).user?.id;
 
     // Validación estricta y avanzada de datos de entrada
@@ -34,8 +56,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'El nombre es obligatorio y debe ser una cadena de texto. 400',
         context: {
           nombre,
-          descripcion,
-          activo,
+          descripcion
         },
       });
       return res.status(400).json({
@@ -59,8 +80,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'El nombre debe tener entre 2 y 100 caracteres. 400',
         context: {
           nombre,
-          descripcion,
-          activo,
+          descripcion
         },
       });
       return res.status(400).json({
@@ -84,8 +104,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'El nombre contiene caracteres no permitidos. 400',
         context: {
           nombre,
-          descripcion,
-          activo,
+          descripcion
         },
       });
       return res.status(400).json({
@@ -118,8 +137,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'Ya existe una marca con ese nombre. 409',
         context: {
           nombre,
-          descripcion,
-          activo,
+          descripcion
         },
       });
       return res.status(409).json({
@@ -134,7 +152,7 @@ export const crearMarca = async (req: Request, res: Response) => {
       data: {
         nombre: nombreLimpio,
         descripcion: descripcion?.trim() || null,
-        activo: activo !== undefined ? activo : true,
+        activo: true, // Siempre se crea como activo
         creadoPor: userId || null,
         creadoEn: new Date(),
       },
@@ -563,8 +581,30 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
 export const actualizarMarca = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, activo } = req.body;
+    const { nombre, descripcion } = req.body;
     const userId = (req as any).usuario?.id || (req as any).user?.id;
+    
+    // Verificar si se intenta modificar el campo activo, que no está permitido
+    if (req.body.activo !== undefined) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'marca',
+        entityId: id,
+        module: 'actualizarMarca',
+        action: 'error_actualizar_marca',
+        message: 'Error al actualizar la marca',
+        error: 'No está permitido modificar el campo activo. 400',
+        context: {
+          idSolicitado: id,
+        },
+      });
+      return res.status(400).json({
+        ok: false,
+        data: null,
+        error: 'No está permitido modificar el campo activo.',
+      });
+    }
 
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -738,10 +778,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       datosActualizados.descripcion = descripcion === null ? null : descripcion.trim();
     }
 
-    // Procesar estado activo si se proporcionó
-    if (activo !== undefined) {
-      datosActualizados.activo = activo;
-    }
+    // Ya no se permite procesar el campo activo
 
     // Si no hay datos para actualizar, retornar error
     if (Object.keys(datosActualizados).length === 0) {

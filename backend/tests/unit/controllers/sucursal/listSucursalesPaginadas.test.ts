@@ -163,11 +163,11 @@ describe('listarSucursalesPaginadas', () => {
     );
   });
 
-  it('debe aplicar filtro por estado', async () => {
+  it('debe aplicar filtro por activo', async () => {
     // Arrange
     req.query = {
       ...req.query,
-      estado: 'true',
+      activo: 'true',
     };
 
     // Act
@@ -177,7 +177,7 @@ describe('listarSucursalesPaginadas', () => {
     expect(mockSucursalFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          estado: true,
+          activo: true,
           anuladoEn: null,
         }),
         orderBy: { nombre: 'asc' },

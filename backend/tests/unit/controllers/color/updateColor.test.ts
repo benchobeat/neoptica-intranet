@@ -71,13 +71,21 @@ describe('Controlador de Colores - Actualizar Color', () => {
     jest.clearAllMocks();
   });
 
-  it('debe actualizar un color existente', async () => {
+  it('debe actualizar un color existente e ignorar el campo activo', async () => {
     // Configurar mocks de Prisma
     prismaMock.color.findUnique.mockResolvedValue(mockColor);
     prismaMock.color.findFirst.mockResolvedValue(null); // Para verificar que no hay duplicados
+    
+    // Añadir activo: false en los datos para verificar que se ignora
+    mockRequest.body = {
+      ...mockRequest.body,
+      activo: false // Este campo debería ser ignorado
+    };
+    
     prismaMock.color.update.mockResolvedValue({
       ...mockColor,
       ...updatedColorData,
+      activo: true, // El valor de activo no debería cambiar
       modificadoEn: new Date(),
       modificadoPor: 'test@example.com'
     });
@@ -87,16 +95,25 @@ describe('Controlador de Colores - Actualizar Color', () => {
 
     // Verificar que se actualizó correctamente
     const updateCall = (prismaMock.color.update as jest.Mock).mock.calls[0][0];
+    
+    // Verificar la estructura básica de la llamada
     expect(updateCall).toMatchObject({
       where: { id: colorId },
       data: expect.objectContaining({
-        ...updatedColorData,
+        nombre: updatedColorData.nombre,
+        codigoHex: updatedColorData.codigoHex,
+        descripcion: updatedColorData.descripcion,
         modificadoPor: 'test-user-id',
         modificadoEn: expect.any(Date)
       })
     });
+    
+    // Verificar que no se incluye el campo activo en la actualización
+    const updateData = (updateCall as { data: any }).data;
+    expect(updateData).not.toHaveProperty('activo');
+    
     // Verificar que no se incluye el mensaje en los datos de actualización
-    expect((updateCall as any).data.mensaje).toBeUndefined();
+    expect(updateData.mensaje).toBeUndefined();
 
     // Verificar que se llamó a logSuccess con los parámetros correctos
     const successCall = (mockLogSuccess as jest.Mock).mock.calls[0][0];
@@ -143,6 +160,25 @@ describe('Controlador de Colores - Actualizar Color', () => {
     });
   });
 
+  it('debe ignorar explícitamente el campo activo cuando se proporciona', async () => {
+    // Configurar mocks de Prisma
+    prismaMock.color.findUnique.mockResolvedValue(mockColor);
+    prismaMock.color.findFirst.mockResolvedValue(null);
+    
+    // Añadir activo: false en la solicitud
+    mockRequest.body = {
+      ...mockRequest.body,
+      activo: false
+    };
+    
+    // Ejecutar la función del controlador
+    await actualizarColor(mockRequest as Request, mockResponse as Response);
+    
+    // Verificar que se llamó a update sin incluir activo
+    const updateCall = (prismaMock.color.update as jest.Mock).mock.calls[0][0];
+    expect((updateCall as any).data).not.toHaveProperty('activo');
+  });
+  
   it('debe manejar el caso cuando el color no existe', async () => {
     // Configurar el mock para simular que no se encuentra el color
     (prismaMock.color.findUnique as jest.Mock).mockImplementation(() => Promise.resolve(null));

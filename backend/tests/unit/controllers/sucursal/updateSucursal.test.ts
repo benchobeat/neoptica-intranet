@@ -55,7 +55,7 @@ describe('actualizarSucursal', () => {
     direccion: 'Dirección Original',
     telefono: '1234567890',
     email: 'original@example.com',
-    estado: true,
+    activo: true,
     creadoEn: new Date('2023-01-01'),
     creadoPor: 'original-user',
     modificadoEn: null,
@@ -68,7 +68,7 @@ describe('actualizarSucursal', () => {
     direccion: 'Nueva Dirección',
     telefono: '0987654321',
     email: 'actualizado@example.com',
-    estado: false,
+    activo: false,
     modificadoEn: new Date(),
     modificadoPor: 'test-user-id',
   };
@@ -219,7 +219,7 @@ describe('actualizarSucursal', () => {
         direccion: 'Nueva Dirección',
         telefono: '0987654321',
         email: 'actualizado@example.com',
-        estado: false
+        activo: false
       })
     });
   });

@@ -18,7 +18,7 @@ const prisma = new PrismaClient();
  */
 export const crearSucursal = async (req: Request, res: Response) => {
   try {
-    const { nombre, direccion, latitud, longitud, telefono, email, estado } = req.body;
+    const { nombre, direccion, latitud, longitud, telefono, email, activo } = req.body;
     const userId = (req as any).usuario?.id || (req as any).user?.id;
 
     // Validación estricta del nombre
@@ -38,7 +38,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          estado,
+          activo,
         },
       });
       return res.status(400).json({
@@ -66,7 +66,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          estado,
+          activo,
         },
       });
       return res.status(400).json({
@@ -93,7 +93,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          estado,
+          activo,
         },
       });
       return res.status(400).json({
@@ -121,7 +121,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
             longitud,
             telefono,
             email,
-            estado,
+            activo,
           },
         });
         return res.status(400).json({
@@ -152,7 +152,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          estado,
+          activo,
         },
       });
       return res.status(400).json({
@@ -178,7 +178,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          estado,
+          activo,
         },
       });
       return res.status(400).json({
@@ -215,7 +215,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          estado,
+          activo,
           error: 'Ya existe una sucursal con ese nombre.',
         },
       });
@@ -254,7 +254,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
             longitud,
             telefono,
             email,
-            estado,
+            activo,
           },
         });
         return res.status(409).json({
@@ -274,7 +274,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
         longitud: longitudParsed,
         telefono: telefono?.trim() || null,
         email: email?.trim().toLowerCase() || null,
-        estado: estado !== undefined ? estado : true,
+        activo: activo !== undefined ? activo : true,
         creadoPor: userId || null,
         creadoEn: new Date(),
       },
@@ -294,7 +294,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
         direccion: nuevaSucursal.direccion,
         email: nuevaSucursal.email,
         telefono: nuevaSucursal.telefono,
-        estado: nuevaSucursal.estado,
+        activo: nuevaSucursal.activo,
         latitud: nuevaSucursal.latitud,
         longitud: nuevaSucursal.longitud,
       },
@@ -367,9 +367,9 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
       };
     }
 
-    // Filtro adicional por estado si se proporciona en la consulta
-    if (req.query.estado !== undefined) {
-      filtro.estado = req.query.estado === 'true';
+    // Filtro adicional por activo si se proporciona en la consulta
+    if (req.query.activo !== undefined) {
+      filtro.activo = req.query.activo === 'true';
     }
 
     // Consulta para obtener el total de registros
@@ -402,7 +402,7 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
         tamanoPagina: pageSize,
         parametrosBusqueda: {
           searchText: searchText || 'No aplica',
-          estado: req.query.estado !== undefined ? req.query.estado : 'No filtrado',
+          activo: req.query.activo !== undefined ? req.query.activo : 'No filtrado',
         },
       },
     });
@@ -435,7 +435,7 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
         tamanoPagina: pageSize,
         parametrosBusqueda: {
           searchText: searchText || 'No aplica',
-          estado: req.query.estado !== undefined ? req.query.estado : 'No filtrado',
+          activo: req.query.activo !== undefined ? req.query.activo : 'No filtrado',
         },
         error: errorMessage,
         ...(process.env.NODE_ENV === 'development' && error instanceof Error
@@ -468,9 +468,9 @@ export const listarSucursales = async (req: Request, res: Response) => {
       anuladoEn: null, // Solo sucursales no anuladas (soft delete)
     };
 
-    // Filtro adicional por estado si se proporciona en la consulta
-    if (req.query.estado !== undefined) {
-      filtro.estado = req.query.estado === 'true';
+    // Filtro adicional por activo si se proporciona en la consulta
+    if (req.query.activo !== undefined) {
+      filtro.activo = req.query.activo === 'true';
     }
 
     // Buscar sucursales según filtros y ordenar alfabéticamente
@@ -492,7 +492,7 @@ export const listarSucursales = async (req: Request, res: Response) => {
       details: {
         total: sucursales.length,
         filtrosAplicados: {
-          estado: req.query.estado !== undefined ? req.query.estado : null,
+          activo: req.query.activo !== undefined ? req.query.activo : null,
           soloActivas: true,
         },
         ordenamiento: 'nombre (ascendente)',
@@ -519,7 +519,7 @@ export const listarSucursales = async (req: Request, res: Response) => {
       error,
       context: {
         filtrosAplicados: {
-          estado: req.query.estado !== undefined ? req.query.estado : null,
+          activo: req.query.activo !== undefined ? req.query.activo : null,
           soloActivas: true,
         },
         error: errorMessage,
@@ -602,7 +602,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
       details: {
         id: sucursal.id,
         nombre: sucursal.nombre,
-        estado: sucursal.estado,
+        activo: sucursal.activo,
         anulada: sucursal.anuladoEn !== null,
         ultimaActualizacion: sucursal.modificadoEn || sucursal.creadoEn,
       },
@@ -706,7 +706,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
   const userId = (req as any).usuario?.id || (req as any).user?.id;
   const { id } = req.params;
   try {
-    const { nombre, direccion, latitud, longitud, telefono, email, estado } = req.body;
+    const { nombre, direccion, latitud, longitud, telefono, email, activo } = req.body;
 
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -786,7 +786,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             telefono,
             direccion,
             email,
-            estado,
+            activo,
             idSolicitado: id,
           },
         });
@@ -817,7 +817,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             telefono,
             direccion,
             email,
-            estado,
+            activo,
             idSolicitado: id,
           },
         });
@@ -859,7 +859,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             telefono,
             direccion,
             email,
-            estado,
+            activo,
             idSolicitado: id,
           },
         });
@@ -898,7 +898,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              estado,
+              activo,
               idSolicitado: id,
             },
           });
@@ -934,7 +934,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              estado,
+              activo,
               idSolicitado: id,
             },
           });
@@ -976,7 +976,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              estado,
+              activo,
               idSolicitado: id,
             },
           });
@@ -1014,7 +1014,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              estado,
+              activo,
               idSolicitado: id,
             },
           });
@@ -1050,7 +1050,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              estado,
+              activo,
               idSolicitado: id,
             },
           });
@@ -1067,8 +1067,8 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     }
 
     // Procesar estado si se proporcionó
-    if (estado !== undefined) {
-      datosActualizados.estado = estado;
+    if (activo !== undefined) {
+      datosActualizados.activo = activo;
     }
 
     // Si no hay datos para actualizar, retornar error
@@ -1089,7 +1089,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           telefono,
           direccion,
           email,
-          estado,
+          activo,
           idSolicitado: id,
         },
       });
@@ -1132,7 +1132,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           direccion: sucursalExistente.direccion,
           telefono: sucursalExistente.telefono,
           email: sucursalExistente.email,
-          estado: sucursalExistente.estado,
+          activo: sucursalExistente.activo,
           latitud: sucursalExistente.latitud,
           longitud: sucursalExistente.longitud,
         },
@@ -1141,7 +1141,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           direccion: sucursalActualizada.direccion,
           telefono: sucursalActualizada.telefono,
           email: sucursalActualizada.email,
-          estado: sucursalActualizada.estado,
+          activo: sucursalActualizada.activo,
           latitud: sucursalActualizada.latitud,
           longitud: sucursalActualizada.longitud,
         },
@@ -1359,7 +1359,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     await prisma.sucursal.update({
       where: { id },
       data: {
-        estado: false,
+        activo: false,
         anuladoEn: new Date(),
         anuladoPor: userId,
       },
@@ -1379,12 +1379,12 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
         nombre: sucursalExistente.nombre,
         razon: 'Eliminación lógica (soft delete)',
         estadoAnterior: {
-          estado: sucursalExistente.estado,
+          activo: sucursalExistente.activo,
           anuladoEn: sucursalExistente.anuladoEn,
           anuladoPor: sucursalExistente.anuladoPor,
         },
         estadoNuevo: {
-          estado: false,
+          activo: false,
           anuladoEn: new Date().toISOString(),
           anuladoPor: userId,
         },

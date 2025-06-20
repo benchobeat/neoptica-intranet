@@ -60,6 +60,13 @@ describe('Controlador de Colores - Crear Color', () => {
     expect(prismaMock.color.findFirst).toHaveBeenCalled();
     expect(prismaMock.color.create).toHaveBeenCalled();
     
+    // Verifica que se llamó a prisma.color.create con los valores por defecto correctos
+    expect(prismaMock.color.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        activo: true, // Siempre true independientemente de la solicitud
+      })
+    });
+    
     // Verifica que se llamó a logSuccess con los parámetros correctos
     expect(mockLogSuccess).toHaveBeenCalledWith({
       userId: 'test-user-id',
@@ -84,6 +91,51 @@ describe('Controlador de Colores - Crear Color', () => {
         data: expect.anything()
       })
     );
+  });
+
+  it('debe crear un color con valores predeterminados cuando falten algunos campos opcionales', async () => {
+    // Preparar solicitud con solo el campo obligatorio (nombre)
+    mockRequest.body = { nombre: 'Verde' };
+    
+    // Configurar mocks
+    jest.spyOn(prismaMock.color, 'findFirst').mockResolvedValue(null);
+    jest.spyOn(prismaMock.color, 'create').mockResolvedValue({
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      nombre: 'Verde',
+      codigoHex: '',
+      descripcion: '',
+      activo: true,
+      creadoEn: new Date(),
+      creadoPor: 'test-user-id',
+      modificadoEn: new Date(),
+      modificadoPor: 'test-user-id',
+      anuladoEn: new Date(),
+      anuladoPor: 'test-user-id'
+    });
+
+    // Ejecutar el controlador
+    await crearColor(mockRequest as Request, mockResponse as Response);
+    
+    // Verificar que se llamó a create con los valores por defecto correctos
+    expect(prismaMock.color.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        nombre: 'Verde',
+        codigoHex: null,
+        descripcion: null,
+        activo: true, // Siempre true independientemente de la solicitud
+        creadoPor: 'test-user-id'
+      })
+    });
+    
+    // Verificar respuesta
+    expect(mockResponse.status).toHaveBeenCalledWith(201);
+    expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
+      ok: true,
+      data: expect.objectContaining({
+        nombre: 'Verde',
+        activo: true
+      })
+    }));
   });
 
   it('debe devolver error si ya existe un color con el mismo nombre', async () => {
@@ -116,7 +168,6 @@ describe('Controlador de Colores - Crear Color', () => {
       context: {
         nombre: 'Rojo',
         descripcion: 'Color rojo estándar',
-        activo: true,
         codigoHex: '#FF0000',
         colorExistenteId: '550e8400-e29b-41d4-a716-446655440000'
       }

@@ -65,10 +65,10 @@ const router = Router();
  *           type: string
  *         description: Texto para filtrar por nombre
  *       - in: query
- *         name: estado
+ *         name: activo
  *         schema:
  *           type: boolean
- *         description: Filtrar por estado (activo/inactivo)
+ *         description: Filtrar por activo (true/false)
  *     responses:
  *       200:
  *         description: Lista paginada de sucursales
