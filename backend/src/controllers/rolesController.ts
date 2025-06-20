@@ -1,9 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
 
-import { success, fail } from '@/utils/response';
-import { logSuccess, logError } from '@/utils/audit';
 import roles from '@/routes/roles';
+import { logSuccess, logError } from '@/utils/audit';
+import { success, fail } from '@/utils/response';
 
 const prisma = new PrismaClient();
 
@@ -45,7 +45,7 @@ export async function listarRoles(req: Request, res: Response): Promise<void> {
       message: 'Error al listar roles',
       error: errorMessage,
       context: {
-        roles: roles,
+        roles,
       },
     });
   }

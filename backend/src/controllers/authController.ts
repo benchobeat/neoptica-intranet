@@ -1,14 +1,14 @@
 import crypto from 'crypto';
 
-
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
-import prisma from '@/utils/prisma';
 import { logSuccess, logError } from '@/utils/audit';
 import { sendMail } from '@/utils/mailer';
+import prisma from '@/utils/prisma';
 import { success, fail } from '@/utils/response';
+import { passwordFuerte } from '@/utils/validacions';
 
 /**
  * Solicita un restablecimiento de contraseña generando un token seguro
@@ -16,7 +16,7 @@ import { success, fail } from '@/utils/response';
  */
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
   const { email } = req.body;
-  let mensajeError = '';
+  const mensajeError = '';
 
   if (!email) {
     await logError({
@@ -28,8 +28,8 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       message: 'Solicitud de restablecimiento de contraseña fallida - Email es requerido',
       error: new Error('Email es requerido. 400'),
       context: {
-        email: null
-      }
+        email: null,
+      },
     });
     res.status(400).json(fail('Email es requerido'));
     return;
@@ -54,7 +54,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
         error: new Error('Email no encontrado'),
         context: {
           email,
-        }
+        },
       });
 
       // Mensaje genérico por seguridad
@@ -121,8 +121,8 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
         email,
         tokenGenerado: true,
         metodo: 'email',
-        expiracion: expiresAt.toISOString()
-      }
+        expiracion: expiresAt.toISOString(),
+      },
     });
 
     res.json(
@@ -135,7 +135,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorStack = error instanceof Error ? error.stack : undefined;
     const errorName = error instanceof Error ? error.name : 'ErrorDesconocido';
-    
+
     await logError({
       userId: null,
       ip: req.ip,
@@ -147,8 +147,8 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       context: {
         email,
         tipoError: errorName,
-        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined
-      }
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
+      },
     });
 
     // Mensaje genérico por seguridad
@@ -166,15 +166,15 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
  */
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   const { token, email, password } = req.body;
-  let mensajeError = '';
+  const mensajeError = '';
 
   if (!token || !email || !password) {
     const camposFaltantes = [
       !token ? 'token' : null,
       !email ? 'email' : null,
-      !password ? 'password' : null
+      !password ? 'password' : null,
     ].filter(Boolean);
-    
+
     await logError({
       userId: null,
       ip: req.ip,
@@ -184,8 +184,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       message: 'Faltan campos requeridos para restablecer la contraseña',
       error: new Error('Token, email y password son requeridos. 400'),
       context: {
-        camposFaltantes
-      }
+        camposFaltantes,
+      },
     });
     res.status(400).json(fail('Token, email y password son requeridos'));
     return;
@@ -207,8 +207,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         message: 'Intento de restablecimiento con email no registrado',
         error: new Error('Usuario no encontrado. 404'),
         context: {
-          email
-        }
+          email,
+        },
       });
       res.status(404).json(fail('Usuario no encontrado'));
       return;
@@ -240,8 +240,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         context: {
           email,
           razon: 'No se encontró un token activo o ha expirado',
-          tiempoRestante: '0 segundos'
-        }
+          tiempoRestante: '0 segundos',
+        },
       });
       res.status(400).json(fail('Token inválido o expirado'));
       return;
@@ -262,8 +262,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         context: {
           email,
           razon: 'El token proporcionado no coincide con ningún token válido',
-          longitudToken: token.length
-        }
+          longitudToken: token.length,
+        },
       });
       res.status(400).json(fail('Token inválido'));
       return;
@@ -275,9 +275,9 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         longitudMinima: password.length >= 8,
         contieneMayuscula: /[A-Z]/.test(password),
         contieneMinuscula: /[a-z]/.test(password),
-        contieneNumero: /\d/.test(password)
+        contieneNumero: /\d/.test(password),
       };
-      
+
       await logError({
         userId: usuario.id,
         ip: req.ip,
@@ -290,13 +290,17 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         context: {
           email,
           requisitosCumplidos,
-          longitud: password.length
-        }
+          longitud: password.length,
+        },
       });
-      
-      res.status(400).json(
-        fail('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número')
-      );
+
+      res
+        .status(400)
+        .json(
+          fail(
+            'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número'
+          )
+        );
       return;
     }
 
@@ -326,9 +330,9 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       longitudMinima: password.length >= 8,
       contieneMayuscula: /[A-Z]/.test(password),
       contieneMinuscula: /[a-z]/.test(password),
-      contieneNumero: /\d/.test(password)
+      contieneNumero: /\d/.test(password),
     };
-    
+
     await logSuccess({
       userId: usuario.id,
       ip: req.ip,
@@ -341,13 +345,16 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         email,
         metodo: 'email',
         longitudNuevaContrasena: password.length,
-        requisitosCumplidos
-      }
+        requisitosCumplidos,
+      },
     });
 
     res.json(success('Contraseña restablecida correctamente'));
   } catch (error) {
-    const errorObj = error instanceof Error ? error : new Error('Error desconocido durante el restablecimiento de contraseña');
+    const errorObj =
+      error instanceof Error
+        ? error
+        : new Error('Error desconocido durante el restablecimiento de contraseña');
     console.error('Error en reset password:', errorObj.message);
 
     await logError({
@@ -361,20 +368,12 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       context: {
         email,
         tipoError: errorObj.name,
-        stack: process.env.NODE_ENV === 'development' ? errorObj.stack : undefined
-      }
+        stack: process.env.NODE_ENV === 'development' ? errorObj.stack : undefined,
+      },
     });
 
     res.status(500).json(fail('Error al restablecer la contraseña'));
   }
-}
-
-/**
- * Valida que la contraseña cumpla con los requisitos mínimos de seguridad
- */
-function passwordFuerte(password: string): boolean {
-  // Mínimo 8 caracteres, una mayúscula, una minúscula y un número
-  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
@@ -382,11 +381,10 @@ export async function login(req: Request, res: Response): Promise<void> {
   let mensajeError = '';
 
   if (!email || !password) {
-    const camposFaltantes = [
-      !email ? 'email' : null,
-      !password ? 'password' : null
-    ].filter(Boolean);
-    
+    const camposFaltantes = [!email ? 'email' : null, !password ? 'password' : null].filter(
+      Boolean
+    );
+
     await logError({
       userId: null,
       ip: req.ip,
@@ -397,10 +395,10 @@ export async function login(req: Request, res: Response): Promise<void> {
       error: new Error('Email y password son requeridos. 400'),
       context: {
         camposFaltantes,
-        email: email || null
-      }
+        email: email || null,
+      },
     });
-    
+
     res.status(400).json(fail('Email y password son requeridos'));
     return;
   }
@@ -429,8 +427,8 @@ export async function login(req: Request, res: Response): Promise<void> {
         message: 'Intento de inicio de sesión fallido - Usuario no encontrado',
         error: new Error('Usuario no encontrado. 401'),
         context: {
-          email
-        }
+          email,
+        },
       });
       res.status(401).json(fail(mensajeError));
       return;
@@ -447,8 +445,8 @@ export async function login(req: Request, res: Response): Promise<void> {
         message: 'Intento de inicio de sesión fallido - Usuario inactivo',
         error: new Error('El usuario está inactivo. 403'),
         context: {
-          email: usuario.email
-        }
+          email: usuario.email,
+        },
       });
       res.status(403).json(fail('El usuario está inactivo. Contacte al administrador.'));
       return;
@@ -465,10 +463,12 @@ export async function login(req: Request, res: Response): Promise<void> {
         message: 'Intento de inicio de sesión fallido - Sin contraseña local',
         error: new Error('El usuario no tiene contraseña local configurada. 401'),
         context: {
-          email: usuario.email
-        }
+          email: usuario.email,
+        },
       });
-      res.status(401).json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
+      res
+        .status(401)
+        .json(fail('Usuario sin password local. Usa login social o recupera la cuenta.'));
       return;
     }
 
@@ -485,8 +485,8 @@ export async function login(req: Request, res: Response): Promise<void> {
         error: new Error('Credenciales inválidas. 401'),
         context: {
           email: usuario.email,
-          ultimoIntentoFallido: new Date().toISOString()
-        }
+          ultimoIntentoFallido: new Date().toISOString(),
+        },
       });
       mensajeError = 'Credenciales inválidas';
       res.status(401).json(fail(mensajeError));
@@ -533,16 +533,16 @@ export async function login(req: Request, res: Response): Promise<void> {
     // Actualizar el usuario (usar modificadoEn como referencia de último acceso)
     await prisma.usuario.update({
       where: { id: usuario.id },
-      data: { 
-        modificadoEn: new Date()
+      data: {
+        modificadoEn: new Date(),
       },
     });
 
     // Obtener roles del usuario para incluirlos en el log
-    const rolesUsuario = usuario.roles.map(ur => ({
+    const rolesUsuario = usuario.roles.map((ur) => ({
       id: ur.rol.id,
       nombre: ur.rol.nombre,
-      descripcion: ur.rol.descripcion
+      descripcion: ur.rol.descripcion,
     }));
 
     // Registrar login exitoso
@@ -567,9 +567,9 @@ export async function login(req: Request, res: Response): Promise<void> {
         roles: rolesUsuario,
         metadatos: {
           userAgent: req.headers['user-agent'],
-          contentType: req.headers['content-type']
-        }
-      }
+          contentType: req.headers['content-type'],
+        },
+      },
     });
 
     // La respuesta ya está siendo limpiada en el objeto de retorno
@@ -587,9 +587,10 @@ export async function login(req: Request, res: Response): Promise<void> {
       })
     );
   } catch (err) {
-    const error = err instanceof Error ? err : new Error('Error desconocido durante el inicio de sesión');
+    const error =
+      err instanceof Error ? err : new Error('Error desconocido durante el inicio de sesión');
     mensajeError = error.message;
-    
+
     await logError({
       userId: null,
       ip: req.ip,
@@ -599,10 +600,10 @@ export async function login(req: Request, res: Response): Promise<void> {
       message: 'Error durante el proceso de inicio de sesión',
       error,
       context: {
-        emailIntentado: email
-      }
+        emailIntentado: email,
+      },
     });
-    
+
     res.status(500).json(fail('Error interno del servidor al procesar el inicio de sesión'));
   }
 }

@@ -24,7 +24,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
     // Validación estricta del nombre
     if (!nombre || typeof nombre !== 'string') {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         module: 'crearSucursal',
@@ -32,14 +32,14 @@ export const crearSucursal = async (req: Request, res: Response) => {
         message: 'Error al crear la sucursal',
         error: 'El nombre es obligatorio y debe ser una cadena de texto. 400',
         context: {
-          nombre: nombre,
-          direccion: direccion,
-          latitud: latitud,
-          longitud: longitud,
-          telefono: telefono,
-          email: email,
-          estado: estado,
-        }
+          nombre,
+          direccion,
+          latitud,
+          longitud,
+          telefono,
+          email,
+          estado,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -52,7 +52,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
     const nombreLimpio = nombre.trim();
     if (nombreLimpio.length < 3 || nombreLimpio.length > 100) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         module: 'crearSucursal',
@@ -60,14 +60,14 @@ export const crearSucursal = async (req: Request, res: Response) => {
         message: 'Error al crear la sucursal',
         error: 'El nombre debe tener al menos 3 caracteres. 400',
         context: {
-          nombre: nombre,
-          direccion: direccion,
-          latitud: latitud,
-          longitud: longitud,
-          telefono: telefono,
-          email: email,
-          estado: estado,
-        }
+          nombre,
+          direccion,
+          latitud,
+          longitud,
+          telefono,
+          email,
+          estado,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -79,7 +79,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
     // Validar teléfono si se proporciona
     if (telefono && (typeof telefono !== 'string' || !/^\d{10}$/.test(telefono))) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         module: 'crearSucursal',
@@ -87,14 +87,14 @@ export const crearSucursal = async (req: Request, res: Response) => {
         message: 'Error al crear la sucursal',
         error: 'El teléfono debe tener 10 dígitos. 400',
         context: {
-          nombre: nombre,
-          direccion: direccion,
-          latitud: latitud,
-          longitud: longitud,
-          telefono: telefono,
-          email: email,
-          estado: estado,
-        }
+          nombre,
+          direccion,
+          latitud,
+          longitud,
+          telefono,
+          email,
+          estado,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -107,7 +107,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
     if (email) {
       if (typeof email !== 'string' || !/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
         logError({
-          userId: userId,
+          userId,
           ip: req.ip,
           entityType: 'sucursal',
           module: 'crearSucursal',
@@ -115,14 +115,14 @@ export const crearSucursal = async (req: Request, res: Response) => {
           message: 'Error al crear la sucursal',
           error: 'El email tiene formato inválido. 400',
           context: {
-            nombre: nombre,
-            direccion: direccion,
-            latitud: latitud,
-            longitud: longitud,
-            telefono: telefono,
-            email: email,
-            estado: estado,
-          }
+            nombre,
+            direccion,
+            latitud,
+            longitud,
+            telefono,
+            email,
+            estado,
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -138,7 +138,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
 
     if (latitud && (isNaN(latitudParsed) || latitudParsed < -90 || latitudParsed > 90)) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         module: 'crearSucursal',
@@ -146,14 +146,14 @@ export const crearSucursal = async (req: Request, res: Response) => {
         message: 'Error al crear la sucursal',
         error: 'La latitud debe ser un número entre -90 y 90. 400',
         context: {
-          nombre: nombre,
-          direccion: direccion,
-          latitud: latitud,
-          longitud: longitud,
-          telefono: telefono,
-          email: email,
-          estado: estado,
-        }
+          nombre,
+          direccion,
+          latitud,
+          longitud,
+          telefono,
+          email,
+          estado,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -164,7 +164,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
 
     if (longitud && (isNaN(longitudParsed) || longitudParsed < -180 || longitudParsed > 180)) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         module: 'crearSucursal',
@@ -172,14 +172,14 @@ export const crearSucursal = async (req: Request, res: Response) => {
         message: 'Error al crear la sucursal',
         error: 'La longitud debe ser un número entre -180 y 180. 400',
         context: {
-          nombre: nombre,
-          direccion: direccion,
-          latitud: latitud,
-          longitud: longitud,
-          telefono: telefono,
-          email: email,
-          estado: estado,
-        }
+          nombre,
+          direccion,
+          latitud,
+          longitud,
+          telefono,
+          email,
+          estado,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -201,7 +201,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
 
     if (sucursalExistente) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         module: 'crearSucursal',
@@ -209,15 +209,15 @@ export const crearSucursal = async (req: Request, res: Response) => {
         message: 'Error al crear la sucursal',
         error: 'Ya existe una sucursal con ese nombre.',
         context: {
-          nombre: nombre,
-          direccion: direccion,
-          latitud: latitud,
-          longitud: longitud,
-          telefono: telefono,
-          email: email,
-          estado: estado,
+          nombre,
+          direccion,
+          latitud,
+          longitud,
+          telefono,
+          email,
+          estado,
           error: 'Ya existe una sucursal con ese nombre.',
-        }
+        },
       });
       return res.status(409).json({
         ok: false,
@@ -240,7 +240,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
 
       if (emailExistente) {
         logError({
-          userId: userId,
+          userId,
           ip: req.ip,
           entityType: 'sucursal',
           module: 'crearSucursal',
@@ -248,14 +248,14 @@ export const crearSucursal = async (req: Request, res: Response) => {
           message: 'Error al crear la sucursal',
           error: 'Ya existe una sucursal con ese email. 409',
           context: {
-            nombre: nombre,
-            direccion: direccion,
-            latitud: latitud,
-            longitud: longitud,
-            telefono: telefono,
-            email: email,
-            estado: estado,
-          }
+            nombre,
+            direccion,
+            latitud,
+            longitud,
+            telefono,
+            email,
+            estado,
+          },
         });
         return res.status(409).json({
           ok: false,
@@ -282,7 +282,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
 
     // Registrar éxito de creación
     await logSuccess({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: nuevaSucursal.id,
@@ -296,8 +296,8 @@ export const crearSucursal = async (req: Request, res: Response) => {
         telefono: nuevaSucursal.telefono,
         estado: nuevaSucursal.estado,
         latitud: nuevaSucursal.latitud,
-        longitud: nuevaSucursal.longitud
-      }
+        longitud: nuevaSucursal.longitud,
+      },
     });
 
     return res.status(201).json({
@@ -317,15 +317,15 @@ export const crearSucursal = async (req: Request, res: Response) => {
       module: 'crearSucursal',
       action: 'error_crear_sucursal',
       message: 'Error al crear sucursal',
-      error: error,
+      error,
       context: {
         datosSolicitud: {
           nombre: req.body.nombre,
           email: req.body.email,
         },
         error: errorMessage,
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     return res.status(500).json({
@@ -349,9 +349,8 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 10;
   const searchText = (req.query.searchText as string) || '';
-  
-  try {
 
+  try {
     // Calcular offset para la paginación
     const skip = (page - 1) * pageSize;
 
@@ -390,7 +389,7 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
 
     // Registrar éxito de listado paginado
     await logSuccess({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       module: 'listarSucursalesPaginadas',
@@ -403,9 +402,9 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
         tamanoPagina: pageSize,
         parametrosBusqueda: {
           searchText: searchText || 'No aplica',
-          estado: req.query.estado !== undefined ? req.query.estado : 'No filtrado'
-        }
-      }
+          estado: req.query.estado !== undefined ? req.query.estado : 'No filtrado',
+        },
+      },
     });
 
     return res.status(200).json({
@@ -424,23 +423,25 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
     // Registrar error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     await logError({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       module: 'listarSucursalesPaginadas',
       action: 'error_listar_sucursales_paginadas',
       message: 'Error al listar sucursales paginadas',
-      error: error,
+      error,
       context: {
         paginaSolicitada: page,
         tamanoPagina: pageSize,
         parametrosBusqueda: {
           searchText: searchText || 'No aplica',
-          estado: req.query.estado !== undefined ? req.query.estado : 'No filtrado'
+          estado: req.query.estado !== undefined ? req.query.estado : 'No filtrado',
         },
         error: errorMessage,
-        ...(process.env.NODE_ENV === 'development' && error instanceof Error ? { stack: error.stack } : {})
-      }
+        ...(process.env.NODE_ENV === 'development' && error instanceof Error
+          ? { stack: error.stack }
+          : {}),
+      },
     });
 
     return res.status(500).json({
@@ -482,7 +483,7 @@ export const listarSucursales = async (req: Request, res: Response) => {
 
     // Registrar éxito de listado
     await logSuccess({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       module: 'listarSucursales',
@@ -492,10 +493,10 @@ export const listarSucursales = async (req: Request, res: Response) => {
         total: sucursales.length,
         filtrosAplicados: {
           estado: req.query.estado !== undefined ? req.query.estado : null,
-          soloActivas: true
+          soloActivas: true,
         },
-        ordenamiento: 'nombre (ascendente)'
-      }
+        ordenamiento: 'nombre (ascendente)',
+      },
     });
 
     return res.status(200).json({
@@ -509,27 +510,29 @@ export const listarSucursales = async (req: Request, res: Response) => {
     // Registrar error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     await logError({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       module: 'listarSucursales',
       action: 'error_listar_sucursales',
       message: 'Error al listar sucursales',
-      error: error,
+      error,
       context: {
         filtrosAplicados: {
           estado: req.query.estado !== undefined ? req.query.estado : null,
-          soloActivas: true
+          soloActivas: true,
         },
         error: errorMessage,
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     return res.status(500).json({
       ok: false,
       data: null,
-      error: 'Error al listar sucursales: ' + (error instanceof Error ? error.message : 'Error desconocido'),
+      error:
+        'Error al listar sucursales: ' +
+        (error instanceof Error ? error.message : 'Error desconocido'),
     });
   }
 };
@@ -569,7 +572,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
     // Verificar si se encontró la sucursal
     if (!sucursal) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         module: 'obtenerSucursalPorId',
@@ -577,8 +580,8 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
         message: 'Error al obtener la sucursal',
         error: 'Sucursal no encontrada. 404',
         context: {
-          id: id,
-        }
+          id,
+        },
       });
       return res.status(404).json({
         ok: false,
@@ -589,7 +592,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
 
     // Registrar éxito de consulta
     await logSuccess({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
@@ -601,8 +604,8 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
         nombre: sucursal.nombre,
         estado: sucursal.estado,
         anulada: sucursal.anuladoEn !== null,
-        ultimaActualizacion: sucursal.modificadoEn || sucursal.creadoEn
-      }
+        ultimaActualizacion: sucursal.modificadoEn || sucursal.creadoEn,
+      },
     });
 
     return res.status(200).json({
@@ -616,21 +619,21 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
     // Registrar error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     await logError({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
       module: 'obtenerSucursalPorId',
       action: 'error_obtener_sucursal',
       message: 'Error al obtener sucursal',
-      error: error,
+      error,
       context: {
         idSolicitado: id,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
         codigoError: (error as any).code || 'NO_CODE',
         error: errorMessage,
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     // Manejo detallado de errores
@@ -642,7 +645,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
       error.code === 'P2023'
     ) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         entityId: id,
@@ -655,8 +658,8 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
           tipoError: error instanceof Error ? error.name : 'Error desconocido',
           codigoError: (error as any).code || 'NO_CODE',
           error: errorMessage,
-          ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-        }
+          ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -666,7 +669,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
     }
 
     logError({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
@@ -679,8 +682,8 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
         codigoError: (error as any).code || 'NO_CODE',
         error: errorMessage,
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     return res.status(500).json({
@@ -709,7 +712,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         entityId: id,
@@ -719,7 +722,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
         error: 'ID inválido. 400',
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -738,7 +741,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
 
     if (!sucursalExistente) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         entityId: id,
@@ -748,7 +751,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
         error: 'Sucursal no encontrada. 404',
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(404).json({
         ok: false,
@@ -768,7 +771,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     if (nombre !== undefined) {
       if (!nombre || typeof nombre !== 'string') {
         logError({
-          userId: userId,
+          userId,
           ip: req.ip,
           entityType: 'sucursal',
           entityId: id,
@@ -777,15 +780,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           message: 'Error al actualizar la sucursal',
           error: 'El nombre debe ser una cadena de texto válida. 400',
           context: {
-            nombre: nombre,
-            latitud: latitud,
-            longitud: longitud,
-            telefono: telefono,
-            direccion: direccion,
-            email: email,
-            estado: estado,
+            nombre,
+            latitud,
+            longitud,
+            telefono,
+            direccion,
+            email,
+            estado,
             idSolicitado: id,
-          }
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -799,7 +802,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
       // Validar longitud
       if (nombreLimpio.length < 3 || nombreLimpio.length > 100) {
         logError({
-          userId: userId,
+          userId,
           ip: req.ip,
           entityType: 'sucursal',
           entityId: id,
@@ -808,15 +811,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           message: 'Error al actualizar la sucursal',
           error: 'El nombre debe tener al menos 3 caracteres. 400',
           context: {
-            nombre: nombre,
-            latitud: latitud,
-            longitud: longitud,
-            telefono: telefono,
-            direccion: direccion,
-            email: email,
-            estado: estado,
+            nombre,
+            latitud,
+            longitud,
+            telefono,
+            direccion,
+            email,
+            estado,
             idSolicitado: id,
-          }
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -841,7 +844,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
 
       if (nombreDuplicado) {
         logError({
-          userId: userId,
+          userId,
           ip: req.ip,
           entityType: 'sucursal',
           entityId: id,
@@ -850,15 +853,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           message: 'Error al actualizar la sucursal',
           error: 'Ya existe otra sucursal con ese nombre. 409',
           context: {
-            nombre: nombre,
-            latitud: latitud,
-            longitud: longitud,
-            telefono: telefono,
-            direccion: direccion,
-            email: email,
-            estado: estado,
+            nombre,
+            latitud,
+            longitud,
+            telefono,
+            direccion,
+            email,
+            estado,
             idSolicitado: id,
-          }
+          },
         });
         return res.status(409).json({
           ok: false,
@@ -880,7 +883,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
       if (telefono !== null) {
         if (typeof telefono !== 'string' || !/^\d{10}$/.test(telefono)) {
           logError({
-            userId: userId,
+            userId,
             ip: req.ip,
             entityType: 'sucursal',
             entityId: id,
@@ -889,15 +892,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             message: 'Error al actualizar la sucursal',
             error: 'El teléfono debe tener 10 dígitos. 400',
             context: {
-              nombre: nombre,
-              latitud: latitud,
-              longitud: longitud,
-              telefono: telefono,
-              direccion: direccion,
-              email: email,
-              estado: estado,
+              nombre,
+              latitud,
+              longitud,
+              telefono,
+              direccion,
+              email,
+              estado,
               idSolicitado: id,
-            }
+            },
           });
           return res.status(400).json({
             ok: false,
@@ -916,7 +919,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
       if (email !== null) {
         if (typeof email !== 'string' || !/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
           logError({
-            userId: userId,
+            userId,
             ip: req.ip,
             entityType: 'sucursal',
             entityId: id,
@@ -925,15 +928,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             message: 'Error al actualizar la sucursal',
             error: 'El email tiene formato inválido. 400',
             context: {
-              nombre: nombre,
-              latitud: latitud,
-              longitud: longitud,
-              telefono: telefono,
-              direccion: direccion,
-              email: email,
-              estado: estado,
+              nombre,
+              latitud,
+              longitud,
+              telefono,
+              direccion,
+              email,
+              estado,
               idSolicitado: id,
-            }
+            },
           });
           return res.status(400).json({
             ok: false,
@@ -958,7 +961,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
 
         if (emailDuplicado) {
           logError({
-            userId: userId,
+            userId,
             ip: req.ip,
             entityType: 'sucursal',
             entityId: id,
@@ -967,15 +970,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             message: 'Error al actualizar la sucursal',
             error: 'Ya existe otra sucursal con ese email. 409',
             context: {
-              nombre: nombre,
-              latitud: latitud,
-              longitud: longitud,
-              telefono: telefono,
-              direccion: direccion,
-              email: email,
-              estado: estado,
+              nombre,
+              latitud,
+              longitud,
+              telefono,
+              direccion,
+              email,
+              estado,
               idSolicitado: id,
-            }
+            },
           });
           return res.status(409).json({
             ok: false,
@@ -996,7 +999,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
         const latitudParsed = parseFloat(latitud);
         if (isNaN(latitudParsed) || latitudParsed < -90 || latitudParsed > 90) {
           logError({
-            userId: userId,
+            userId,
             ip: req.ip,
             entityType: 'sucursal',
             entityId: id,
@@ -1005,15 +1008,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             message: 'Error al actualizar la sucursal',
             error: 'La latitud debe ser un número entre -90 y 90. 400',
             context: {
-              nombre: nombre,
-              latitud: latitud,
-              longitud: longitud,
-              telefono: telefono,
-              direccion: direccion,
-              email: email,
-              estado: estado,
+              nombre,
+              latitud,
+              longitud,
+              telefono,
+              direccion,
+              email,
+              estado,
               idSolicitado: id,
-            }
+            },
           });
           return res.status(400).json({
             ok: false,
@@ -1032,7 +1035,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
         const longitudParsed = parseFloat(longitud);
         if (isNaN(longitudParsed) || longitudParsed < -180 || longitudParsed > 180) {
           logError({
-            userId: userId,
+            userId,
             ip: req.ip,
             entityType: 'sucursal',
             entityId: id,
@@ -1041,15 +1044,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             message: 'Error al actualizar la sucursal',
             error: 'La longitud debe ser un número entre -180 y 180. 400',
             context: {
-              nombre: nombre,
-              latitud: latitud,
-              longitud: longitud,
-              telefono: telefono,
-              direccion: direccion,
-              email: email,
-              estado: estado,
+              nombre,
+              latitud,
+              longitud,
+              telefono,
+              direccion,
+              email,
+              estado,
               idSolicitado: id,
-            }
+            },
           });
           return res.status(400).json({
             ok: false,
@@ -1071,7 +1074,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     // Si no hay datos para actualizar, retornar error
     if (Object.keys(datosActualizados).length === 0) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         entityId: id,
@@ -1080,15 +1083,15 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
         message: 'Error al actualizar la sucursal',
         error: 'No se proporcionaron datos para actualizar. 400',
         context: {
-          nombre: nombre,
-          latitud: latitud,
-          longitud: longitud,
-          telefono: telefono,
-          direccion: direccion,
-          email: email,
-          estado: estado,
+          nombre,
+          latitud,
+          longitud,
+          telefono,
+          direccion,
+          email,
+          estado,
           idSolicitado: id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -1105,14 +1108,17 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
 
     // Registrar éxito de actualización
     const cambios = Object.keys(datosActualizados)
-      .filter(key => key !== 'modificadoPor' && key !== 'modificadoEn')
-      .reduce((obj, key) => {
-        obj[key] = datosActualizados[key];
-        return obj;
-      }, {} as Record<string, any>);
+      .filter((key) => key !== 'modificadoPor' && key !== 'modificadoEn')
+      .reduce(
+        (obj, key) => {
+          obj[key] = datosActualizados[key];
+          return obj;
+        },
+        {} as Record<string, any>
+      );
 
     await logSuccess({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
@@ -1120,7 +1126,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
       action: 'actualizar_sucursal_exitoso',
       message: 'Sucursal actualizada exitosamente',
       details: {
-        cambios: cambios,
+        cambios,
         estadoAnterior: {
           nombre: sucursalExistente.nombre,
           direccion: sucursalExistente.direccion,
@@ -1139,7 +1145,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           latitud: sucursalActualizada.latitud,
           longitud: sucursalActualizada.longitud,
         },
-      }
+      },
     });
 
     return res.status(200).json({
@@ -1153,29 +1159,29 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
 
     // Registrar error
     await logError({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
       module: 'actualizarSucursal',
       action: 'error_actualizar_sucursal',
       message: 'Error al actualizar la sucursal',
-      error: error,
+      error,
       context: {
         idSucursal: id,
         datosSolicitados: req.body,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
         codigoError: (error as any).code || 'NO_CODE',
         error: errorMessage,
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     // Manejo detallado de errores
     if (error instanceof Error) {
       if ('code' in error && error.code === 'P2025') {
         logError({
-          userId: userId,
+          userId,
           ip: req.ip,
           entityType: 'sucursal',
           entityId: id,
@@ -1189,8 +1195,8 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             tipoError: error instanceof Error ? error.name : 'Error desconocido',
             codigoError: (error as any).code || 'NO_CODE',
             error: errorMessage,
-            ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-          }
+            ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+          },
         });
         return res.status(404).json({
           ok: false,
@@ -1201,7 +1207,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
 
       if ('code' in error && error.code === 'P2002') {
         logError({
-          userId: userId,
+          userId,
           ip: req.ip,
           entityType: 'sucursal',
           entityId: id,
@@ -1215,8 +1221,8 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             tipoError: error instanceof Error ? error.name : 'Error desconocido',
             codigoError: (error as any).code || 'NO_CODE',
             error: errorMessage,
-            ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-          }
+            ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+          },
         });
         return res.status(409).json({
           ok: false,
@@ -1227,7 +1233,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     }
 
     logError({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
@@ -1241,8 +1247,8 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
         codigoError: (error as any).code || 'NO_CODE',
         error: errorMessage,
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
     return res.status(500).json({
       ok: false,
@@ -1271,7 +1277,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         entityId: id,
@@ -1281,7 +1287,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
         error: 'ID inválido. 400',
         context: {
           idSucursal: id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -1300,7 +1306,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
 
     if (!sucursalExistente) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         entityId: id,
@@ -1310,8 +1316,8 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
         error: 'Sucursal no encontrada. 404',
         context: {
           idSucursal: id,
-        }
-      });      
+        },
+      });
       return res.status(404).json({
         ok: false,
         data: null,
@@ -1329,7 +1335,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
 
     if (citasAsociadas > 0) {
       logError({
-        userId: userId,
+        userId,
         ip: req.ip,
         entityType: 'sucursal',
         entityId: id,
@@ -1339,8 +1345,8 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
         error: 'No se puede eliminar la sucursal porque tiene citas asociadas. 409',
         context: {
           idSucursal: id,
-          citasAsociadas: citasAsociadas,
-        }
+          citasAsociadas,
+        },
       });
       return res.status(409).json({
         ok: false,
@@ -1361,7 +1367,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
 
     // Registrar éxito de eliminación
     await logSuccess({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
@@ -1382,7 +1388,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
           anuladoEn: new Date().toISOString(),
           anuladoPor: userId,
         },
-      }
+      },
     });
 
     return res.status(200).json({
@@ -1396,28 +1402,28 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
 
     // Registrar error
     await logError({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
       module: 'eliminarSucursal',
       action: 'error_eliminar_sucursal',
       message: 'Error al eliminar la sucursal',
-      error: error,
+      error,
       context: {
         idSucursal: id,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
         codigoError: (error as any).code || 'NO_CODE',
         error: errorMessage,
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     // Manejo detallado de errores
     if (error instanceof Error) {
       if ('code' in error && error.code === 'P2025') {
         logError({
-          userId: userId,
+          userId,
           ip: req.ip,
           entityType: 'sucursal',
           entityId: id,
@@ -1427,7 +1433,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
           error: 'Sucursal no encontrada. 404',
           context: {
             idSucursal: id,
-          }
+          },
         });
         return res.status(404).json({
           ok: false,
@@ -1438,7 +1444,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     }
 
     logError({
-      userId: userId,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       entityId: id,
@@ -1451,8 +1457,8 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
         codigoError: (error as any).code || 'NO_CODE',
         error: errorMessage,
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
     return res.status(500).json({
       ok: false,

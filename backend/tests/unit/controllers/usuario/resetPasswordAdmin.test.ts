@@ -1,18 +1,17 @@
 import { Request, Response } from 'express';
-import { resetPasswordAdmin } from '@/controllers/usuarioController';
-import { registrarAuditoria } from '@/utils/audit';
+import { resetPasswordAdmin } from '../../../../src/controllers/usuarioController';
 import bcrypt from 'bcrypt';
 import { mockRequest, mockResponse } from '@/../tests/unit/__fixtures__/usuarioFixtures';
 
 // Mock modules first to avoid hoisting issues
 const mockFindUnique = jest.fn();
 const mockUpdate = jest.fn();
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
+const mockLogSuccess = jest.fn().mockResolvedValue(undefined);
+const mockLogError = jest.fn().mockResolvedValue(undefined);
 const mockHash = jest.fn().mockResolvedValue('hashedPassword123');
-const mockIsSystemUser = jest.fn().mockResolvedValue(false);
 
 // Mock the modules
-jest.mock('@/utils/prisma', () => ({
+jest.mock('../../../../src/utils/prisma', () => ({
   __esModule: true,
   default: {
     usuario: {
@@ -22,20 +21,17 @@ jest.mock('@/utils/prisma', () => ({
   },
 }));
 
-jest.mock('@/utils/audit', () => ({
-  registrarAuditoria: (...args: any[]) => mockRegistrarAuditoria(...args),
+jest.mock('../../../../src/utils/audit', () => ({
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+  logError: (...args: any[]) => mockLogError(...args),
 }));
 
 jest.mock('bcrypt', () => ({
   hash: (...args: any[]) => mockHash(...args),
 }));
 
-jest.mock('@/utils/system', () => ({
-  isSystemUser: (id: string) => mockIsSystemUser(id),
-}));
-
 // Import after mocks to ensure mocks are in place
-import prisma from '@/utils/prisma';
+import prisma from '../../../../src/utils/prisma';
 
 // Extend Express Request type to include our custom properties
 interface AuthenticatedRequest extends Request {
@@ -104,9 +100,7 @@ describe('resetPasswordAdmin', () => {
     // Reset all mocks
     mockFindUnique.mockReset();
     mockUpdate.mockReset();
-    mockRegistrarAuditoria.mockReset();
     mockHash.mockReset();
-    mockIsSystemUser.mockReset();
     
     // Setup default mocks
     mockFindUnique.mockResolvedValue({
@@ -173,14 +167,18 @@ describe('resetPasswordAdmin', () => {
     );
     
     // Verificar que se registró la auditoría
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
-      usuarioId: adminUser.id,
-      accion: 'reset_password_admin',
-      descripcion: expect.stringContaining('restableció la contraseña'),
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: adminUser.id,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: targetUserId,
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      entityId: targetUserId,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_exitoso',
+      message: `Contraseña restablecida para el usuario ${mockUser.email}`,
+      details: expect.objectContaining({
+        accion: 'reset_password_admin',
+        realizadoPor: adminUser.id
+      })
     });
   });
 
@@ -205,6 +203,22 @@ describe('resetPasswordAdmin', () => {
     // Verificar que no se intentó buscar ni actualizar el usuario
     expect(mockFindUnique).not.toHaveBeenCalled();
     expect(mockUpdate).not.toHaveBeenCalled();
+    
+    // Verificar que se registró el error en la auditoría
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: regularUser.id,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: targetUserId,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_fallido',
+      message: 'Solo admin puede restablecer contraseñas',
+      error: expect.any(Error),
+      context: expect.objectContaining({
+        accion: 'validacion_permisos',
+        rolRequerido: 'admin'
+      })
+    });
   });
 
   it('debe manejar el caso cuando el usuario objetivo no existe', async () => {
@@ -220,6 +234,22 @@ describe('resetPasswordAdmin', () => {
         error: 'Usuario no encontrado',
       })
     );
+    
+    // Verificar que se registró el error en la auditoría
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: adminUser.id,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: targetUserId,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_fallido',
+      message: 'Usuario no encontrado',
+      error: expect.any(Error),
+      context: expect.objectContaining({
+        accion: 'buscar_usuario',
+        usuarioBuscado: targetUserId
+      })
+    });
   });
 
   it('debe validar la fortaleza de la nueva contraseña', async () => {
@@ -240,6 +270,22 @@ describe('resetPasswordAdmin', () => {
     // Verificar que no se intentó buscar ni actualizar el usuario
     expect(mockFindUnique).not.toHaveBeenCalled();
     expect(mockUpdate).not.toHaveBeenCalled();
+    
+    // Verificar que se registró el error en la auditoría
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: adminUser.id,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: targetUserId,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_fallido',
+      message: 'Validación de contraseña fallida. 400',
+      error: expect.any(Error),
+      context: expect.objectContaining({
+        accion: 'validacion_password',
+        requisitos: expect.any(Array)
+      })
+    });
   });
 
   it('debe manejar errores inesperados', async () => {
@@ -254,9 +300,25 @@ describe('resetPasswordAdmin', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         ok: false,
-        error: 'Error inesperado',
+        error: 'Error al restablecer la contraseña',
       })
     );
+    
+    // Verificar que se registró el error en la auditoría
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: adminUser.id,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: targetUserId,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_error',
+      message: 'Error al restablecer contraseña',
+      error: expect.any(Error),
+      context: expect.objectContaining({
+        accion: 'reset_password_admin',
+        error: expect.any(String)
+      })
+    });
   });
 
   it('debe aceptar tanto password_nuevo como newPassword en el body', async () => {
@@ -277,10 +339,16 @@ describe('resetPasswordAdmin', () => {
     // Verificar que se usó newPassword para el hash
     expect(mockHash).toHaveBeenCalledWith('otraContraseña123', 10);
     
-    // Verificar que no se actualizó la contraseña
-    expect(mockUpdate).not.toHaveBeenCalledWith({
+    // Verificar que se actualizó la contraseña
+    expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: targetUserId },
-      data: { password: 'newHashedPassword123' },
+      data: { password: hashedPassword },
     });
+    
+    // Verificar que se registró en la auditoría
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'reset_password_admin_exitoso',
+      entityId: targetUserId
+    }));
   });
 });

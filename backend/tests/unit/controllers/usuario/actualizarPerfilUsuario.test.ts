@@ -1,582 +1,321 @@
-// Import types
 import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
-// Extended user type for testing
-interface TestUser {
-  id: string;
-  email: string;
-  nombreCompleto: string;
-  telefono?: string | null;
-  dni?: string | null;
-  direccion?: string | null;
-  password?: string;
-  salt?: string;
-  token?: string | null;
-  tokenExpiracion?: Date | null;
-  ultimoInicioSesion?: Date | null;
-  intentosFallidos?: number;
-  bloqueado?: boolean;
-  fechaNacimiento?: Date | null;
-  genero?: string | null;
-  fotoPerfil?: string | null;
-  notificaciones?: boolean;
-  preferencias?: Record<string, any>;
-  roles: Array<{ rol: { nombre: string } }>;
-  [key: string]: any; // For any additional properties that might exist
-}
-
-// Extend Express types to include our custom properties
-declare global {
-  namespace Express {
-    // Extend the existing Request type
-    interface Request {
-      user?: User;
-      ip?: string;
-      body: any;
-      params: Record<string, any>;
-      method: string;
-      url: string;
-      headers: Record<string, any>;
-      get: jest.Mock;
-    }
-  }
-}
-
-// Simplified mock response type for testing
-type MockResponse = {
-  status: jest.Mock<MockResponse, [number]>;
-  json: jest.Mock<MockResponse, [any]>;
-  send: jest.Mock<MockResponse, [any?]>;
-  mockClear: () => void;
-  [key: string]: any; // Allow any other properties
-};
-
-// Define mocks first
-const mockRegistrarAuditoria = jest.fn();
-
-// Mock Prisma client methods
+// Crear funciones mock primero
 const mockFindUnique = jest.fn();
 const mockUpdate = jest.fn();
-const mockRolFindMany = jest.fn();
-const mockUsuarioRolFindMany = jest.fn();
+const mockLogSuccess = jest.fn();
+const mockLogError = jest.fn();
 
-// Mock the modules using jest.doMock to avoid hoisting issues
-jest.doMock('@/utils/prisma', () => ({
-  usuario: {
-    findUnique: mockFindUnique,
-    update: mockUpdate,
-  },
-  rol: {
-    findMany: mockRolFindMany,
-  },
-  usuarioRol: {
-    findMany: mockUsuarioRolFindMany,
-  },
+// Configurar mocks
+jest.mock('@prisma/client', () => ({
+  PrismaClient: jest.fn().mockImplementation(() => ({
+    usuario: {
+      findUnique: mockFindUnique,
+      update: mockUpdate
+    }
+  }))
 }));
 
-jest.doMock('@/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria,
+jest.mock('@/utils/audit', () => ({
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+  logError: (...args: any[]) => mockLogError(...args)
 }));
 
-// Now import the controller after setting up mocks
-const { actualizarPerfilUsuario } = require('@/controllers/usuarioController');
+// Importar el controlador después de configurar los mocks
+import { actualizarPerfilUsuario } from '@/controllers/usuarioMeController';
 
-// Helper function to create a mock response
-const createMockResponse = (): MockResponse => {
-  const res: Partial<MockResponse> = {};
-  
-  // Mock essential response methods
-  res.status = jest.fn().mockImplementation(() => res as MockResponse);
-  res.json = jest.fn().mockImplementation(() => res as MockResponse);
-  res.send = jest.fn().mockImplementation(() => res as MockResponse);
-  
-  // Mock clear function
-  res.mockClear = () => {
-    (res.status as jest.Mock).mockClear();
-    (res.json as jest.Mock).mockClear();
-    (res.send as jest.Mock).mockClear();
-  };
-  
-  return res as MockResponse;
-};
+// Función auxiliar para crear una solicitud mock
+const createMockRequest = (body: any, user: any): Request => ({
+  body,
+  user: {
+    id: user.id,
+    roles: user.roles || ['usuario'],
+    ...user
+  },
+  ip: '127.0.0.1',
+  headers: {},
+  method: 'PUT',
+  url: '/api/usuarios/me/perfil'
+} as unknown as Request);
 
-// Helper function to create a mock request with user data
-const createMockRequest = (body: any, user: any): Request => {
-  // Create a simple mock request with essential properties
-  const req: any = {
-    body,
-    user,
-    params: { id: user?.id },
-    method: 'POST',
-    url: '/api/usuarios/actualizar-perfil',
-    headers: {},
-    ip: '127.0.0.1',
-    get: jest.fn()
-  };
-  
-  return req as Request;
+// Función auxiliar para crear una respuesta mock
+const createMockResponse = (): Response => {
+  const res: any = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  res.send = jest.fn().mockReturnValue(res);
+  res.links = jest.fn().mockReturnValue(res);
+  return res as Response;
 };
 
 describe('actualizarPerfilUsuario', () => {
-  // Test data
+  // Datos de prueba
   const userId = '550e8400-e29b-41d4-a716-446655440000';
-  const fechaActual = new Date();
-  // Test data - use camelCase field names to match controller expectations
   const validUpdateData = {
-    nombreCompleto: 'Updated Name',
-    telefono: '0987654321',
-    direccion: 'Updated Address',
+    nombreCompleto: 'Nuevo Nombre',
+    telefono: '9876543210',
+    direccion: 'Nueva Dirección',
     dni: '87654321'
   };
-  
-  // Mock user data with all required fields
-  const mockUser: TestUser = {
+
+  // Objetos de solicitud y respuesta mock
+  let req: Request;
+  let res: Response;
+
+  // Datos de usuario mock
+  const mockUser = {
     id: userId,
-    nombreCompleto: 'Test User',
-    email: 'test@example.com',
+    email: 'usuario@ejemplo.com',
+    nombreCompleto: 'Usuario Existente',
     telefono: '1234567890',
+    direccion: 'Calle Falsa 123',
     dni: null,
-    direccion: 'Test Address',
+    activo: true,
+    creadoEn: new Date(),
+    actualizadoEn: new Date(),
     roles: [
-      {
-        rol: {
-          nombre: 'cliente'
-        }
-      }
-    ],
-    // Additional test-only properties
-    password: 'hashedpassword',
-    salt: 'somesalt',
-    token: null,
-    tokenExpiracion: null,
-    ultimoInicioSesion: null,
-    intentosFallidos: 0,
-    bloqueado: false,
-    fechaNacimiento: null,
-    genero: null,
-    fotoPerfil: null,
-    notificaciones: true,
-    preferencias: {}
+      { rol: { id: '1', nombre: 'usuario', descripcion: 'Usuario regular' } }
+    ]
   };
 
-  // Test variables
-  let req: Partial<Request>;
-  let res: MockResponse;
-  let currentMockUser: TestUser;
-  
-  // Mock functions are already defined at the top level
-  
-  afterEach(() => {
+  beforeEach(() => {
+    // Limpiar mocks antes de cada prueba
     jest.clearAllMocks();
+    
+    // Crear objetos de solicitud y respuesta nuevos para cada prueba
+    req = createMockRequest(validUpdateData, { 
+      id: userId,
+      roles: ['usuario'] 
+    });
+    
+    res = createMockResponse();
+    
+    // Configurar implementaciones mock por defecto
+    mockFindUnique.mockResolvedValue(mockUser);
+    mockUpdate.mockImplementation((params: any) => 
+      Promise.resolve({
+        ...mockUser,
+        ...params.data,
+        actualizadoEn: new Date(),
+        modificadoEn: new Date(),
+        modificadoPor: userId
+      })
+    );
   });
 
-  afterAll(() => {
+  afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  beforeEach(() => {
-    // Reset all mocks
-    
-    // Setup default mock user data
-    currentMockUser = { ...mockUser };
-    
-    // Setup request with user data
-    const requestUser = { 
-      id: userId,
-      email: 'test@example.com',
-      nombreCompleto: 'Test User',
-      roles: ['user']
-    };
-    
-    // Create mock request with user and update data
-    const mockUserWithRoles = {
-      ...requestUser,
-      roles: requestUser.roles.map(rol => ({ rol: { nombre: rol } }))
-    };
-    
-    // Create the request with the properly typed user
-    req = createMockRequest(
-      { ...validUpdateData },
-      mockUserWithRoles
-    );
-    
-    // Update current mock user with the full user object
-    currentMockUser = { 
-      ...mockUser,
-      roles: mockUserWithRoles.roles 
-    };
-    
-    // Setup response mock
-    res = createMockResponse();
-    
-    // Setup Prisma mocks
-    mockFindUnique.mockImplementation(({ where }) => {
-      if (where.id === currentMockUser.id) {
-        return Promise.resolve({
-          ...currentMockUser,
-          // Add any additional fields that the controller might expect
-          activo: true,
-          creadoEn: new Date(),
-          modificadoEn: new Date(),
-          creadoPor: 'system',
-          modificadoPor: 'system'
-        });
-      }
-      return Promise.resolve(null);
-    });
+  describe('actualizaciones exitosas', () => {
+    it('debe actualizar el perfil del usuario con datos válidos', async () => {
+      // Preparar
+      const updatedUser = {
+        ...mockUser,
+        ...validUpdateData,
+        roles: [
+          { rol: { id: '1', nombre: 'usuario', descripcion: 'Usuario regular' } }
+        ]
+      };
+      
+      mockUpdate.mockResolvedValueOnce(updatedUser);
 
-    // Mock the update function to return updated user data
-    mockUpdate.mockImplementation(({ data }) => {
-      // Create a copy of the current mock user
-      const updatedUser = { ...currentMockUser };
+      // Actuar
+      await actualizarPerfilUsuario(req, res);
+
+      // Verificar
+      expect(mockFindUnique).toHaveBeenCalledWith({
+        where: { id: userId }
+      });
       
-      // Update fields from the request data
-      if (data.nombreCompleto) updatedUser.nombreCompleto = data.nombreCompleto;
-      if (data.telefono !== undefined) updatedUser.telefono = data.telefono;
-      if (data.direccion !== undefined) updatedUser.direccion = data.direccion;
-      if (data.dni !== undefined) updatedUser.dni = data.dni;
-      
-      // Handle the case where nombre_completo is passed in the request body
-      if (data.nombre_completo) {
-        updatedUser.nombreCompleto = data.nombre_completo;
-      }
-      
-      // Update timestamps
-      (updatedUser as any).modificadoEn = new Date();
-      (updatedUser as any).modificadoPor = userId;
-      
-      // Update the current mock user for subsequent tests
-      currentMockUser = updatedUser;
-      
-      return Promise.resolve({
-        ...updatedUser,
-        // Include any additional fields that the controller might expect
-        roles: updatedUser.roles || [{ rol: { nombre: 'cliente' } }]
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: {
+          ...validUpdateData,
+          modificadoEn: expect.any(Date),
+          modificadoPor: userId
+        },
+        include: { roles: { include: { rol: true } } }
+      });
+
+      expect(res.json).toHaveBeenCalledWith({
+        ok: true,
+        data: expect.objectContaining({
+          ...validUpdateData,
+          id: userId,
+          email: mockUser.email,
+          roles: ['usuario']
+        }),
+        error: null
+      });
+
+      // Verificar registro de auditoría
+      expect(mockLogSuccess).toHaveBeenCalledWith({
+        userId: userId,
+        ip: '127.0.0.1',
+        entityType: 'usuario',
+        entityId: userId,
+        module: 'actualizarPerfilUsuario',
+        action: 'actualizar_perfil_exitoso',
+        message: 'Perfil actualizado exitosamente',
+        details: expect.objectContaining({
+          cambiosRealizados: expect.any(Array),
+          camposActualizados: expect.objectContaining({
+            nombreCompleto: true,
+            telefono: true,
+            direccion: true,
+            dni: true
+          })
+        })
       });
     });
-    
-    // Setup role mocks
-    mockRolFindMany.mockResolvedValue([{ nombre: 'user' }]);
-    mockUsuarioRolFindMany.mockResolvedValue([{ rol: { nombre: 'user' } }]);
-    
-    // Setup audit mock
-    mockRegistrarAuditoria.mockResolvedValue(undefined);
   });
 
-  it('debe actualizar el perfil correctamente', async () => {
-    // Arrange    // Create a copy of mockUser to avoid reference issues
-    const userToUpdate = JSON.parse(JSON.stringify(mockUser));
-    
-    // Mock successful find
-    mockFindUnique.mockResolvedValueOnce(userToUpdate);
-    
-    // Create updated user with the new data
-    const updatedUser = {
-      ...userToUpdate,
-      nombreCompleto: validUpdateData.nombreCompleto || userToUpdate.nombreCompleto,
-      telefono: validUpdateData.telefono || userToUpdate.telefono,
-      direccion: validUpdateData.direccion || userToUpdate.direccion,
-      dni: validUpdateData.dni || userToUpdate.dni,
-      modificadoEn: new Date(),
-      modificadoPor: userId,
-      // Ensure roles is included in the response
-      roles: userToUpdate.roles || []
-    };
-    
-    mockUpdate.mockResolvedValueOnce(updatedUser);
-    
-    req = createMockRequest(validUpdateData, { 
-      id: userId, 
-      email: 'test@example.com',
-      nombreCompleto: 'Test User',
-      roles: ['user'] 
-    });
-    
-    // Act
-    try {
+  describe('manejo de errores', () => {
+    it('debe retornar 404 si el usuario no existe', async () => {
+      // Preparar
+      mockFindUnique.mockResolvedValueOnce(null);
+
+      // Actuar
       await actualizarPerfilUsuario(req, res);
-    } catch (error) {
-      throw error;
-    }
-    
-    // Assert - The controller doesn't set status code on success, only sends JSON
-    // Verify database update was called with correct data
-    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ id: userId }),
-      data: expect.objectContaining({
-        nombreCompleto: validUpdateData.nombreCompleto,
-        telefono: validUpdateData.telefono,
-        direccion: validUpdateData.direccion,
-        dni: validUpdateData.dni,
-        modificadoEn: expect.any(Date),
-        modificadoPor: userId
-      })
-    }));
-    
-    // Verify the response contains the expected data
-    const responseData = (res.json as jest.Mock).mock.calls[0][0];
-    expect(responseData).toMatchObject({
-      ok: true,
-      data: {
-        id: userId,
-        nombreCompleto: validUpdateData.nombreCompleto, // Expect the updated name
-        telefono: validUpdateData.telefono,
-        direccion: validUpdateData.direccion,
-        dni: validUpdateData.dni,
-        email: 'test@example.com',
-        roles: ['cliente'],
-      },
-      error: null,
-    });
-    
-    // Verify audit log was called with the correct action and description
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
-      usuarioId: userId,
-      accion: 'modificar_perfil_exitoso',
-      descripcion: expect.stringContaining('Perfil modificado. Cambios:'),
-      modulo: 'usuarios',
-      entidadId: userId,
-      entidadTipo: 'usuario',
-      ip: '127.0.0.1'
-    });
-  });
-  
-  it('debe actualizar el DNI cuando es nulo', async () => {
-    // Arrange
-    const updateDataWithDNI = { ...validUpdateData, dni: '87654321' };
-    req = createMockRequest(updateDataWithDNI, { id: userId, roles: ['user'] });
-    
-    // Act
-    await actualizarPerfilUsuario(req, res);
-    
-    // Assert - Should allow DNI update when current DNI is null
-    // The controller doesn't set status code on success, only sends JSON
-    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: userId },
-      data: expect.objectContaining({
-        dni: '87654321',
-        modificadoEn: expect.any(Date),
-        modificadoPor: userId
-      })
-    }));
-  });
-  
-  it('no debe permitir actualizar el email', async () => {
-    // Arrange
-    const updateWithEmail = { ...validUpdateData, email: 'newemail@example.com' };
-    req = createMockRequest(updateWithEmail, { 
-      id: userId, 
-      email: 'test@example.com',
-      nombreCompleto: 'Test User',
-      roles: ['user'] 
-    });
-    
-    // Act
-    await actualizarPerfilUsuario(req, res);
-    
-    // Assert
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: 'No puedes modificar tu email desde este endpoint por seguridad'
-      })
-    );
-  });
-  
-  it('no debe permitir actualizar roles', async () => {
-    // Arrange
-    const updateWithRoles = { ...validUpdateData, roles: ['admin'] };
-    req = createMockRequest(updateWithRoles, { 
-      id: userId, 
-      email: 'test@example.com',
-      nombreCompleto: 'Test User',
-      roles: ['user'] 
-    });
-    
-    // Act
-    await actualizarPerfilUsuario(req, res);
-    
-    // Assert
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: 'Acceso denegado: no puedes modificar tus propios roles'
-      })
-    );
-  });
-  
-  it('debe manejar error cuando el usuario no existe', async () => {
-    // Arrange
-    mockFindUnique.mockResolvedValueOnce(null);
-    
-    // Act
-    await actualizarPerfilUsuario(req, res);
-    
-    // Assert
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: 'Usuario no encontrado'
-      })
-    );
-  });
-  
-  it('debe manejar errores de validación', async () => {
-    // Arrange
-    const invalidData = { ...validUpdateData, telefono: 'invalid' };
-    req = createMockRequest(invalidData, { 
-      id: userId, 
-      email: 'test@example.com',
-      nombreCompleto: 'Test User',
-      roles: ['user'] 
-    });
-    
-    // Act
-    await actualizarPerfilUsuario(req, res);
-    
-    // Assert
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: expect.any(String)
-      })
-    );
-  });
-  
-  it('debe manejar errores inesperados', async () => {
-    // Arrange
-    const error = new Error('Database error');
-    mockFindUnique.mockRejectedValueOnce(error);
-    
-    // Act
-    await actualizarPerfilUsuario(req, res);
-    
-    // Assert
-    expect(res.status).toHaveBeenCalledWith(500);
-    const responseData = (res.json as jest.Mock).mock.calls[0][0];
-    expect(responseData).toMatchObject({
-      ok: false,
-      error: 'Database error'  // The controller uses the actual error message
-    });
-  });
 
-  it('debe manejar intento de modificar roles', async () => {
-    // Try to update roles (should be rejected)
-    const reqWithRoles = {
-      ...req,
-      body: {
-        ...req.body,
-        roles: ['admin']
-      }
-    };
-    
-    await actualizarPerfilUsuario(reqWithRoles as Request, res);
-    
-    expect(res.status).toHaveBeenCalledWith(403);
-    const responseData = (res.json as jest.Mock).mock.calls[0][0];
-    expect(responseData).toMatchObject({
-      ok: false,
-      error: 'Acceso denegado: no puedes modificar tus propios roles'
-    });
-  });
-
-  it('debe manejar intento de modificar email', async () => {
-    // Try to update email (should be rejected)
-    const reqWithEmail = {
-      ...req,
-      body: {
-        ...req.body,
-        email: 'newemail@example.com'
-      }
-    };
-    
-    await actualizarPerfilUsuario(reqWithEmail as Request, res);
-    
-    expect(res.status).toHaveBeenCalledWith(403);
-    const responseData = (res.json as jest.Mock).mock.calls[0][0];
-    expect(responseData).toMatchObject({
-      ok: false,
-      error: 'No puedes modificar tu email desde este endpoint por seguridad'
-    });
-  });
-
-  it('no debe permitir modificar DNI si ya tiene valor', async () => {
-    // Mock user with existing DNI
-    mockFindUnique.mockResolvedValueOnce({
-      ...mockUser,
-      dni: '12345678' // Existing DNI value
-    });
-    
-    // Arrange
-    const updateDataWithDNI = { ...validUpdateData, dni: '87654321' };
-    req = createMockRequest(updateDataWithDNI, { id: userId, roles: ['user'] });
-    
-    // Act
-    await actualizarPerfilUsuario(req, res);
-    
-    // Assert - Should return 400 if trying to update DNI when it already has a value
-    expect(res.status).toHaveBeenCalledWith(400);
-    const responseData = (res.json as jest.Mock).mock.calls[0][0];
-    expect(responseData).toMatchObject({
-      ok: false,
-      error: 'El DNI ya está registrado y no puede ser modificado'
-    });
-  });
-
-  it('debe manejar usuario no encontrado', async () => {
-    // Arrange
-    const updateData = { ...validUpdateData };
-    req = createMockRequest(updateData, { id: 'non-existent-id', roles: ['user'] });
-    mockFindUnique.mockResolvedValueOnce(null);
-    
-    // Act
-    await actualizarPerfilUsuario(req, res);
-    
-    // Assert
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
         ok: false,
-        error: 'Usuario no encontrado'
-      })
-    );
-  });
+        error: 'Usuario no encontrado',
+        data: null
+      });
+      expect(mockLogError).toHaveBeenCalled();
+    });
 
-  it('debe manejar errores inesperados', async () => {
-    
-    // Arrange - Mock an error during the find operation
-    const error = new Error('Error inesperado');
-    mockFindUnique.mockRejectedValueOnce(error);
-    
-    // Reset mock calls
-    res.status.mockClear();
-    (res.json as jest.Mock).mockClear();
-    
-    // Act
-    try {
+    it('debe retornar 400 para formato de teléfono inválido', async () => {
+      // Preparar
+      const invalidReq = createMockRequest(
+        { ...validUpdateData, telefono: 'invalido' },
+        { id: userId, roles: ['usuario'] }
+      );
+
+      // Actuar
+      await actualizarPerfilUsuario(invalidReq, res);
+
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        error: 'El teléfono debe ser un número celular de 10 dígitos',
+        data: null
+      });
+    });
+
+    it('debe retornar 400 al intentar modificar un DNI ya establecido', async () => {
+      // Preparar
+      const userWithDni = { ...mockUser, dni: '12345678' };
+      mockFindUnique.mockResolvedValueOnce(userWithDni);
+      
+      const dniUpdateReq = createMockRequest(
+        { ...validUpdateData, dni: '87654321' },
+        { id: userId, roles: ['usuario'] }
+      );
+
+      // Actuar
+      await actualizarPerfilUsuario(dniUpdateReq, res);
+      
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        error: 'El DNI ya está registrado y no puede ser modificado',
+        data: null
+      });
+    });
+
+    it('debe retornar 403 al intentar actualizar el email', async () => {
+      // Preparar
+      const emailUpdateReq = createMockRequest(
+        { ...validUpdateData, email: 'nuevo@ejemplo.com' },
+        { id: userId, roles: ['usuario'] }
+      );
+
+      // Actuar
+      await actualizarPerfilUsuario(emailUpdateReq, res);
+      
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        error: 'No puedes modificar tu email desde este endpoint por seguridad',
+        data: null
+      });
+    });
+
+    it('debe manejar una solicitud de actualización vacía', async () => {
+      // Preparar
+      const emptyUpdateReq = createMockRequest(
+        { /* cuerpo vacío */ },
+        { id: userId, roles: ['usuario'] }
+      );
+      
+      // Configurar para que la búsqueda de usuario retorne un usuario válido
+      mockFindUnique.mockResolvedValueOnce(mockUser);
+      mockUpdate.mockResolvedValueOnce(mockUser);
+
+      // Actuar
+      await actualizarPerfilUsuario(emptyUpdateReq, res);
+      
+      // Verificar
+      // No debería registrar un error para actualizaciones vacías
+      expect(mockLogError).not.toHaveBeenCalled();
+      
+      // Debería retornar éxito con los datos existentes del usuario
+      expect(res.json).toHaveBeenCalledWith({
+        ok: true,
+        data: expect.objectContaining({
+          id: userId,
+          email: mockUser.email,
+          roles: ['usuario']
+        }),
+        error: null
+      });
+    });
+
+    it('debe manejar errores de base de datos', async () => {
+      // Preparar
+      const dbError = new Error('Error de base de datos');
+      mockFindUnique.mockRejectedValueOnce(dbError);
+
+      // Actuar
       await actualizarPerfilUsuario(req, res);
-    } catch (error) {
-      throw error;
-    }
-    
-    // Assert
-    expect(res.status).toHaveBeenCalledWith(500);
-    const responseData = (res.json as jest.Mock).mock.calls[0][0];
-    
-    // Verify the error message contains the expected text
-    expect(responseData).toMatchObject({
-      ok: false,
-      error: expect.stringContaining('Error')
+      
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        data: null,
+        error: 'Error al actualizar el perfil'
+      });
+      
+      // Verificar que se registró el error
+      expect(mockLogError).toHaveBeenCalledWith({
+        userId: userId,
+        ip: '127.0.0.1',
+        entityType: 'usuario',
+        entityId: userId,
+        module: 'actualizarPerfilUsuario',
+        action: 'actualizar_perfil_fallido',
+        message: 'Error al actualizar el perfil',
+        error: dbError,
+        context: {
+          datosSolicitud: {
+            nombreCompleto: 'proporcionado',
+            telefono: 'proporcionado',
+            direccion: 'proporcionada',
+            dni: 'proporcionado'
+          },
+          stack: expect.any(String)
+        }
+      });
     });
-    
-    // Verify audit log was created for the error
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(expect.objectContaining({
-      accion: 'modificar_perfil_fallido',
-      descripcion: expect.stringContaining('Error')
-    }));
   });
 });

@@ -12,6 +12,56 @@ const router = Router();
  *   name: Auditoría
  *   description: Gestión y consulta de registros de auditoría
  */
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     LogAuditoria:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           description: ID único del registro de auditoría
+ *         usuarioId:
+ *           type: string
+ *           format: uuid
+ *           description: ID del usuario que realizó la acción
+ *         accion:
+ *           type: string
+ *           description: Tipo de acción realizada (crear, listar, actualizar, eliminar, etc.)
+ *         descripcion:
+ *           type: string
+ *           description: Descripción detallada de la acción
+ *         fecha:
+ *           type: string
+ *           format: date-time
+ *           description: Fecha y hora de la acción
+ *         ip:
+ *           type: string
+ *           description: Dirección IP desde donde se realizó la acción
+ *         entidadTipo:
+ *           type: string
+ *           description: Tipo de entidad afectada
+ *         entidadId:
+ *           type: string
+ *           format: uuid
+ *           description: ID de la entidad afectada
+ *         modulo:
+ *           type: string
+ *           description: Módulo al que pertenece la acción
+ *         usuario:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *             nombre_completo:
+ *               type: string
+ *             email:
+ *               type: string
+ *               format: email
+ */
 
 /**
  * @swagger
@@ -337,56 +387,5 @@ router.get(
   requireRole('admin'),
   auditoriaController.filtrarAuditoriaPorUsuario
 );
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     LogAuditoria:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *           description: ID único del registro de auditoría
- *         usuarioId:
- *           type: string
- *           format: uuid
- *           description: ID del usuario que realizó la acción
- *         accion:
- *           type: string
- *           description: Tipo de acción realizada (crear, listar, actualizar, eliminar, etc.)
- *         descripcion:
- *           type: string
- *           description: Descripción detallada de la acción
- *         fecha:
- *           type: string
- *           format: date-time
- *           description: Fecha y hora de la acción
- *         ip:
- *           type: string
- *           description: Dirección IP desde donde se realizó la acción
- *         entidadTipo:
- *           type: string
- *           description: Tipo de entidad afectada
- *         entidadId:
- *           type: string
- *           format: uuid
- *           description: ID de la entidad afectada
- *         modulo:
- *           type: string
- *           description: Módulo al que pertenece la acción
- *         usuario:
- *           type: object
- *           properties:
- *             id:
- *               type: string
- *               format: uuid
- *             nombre_completo:
- *               type: string
- *             email:
- *               type: string
- *               format: email
- */
 
 export default router;

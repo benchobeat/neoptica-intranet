@@ -102,6 +102,7 @@ model CuentaContable {
   nombre         String   @db.VarChar(100)
   tipo           String   @db.VarChar(20)
   descripcion    String?
+  orden          Int?     @default(0)
   cuentaPadreId  String?  @map("cuenta_padre_id") @db.Uuid
   erpId          Int?     @map("erp_id")
   erpTipo        String?  @map("erp_tipo") @db.VarChar(30)
@@ -687,6 +688,42 @@ model Pedido {
   @@map("pedido")
 }
 
+model Categoria {
+  // ID
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Campos normales
+  nombre        String    @db.VarChar(100)
+  descripcion   String?
+  tipoCategoria String?   @map("tipo_categoria") @db.VarChar(30) // LENTE, ARMAZON, ACCESORIO, SOLUCION
+  iconoUrl      String?   @map("icono_url") @db.VarChar(255)
+  orden         Int?      @default(0)
+  activo        Boolean?  @default(true)
+  erpId         Int?      @map("erp_id")
+  erpTipo       String?   @map("erp_tipo") @db.VarChar(30)
+
+  // Jerarquía
+  padreId       String?   @map("padre_id") @db.Uuid
+  padre         Categoria? @relation("CategoriaHija", fields: [padreId], references: [id])
+  subcategorias Categoria[] @relation("CategoriaHija")
+
+  // Relaciones
+  productos     Producto[]
+
+  // Campos de control
+  creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
+  creadoPor     String?   @map("creado_por") @db.Uuid
+  modificadoEn  DateTime? @map("modificado_en") @db.Timestamptz(6)
+  modificadoPor String?   @map("modificado_por") @db.Uuid
+  anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPor    String?   @map("anulado_por") @db.Uuid
+
+  @@unique([nombre], name: "categoria_nombre_key")
+  @@index([padreId], name: "categoria_padre_id_idx")
+  @@index([tipoCategoria], name: "categoria_tipo_idx")
+  @@map("categoria")
+}
+
 model Producto {
   // ID
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -695,11 +732,9 @@ model Producto {
   nombre          String   @db.VarChar(255)
   descripcion     String?
   precio          Decimal  @db.Decimal(10, 2)
-  categoria       String?  @db.VarChar(50)
   imagenUrl       String?  @map("imagen_url")
+  categoriaId     String?   @map("categoria_id") @db.Uuid
   modelo3dUrl     String?  @map("modelo_3d_url")
-  tipoProducto    String?  @map("tipo_producto") @db.VarChar(30)   // LENTE, ARMAZON, ACCESORIO, SOLUCION
-  tipoLente       String?  @map("tipo_lente") @db.VarChar(50)      // Monofocal, Bifocal, Progresivo
   materialLente   String?  @map("material_lente") @db.VarChar(50)  // Policarbonato, Trivex, etc.
   tratamientoLente String? @map("tratamiento_lente") @db.VarChar(100) // Antirreflejante, Blue Light, etc.
   graduacionEsfera Decimal? @map("graduacion_esfera") @db.Decimal(4, 2)  // -10.00 a +10.00
@@ -724,6 +759,7 @@ model Producto {
   inventarios       Inventario[]
   transferenciasStock TransferenciaStock[]
   cupones           ProductoCupon[]
+  categoria       Categoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   // Campos de control
   creadoEn      DateTime? @map("creado_en") @default(now()) @db.Timestamptz(6)
@@ -733,6 +769,10 @@ model Producto {
   anuladoEn     DateTime? @map("anulado_en") @db.Timestamptz(6)
   anuladoPor    String?   @map("anulado_por") @db.Uuid
 
+  @@index([nombre])
+  @@index([marcaId])
+  @@index([colorId])
+  @@index([categoriaId])
   @@map("producto")
 }
 

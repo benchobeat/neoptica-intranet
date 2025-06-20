@@ -4,8 +4,15 @@ Bienvenido al repositorio oficial de **Neóptica Intranet**, la plataforma de ge
 
 ## 🚀 Últimas Mejoras
 
-### Mejoras en la Experiencia de Usuario (Junio 2025)
+### Sistema de Auditoría Mejorado (Junio 2025)
 
+- **Registro Estructurado**: Auditoría basada en JSON para mayor flexibilidad y consistencia
+- **Helpers de Auditoría**: Nuevos helpers `logSuccess` y `logError` para un registro estandarizado
+- **Trazabilidad Mejorada**: Mayor detalle en los registros de auditoría con contexto completo
+- **Búsqueda Avanzada**: Capacidad de búsqueda dentro de los campos JSON de auditoría
+- **Migración Automática**: Herramientas para migrar registros antiguos al nuevo formato
+
+### Mejoras en la Experiencia de Usuario (Junio 2025)
 - **Formularios con Pestañas**: Reorganización de formularios complejos en pestañas lógicas para mejor usabilidad
 - **Indicadores de Carga Mejorados**: Feedback visual durante operaciones asíncronas
 - **Validación en Tiempo Real**: Validación mejorada con mensajes claros y precisos
@@ -19,6 +26,296 @@ Bienvenido al repositorio oficial de **Neóptica Intranet**, la plataforma de ge
 - **Feedback visual** en acciones importantes
 - **Carga optimizada** para mejor rendimiento
 - **Accesibilidad** mejorada siguiendo estándares WCAG
+
+## 🧪 Testing y Calidad de Código
+
+Hemos implementado un conjunto robusto de utilidades y patrones de prueba para garantizar la calidad y confiabilidad del código. Nuestro enfoque de pruebas incluye:
+
+### Estructura de Pruebas
+
+```
+backend/
+  tests/
+    unit/                    # Pruebas unitarias
+      __mocks__/            # Mocks globales
+        prisma.ts           # Mock de Prisma Client
+      controllers/          # Pruebas de controladores
+        color/
+        marca/
+        producto/
+      test-utils.ts        # Utilidades de prueba
+```
+
+### Utilidades de Prueba
+
+#### `test-utils.ts`
+Proporciona funciones auxiliares para pruebas:
+
+- `createMockRequest()`: Crea un objeto de solicitud HTTP simulada
+- `createMockResponse()`: Crea un objeto de respuesta HTTP simulado
+- `resetMocks()`: Restablece todos los mocks entre pruebas
+- `mockRegistrarAuditoria`: Mock para la función de registro de auditoría
+
+#### Mock de Prisma
+
+El archivo `__mocks__/prisma.ts` proporciona un mock completo de Prisma Client con las siguientes características:
+
+- Mock de todas las operaciones CRUD básicas
+- Soporte para transacciones
+- Funciones de utilidad para resetear el estado entre pruebas
+
+### Convenciones de Nombrado
+
+- Archivos de prueba: `[nombre].test.ts` (ej: `producto.controller.test.ts`)
+- Describe blocks: `describe('Módulo/Entidad', () => { ... })`
+- Test cases: 
+  - `it('debería [comportamiento esperado] cuando [condición]', ...)`
+  - `it('debería manejar [caso de error] correctamente', ...)`
+
+### Estructura de Pruebas Típica
+
+```typescript
+describe('Módulo Producto', () => {
+  // Fixtures de prueba
+  const mockProducto = { id: '1', nombre: 'Producto Test', precio: 100 };
+  const mockUsuario = { id: 'user-123', email: 'test@example.com' };
+
+  beforeEach(() => {
+    resetMocks();
+    // Configuración común para todas las pruebas
+    prismaMock.producto.findUnique.mockResolvedValue(null);
+  });
+
+  describe('crearProducto', () => {
+    it('debería crear un producto exitosamente', async () => {
+      // Configuración específica
+      prismaMock.producto.create.mockResolvedValue(mockProducto);
+      
+      // Ejecución
+      const req = createMockRequest({ 
+        body: { nombre: 'Producto Test', precio: 100 },
+        user: mockUsuario
+      });
+      const res = createMockResponse();
+
+      await crearProducto(req as Request, res as Response);
+
+      // Aserciones
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(prismaMock.producto.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          nombre: 'Producto Test',
+          creadoPor: mockUsuario.id
+        })
+      });
+      expect(mockRegistrarAuditoria).toHaveBeenCalled();
+    });
+  });
+});
+```
+
+### Patrones de Prueba Comunes
+
+1. **Pruebas de Éxito**: Verificar el flujo feliz
+2. **Pruebas de Validación**: Verificar validaciones de entrada
+3. **Pruebas de Error**: Verificar manejo de errores
+4. **Pruebas de Seguridad**: Verificar autorización
+5. **Pruebas de Auditoría**: Verificar registro de auditoría
+
+#### Ejemplo: Prueba de Error
+
+```typescript
+it('debería devolver 400 cuando faltan campos requeridos', async () => {
+  const req = createMockRequest({ body: {} });
+  const res = createMockResponse();
+
+  await crearProducto(req as Request, res as Response);
+
+  expect(res.status).toHaveBeenCalledWith(400);
+  expect(res.json).toHaveBeenCalledWith(
+    expect.objectContaining({
+      error: expect.stringContaining('validación')
+    })
+  );
+});
+```
+
+### Patrones de Prueba
+
+#### 1. Pruebas de Controladores
+
+Cada controlador sigue un patrón de prueba consistente:
+
+1. **Configuración de Mocks**: Configurar los mocks de Prisma y auditoría
+2. **Ejecución**: Llamar a la función del controlador con mocks
+3. **Aserciones**: Verificar el comportamiento esperado
+
+Ejemplo básico:
+
+```typescript
+describe('createProducto', () => {
+  beforeEach(() => {
+    resetMocks();
+    // Configurar mocks específicos para esta prueba
+    prismaMock.producto.create.mockResolvedValue(mockProducto);
+  });
+
+  it('debería crear un producto exitosamente', async () => {
+    const req = createMockRequest({ body: productoValido });
+    const res = createMockResponse();
+
+    await crearProducto(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(prismaMock.producto.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        nombre: productoValido.nombre,
+      })
+    });
+  });
+});
+```
+
+#### Pruebas de Auditoría
+
+Todas las operaciones CRUD registran auditorías. Las pruebas verifican:
+
+- Que se registra la auditoría correctamente
+- Que se incluyen los metadatos correctos (usuario, IP, acción)
+- Que los errores se manejan correctamente
+
+### Gestión de Datos de Prueba
+
+#### Fixtures
+
+Usamos fixtures para mantener los datos de prueba consistentes y reutilizables:
+
+```typescript
+// tests/fixtures/producto.fixture.ts
+export const productoFixture = {
+  valido: {
+    nombre: 'Lentes de Sol Premium',
+    precio: 199.99,
+    stock: 50,
+    colorId: 'color-123',
+    marcaId: 'marca-456'
+  },
+  invalido: {
+    // Falta el campo requerido 'nombre'
+    precio: 99.99
+  }
+};
+```
+
+#### Factories
+
+Para datos más complejos, usamos factories:
+
+```typescript
+// tests/factories/producto.factory.ts
+export function crearProductoFactory(overrides = {}) {
+  return {
+    nombre: 'Producto ' + Math.random().toString(36).substr(2, 9),
+    precio: Math.floor(Math.random() * 1000) + 100,
+    stock: Math.floor(Math.random() * 100),
+    colorId: 'color-' + Math.random().toString(36).substr(2, 5),
+    marcaId: 'marca-' + Math.random().toString(36).substr(2, 5),
+    ...overrides
+  };
+}
+```
+
+### Buenas Prácticas de Pruebas
+
+1. **Aislamiento**: Cada prueba debe ser independiente
+2. **Legibilidad**: Usar nombres descriptivos y agrupar pruebas relacionadas
+3. **Mantenibilidad**: Extraer lógica común a funciones auxiliares
+4. **Velocidad**: Usar mocks para dependencias externas
+5. **Consistencia**: Seguir la misma estructura en todas las pruebas
+
+### Ejemplo de Prueba Completa
+
+```typescript
+describe('actualizarProducto', () => {
+  const productoId = 'prod-123';
+  const actualizacion = { precio: 250 };
+  
+  beforeEach(() => {
+    resetMocks();
+    // Configurar mocks comunes
+    prismaMock.producto.update.mockResolvedValue({
+      id: productoId,
+      ...productoFixture.valido,
+      ...actualizacion,
+      actualizadoEn: new Date()
+    });
+  });
+
+  it('debería actualizar un producto existente', async () => {
+    const req = createMockRequest({
+      params: { id: productoId },
+      body: actualizacion,
+      user: { id: 'usuario-actualizador' }
+    });
+    const res = createMockResponse();
+
+    await actualizarProducto(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(prismaMock.producto.update).toHaveBeenCalledWith({
+      where: { id: productoId, anuladoEn: null },
+      data: expect.objectContaining(actualizacion)
+    });
+    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accion: 'ACTUALIZAR',
+        entidad: 'Producto',
+        entidadId: productoId,
+        usuarioId: 'usuario-actualizador'
+      })
+    );
+  });
+
+  it('debería manejar errores de base de datos', async () => {
+    const error = new Error('Error de conexión a BD');
+    prismaMock.producto.update.mockRejectedValue(error);
+
+    const req = createMockRequest({
+      params: { id: productoId },
+      body: actualizacion
+    });
+    const res = createMockResponse();
+
+    await actualizarProducto(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.stringContaining('Error al actualizar')
+      })
+    );
+  });
+});
+```
+
+### Cobertura de Pruebas
+
+- **Unitarias**: Pruebas individuales de funciones y componentes
+- **Integración**: Pruebas de flujos completos
+- **E2E**: Pruebas de extremo a extremo (en desarrollo)
+
+### Ejecutando las Pruebas
+
+```bash
+# Ejecutar todas las pruebas
+npm test
+
+# Ejecutar pruebas con cobertura
+npm run test:coverage
+
+# Ejecutar pruebas en modo watch
+npm run test:watch
+```
 
 ## Documentación Detallada
 

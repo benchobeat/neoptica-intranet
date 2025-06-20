@@ -1,272 +1,317 @@
-import { Request } from 'express';
-import { cambiarPassword } from '@/controllers/usuarioController';
+import { Request, Response } from 'express';
+import { cambiarPasswordUsuario } from '@/controllers/usuarioMeController';
 import prisma from '@/utils/prisma';
-import { registrarAuditoria } from '@/utils/audit';
+import { logSuccess, logError } from '@/utils/audit';
 import bcrypt from 'bcrypt';
 import { mockUsuarioAdmin, mockRequest, mockResponse } from '@/../tests/unit/__fixtures__/usuarioFixtures';
 
-// Create mock implementations
-const mockFindUnique = jest.fn();
-const mockUpdate = jest.fn();
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
-const mockCompare = jest.fn();
-const mockHash = jest.fn().mockResolvedValue('newHashedPassword123');
-
-// Helper function to match controller's response format
-const success = (message: string) => ({
-  ok: true,
-  data: message,
-  error: null
-});
-
-const fail = (message: string) => ({
-  ok: false,
-  data: null,
-  error: message
-});
-
-// Mock the modules
+// Mocks para las dependencias
 jest.mock('@/utils/prisma', () => ({
   __esModule: true,
   default: {
     usuario: {
-      findUnique: jest.fn((...args) => mockFindUnique(...args)),
-      update: jest.fn((...args) => mockUpdate(...args)),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
   },
 }));
 
-jest.mock('@/utils/audit', () => ({
-  registrarAuditoria: jest.fn((...args) => mockRegistrarAuditoria(...args)),
-}));
-
+// Mock para bcrypt
 jest.mock('bcrypt', () => ({
-  compare: jest.fn((...args) => mockCompare(...args)),
-  hash: jest.fn((...args) => mockHash(...args)),
+  compare: jest.fn(),
+  hash: jest.fn().mockResolvedValue('nuevoHashContraseña123'),
 }));
 
-describe('cambiarPassword', () => {
-  let req: any;
-  let res: any;
-  let next: jest.Mock;
-  
-  // Extend Express Request type for our tests
-  interface AuthenticatedRequest extends Request {
-    user: any;
-    ip: string;
-    [key: string]: any;
-  }
+// Mock para el módulo de auditoría
+jest.mock('@/utils/audit', () => ({
+  logSuccess: jest.fn().mockResolvedValue(undefined),
+  logError: jest.fn().mockResolvedValue(undefined),
+}));
 
-  const passwordData = {
-    actual: 'currentPassword123',
-    nueva: 'newSecurePassword123',
+// Tipos para los mocks
+const mockFindUnique = prisma.usuario.findUnique as jest.Mock;
+const mockUpdate = prisma.usuario.update as jest.Mock;
+const mockCompare = bcrypt.compare as jest.Mock;
+const mockHash = bcrypt.hash as jest.Mock;
+const mockLogSuccess = logSuccess as jest.Mock;
+const mockLogError = logError as jest.Mock;
+
+// Extender el tipo de Request para incluir el usuario autenticado
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    nombreCompleto: string;
+    email: string;
+    roles?: string[];
   };
+  ip: string; // Hacer ip requerida para coincidir con el tipo Request de Express
+}
 
-  beforeEach(() => {
-    // Reset mocks
-    jest.clearAllMocks();
-
-    // Mock response
-    res = mockResponse();
-    next = jest.fn();
-
-    // Mock request with user and body
-    const mockReq = mockRequest() as any;
-    req = {
-      ...mockReq,
-      params: { id: mockUsuarioAdmin.id },
-      body: {
-        actual: 'currentPassword123',
-        nueva: 'NewSecurePassword123!', // Must meet password strength requirements
-      },
-      user: { ...mockUsuarioAdmin, id: mockUsuarioAdmin.id },
-      ip: '127.0.0.1',
-    };
-
-    // Setup default mocks
-    mockFindUnique.mockResolvedValue({
-      id: mockUsuarioAdmin.id,
-      password: 'hashedCurrentPassword123',
-    });
-
-    mockCompare.mockResolvedValue(true);
-    mockHash.mockResolvedValue('newHashedPassword123');
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  afterAll(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('debe cambiar la contraseña correctamente', async () => {
-    // Mock successful password comparison
-    mockCompare.mockResolvedValueOnce(true);
-    
-    // Mock successful user lookup
-    mockFindUnique.mockResolvedValueOnce({
-      id: mockUsuarioAdmin.id,
-      password: 'hashedCurrentPassword123',
-    });
-
-    await cambiarPassword(req, res);
-
-    // Verify database query
-    expect(mockFindUnique).toHaveBeenCalledWith({
-      where: { id: mockUsuarioAdmin.id },
-    });
-
-    // Verify password comparison
-    expect(mockCompare).toHaveBeenCalledWith(
-      'currentPassword123',
-      'hashedCurrentPassword123'
-    );
-
-    // Verify database update
-    expect(mockUpdate).toHaveBeenCalledWith({
-      where: { id: mockUsuarioAdmin.id },
-      data: { password: 'newHashedPassword123' },
-    });
-
-    // Verify response
-    expect(res.json).toHaveBeenCalledWith(
-      success('Contraseña actualizada correctamente')
-    );
-
-    // Verify audit log
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith({
-      usuarioId: mockUsuarioAdmin.id,
-      accion: 'cambiar_password',
-      descripcion: 'El usuario cambió su contraseña.',
-      ip: '127.0.0.1',
-      entidadTipo: 'usuario',
-      entidadId: mockUsuarioAdmin.id,
-      modulo: 'usuarios',
-    });
-  });
-
-  it('no debe permitir cambiar la contraseña si la actual no coincide', async () => {
-    // Mock user lookup and incorrect password
-    mockFindUnique.mockResolvedValueOnce({
-      id: mockUsuarioAdmin.id,
-      password: 'hashedCurrentPassword123',
-    });
-    mockCompare.mockResolvedValueOnce(false);
-
-    await cambiarPassword(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith(
-      fail('El password actual es incorrecto')
-    );
-    
-    // Verify no update was made
-    expect(mockUpdate).not.toHaveBeenCalled();
-  });
-
-  it('no debe permitir cambiar la contraseña de otro usuario', async () => {
-    // User trying to change password of another user
-    req.user = {
-      id: 'other-user-id',
-      roles: ['vendedor'],
-    };
-
-    await cambiarPassword(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith(
-      fail('Solo puedes cambiar tu propia contraseña')
-    );
-    
-    // Verify no database calls were made
-    expect(mockFindUnique).not.toHaveBeenCalled();
-    expect(mockUpdate).not.toHaveBeenCalled();
-  });
-
-  it('debe manejar errores inesperados', async () => {
-    // Mock error
-    const error = new Error('Database error');
-    mockFindUnique.mockRejectedValueOnce(error);
-    
-    await cambiarPassword(req, res);
-    
-    // The controller should handle the error and return a 500 status
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: expect.any(String)
-      })
-    );
-  });
-
-  it('debe validar que se proporcionen ambos passwords', async () => {
-    // Missing required fields
-    const testReq = {
-      ...req,
-      body: {},
-    } as any;
-
-    await cambiarPassword(testReq, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(
-      fail('Se requieren el password actual y el nuevo')
-    );
-  });
-
-  it('debe validar la fortaleza de la nueva contraseña', async () => {
-    // Weak password (doesn't meet strength requirements)
-    const testReq = {
-      ...req,
-      body: {
-        actual: 'currentPassword123',
-        nueva: 'weak',
-      },
-    } as any;
-
-    await cambiarPassword(testReq, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(
-      fail(expect.stringContaining('El password nuevo debe ser fuerte'))
-    );
-  });
-
-  it('debe manejar usuario no encontrado', async () => {
-    // User not found
-    mockFindUnique.mockResolvedValueOnce(null);
-    
-    await cambiarPassword(req, res);
-    
-    // The controller returns 404 when user is not found
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: expect.any(String)
-      })
-    );
-  });
+describe('Controlador cambiarPasswordUsuario', () => {
+  let req: AuthenticatedRequest;
+  let res: Response;
   
-  it('debe manejar usuario sin password configurado', async () => {
-    // User without password set
-    mockFindUnique.mockResolvedValueOnce({
-      id: mockUsuarioAdmin.id,
-      password: null,
+  // Datos de prueba
+  const userId = 'usuario-123';
+  const passwordActual = 'miContraseñaActual123';
+  const passwordNuevo = 'nuevaContraseñaSegura123!';
+  const hashedPassword = '$2b$10$unV4LkKq9PbjHx5n5X5XeOcXvJZvW8XKzY9XcYvB7dC3dF5gH6jK7l';
+  const ip = '192.168.1.1';
+
+  // Configuración inicial antes de cada prueba
+  beforeEach(() => {
+    // Limpiar todos los mocks antes de cada prueba
+    jest.clearAllMocks();
+    
+    // Configurar mocks por defecto
+    mockFindUnique.mockResolvedValue({
+      id: userId,
+      password: hashedPassword,
     });
     
-    await cambiarPassword(req, res);
+    mockCompare.mockResolvedValue(true);
+    mockHash.mockResolvedValue('nuevoHashContraseña123');
     
-    // The controller should return a 400 status when user has no password
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
+    // Configurar request de prueba
+    req = {
+      body: {
+        passwordActual,
+        passwordNuevo,
+      },
+      user: { 
+        id: userId, 
+        nombreCompleto: 'Usuario de Prueba',
+        email: 'test@example.com',
+        roles: ['usuario'] 
+      },
+      ip,
+    } as AuthenticatedRequest;
+    
+    // Configurar response de prueba
+    res = mockResponse() as unknown as Response;
+  });
+
+  describe('Éxito', () => {
+    it('debe cambiar la contraseña correctamente cuando los datos son válidos', async () => {
+      // Actuar
+      await cambiarPasswordUsuario(req, res);
+
+      // Verificar
+      // 1. Se buscó el usuario en la base de datos
+      expect(mockFindUnique).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
+
+      // 2. Se comparó la contraseña actual
+      expect(mockCompare).toHaveBeenCalledWith(passwordActual, hashedPassword);
+
+      // 3. Se hasheó la nueva contraseña
+      expect(mockHash).toHaveBeenCalledWith(passwordNuevo, 10);
+
+      // 4. Se actualizó el usuario con la nueva contraseña
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: expect.objectContaining({
+          password: 'nuevoHashContraseña123',
+          modificadoEn: expect.any(Date),
+          modificadoPor: userId,
+        }),
+      });
+
+      // 5. Se registró el éxito en el log de auditoría
+      expect(mockLogSuccess).toHaveBeenCalledWith({
+        userId,
+        ip,
+        entityType: 'usuario',
+        entityId: userId,
+        module: 'cambiarPasswordUsuario',
+        action: 'cambiar_password_exitoso',
+        message: 'Contraseña actualizada correctamente',
+        details: expect.objectContaining({
+          accion: 'cambio_password',
+          realizadoPor: userId,
+          requiereReinicioSesion: true,
+        }),
+      });
+
+      // 6. Se envió la respuesta exitosa
+      expect(res.json).toHaveBeenCalledWith({
+        ok: true,
+        data: 'Contraseña actualizada correctamente',
+        error: null,
+      });
+    });
+  });
+
+  describe('Validaciones', () => {
+    it('debe retornar error 401 si el usuario no está autenticado', async () => {
+      // Preparar
+      req.user = undefined;
+
+      // Actuar
+      await cambiarPasswordUsuario(req, res);
+
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
         ok: false,
-        error: expect.stringContaining('password local')
-      })
-    );
+        data: null,
+        error: 'Usuario no autenticado',
+      });
+
+      // Verificar que se registró el error de auditoría
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'sistema',
+          module: 'cambiarPasswordUsuario',
+          action: 'cambiar_password_fallido',
+          message: 'Usuario no autenticado. 401',
+          entityType: 'usuario',
+          entityId: 'no-autenticado',
+          ip: expect.any(String),
+        })
+      );
+    });
+
+    it('debe retornar error 400 si faltan campos obligatorios', async () => {
+      // Preparar
+      req.body = {};
+
+      // Actuar
+      await cambiarPasswordUsuario(req, res);
+
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        data: null,
+        error: 'Se requieren el password actual y el nuevo',
+      });
+    });
+
+    it('debe retornar error 400 si la nueva contraseña no cumple con los requisitos', async () => {
+      // Preparar
+      req.body.passwordNuevo = 'debil';
+
+      // Actuar
+      await cambiarPasswordUsuario(req, res);
+
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        data: null,
+        error: expect.stringContaining('El password nuevo debe tener al menos 8 caracteres'),
+      });
+    });
+  });
+
+  describe('Manejo de errores', () => {
+    it('debe retornar error 404 si el usuario no existe', async () => {
+      // Preparar
+      mockFindUnique.mockResolvedValueOnce(null);
+
+      // Actuar
+      await cambiarPasswordUsuario(req, res);
+
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        data: null,
+        error: 'Usuario no encontrado',
+      });
+
+      // Verificar que se registró el error de auditoría
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          module: 'cambiarPasswordUsuario',
+          action: 'cambiar_password_fallido',
+          message: 'Usuario no encontrado',
+          entityType: 'usuario',
+          entityId: userId,
+        })
+      );
+    });
+
+    it('debe retornar error 400 si la contraseña actual es incorrecta', async () => {
+      // Preparar
+      mockCompare.mockResolvedValueOnce(false);
+
+      // Actuar
+      await cambiarPasswordUsuario(req, res);
+
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        data: null,
+        error: 'El password actual es incorrecto',
+      });
+
+      // Verificar que se registró el error de auditoría
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          module: 'cambiarPasswordUsuario',
+          action: 'cambiar_password_fallido',
+          message: 'El password actual es incorrecto',
+          entityType: 'usuario',
+          entityId: userId,
+        })
+      );
+    });
+
+    it('debe retornar error 400 si el usuario no tiene contraseña configurada', async () => {
+      // Preparar
+      mockFindUnique.mockResolvedValueOnce({
+        id: userId,
+        password: null,
+      });
+
+      // Actuar
+      await cambiarPasswordUsuario(req, res);
+
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        data: null,
+        error: 'El usuario no tiene password local configurado',
+      });
+    });
+
+    it('debe manejar errores inesperados y retornar 500', async () => {
+      // Preparar
+      const error = new Error('Error inesperado');
+      mockFindUnique.mockRejectedValueOnce(error);
+
+      // Actuar
+      await cambiarPasswordUsuario(req, res);
+
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: false,
+        data: null,
+        error: 'Error al cambiar la contraseña',
+      });
+
+      // Verificar que se registró el error de auditoría
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          module: 'cambiarPasswordUsuario',
+          action: 'cambiar_password_error',
+          message: expect.stringContaining('Error al cambiar la contraseña'),
+          entityType: 'usuario',
+          entityId: userId,
+          error: expect.any(Error),
+          context: expect.any(Object),
+          ip: expect.any(String)
+        })
+      );
+    });
   });
 });

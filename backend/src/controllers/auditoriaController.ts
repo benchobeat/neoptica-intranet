@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
 
 import { registrarAuditoria } from '../utils/audit';
+import { success, fail } from '../utils/response';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -41,11 +42,11 @@ export const listarAuditoria = async (req: Request, res: Response) => {
 
     // Validar que los parámetros de paginación sean valores válidos
     if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1 || limitNum > 100) {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'Parámetros de paginación inválidos. Página debe ser >= 1 y límite entre 1 y 100.',
-      });
+      return res
+        .status(400)
+        .json(
+          fail('Parámetros de paginación inválidos. Página debe ser >= 1 y límite entre 1 y 100.')
+        );
     }
 
     // Calcular offset para paginación
@@ -67,11 +68,7 @@ export const listarAuditoria = async (req: Request, res: Response) => {
       if (fechaInicio) {
         const fechaInicioDate = new Date(fechaInicio as string);
         if (isNaN(fechaInicioDate.getTime())) {
-          return res.status(400).json({
-            ok: false,
-            data: null,
-            error: 'Formato de fecha de inicio inválido',
-          });
+          return res.status(400).json(fail('Formato de fecha de inicio inválido'));
         }
         where.fecha.gte = fechaInicioDate;
       }
@@ -79,11 +76,7 @@ export const listarAuditoria = async (req: Request, res: Response) => {
       if (fechaFin) {
         const fechaFinDate = new Date(fechaFin as string);
         if (isNaN(fechaFinDate.getTime())) {
-          return res.status(400).json({
-            ok: false,
-            data: null,
-            error: 'Formato de fecha de fin inválido',
-          });
+          return res.status(400).json(fail('Formato de fecha de fin inválido'));
         }
         // Ajustar la fecha de fin para incluir todo el día
         fechaFinDate.setHours(23, 59, 59, 999);
@@ -127,9 +120,8 @@ export const listarAuditoria = async (req: Request, res: Response) => {
     });
 
     // Enviar respuesta con metadatos de paginación
-    return res.status(200).json({
-      ok: true,
-      data: {
+    return res.status(200).json(
+      success({
         registros,
         paginacion: {
           total: totalRegistros,
@@ -137,9 +129,8 @@ export const listarAuditoria = async (req: Request, res: Response) => {
           limite: limitNum,
           paginas: totalPaginas,
         },
-      },
-      error: null,
-    });
+      })
+    );
   } catch (error: any) {
     console.error('Error al listar registros de auditoría:', error);
 
@@ -153,11 +144,7 @@ export const listarAuditoria = async (req: Request, res: Response) => {
       modulo: 'auditoria',
     });
 
-    return res.status(500).json({
-      ok: false,
-      data: null,
-      error: 'Error al obtener registros de auditoría',
-    });
+    return res.status(500).json(fail('Error al obtener registros de auditoría'));
   }
 };
 
@@ -176,11 +163,7 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
     // Validación del ID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'ID inválido',
-      });
+      return res.status(400).json(fail('ID inválido'));
     }
 
     // Buscar el registro de auditoría por ID
@@ -199,11 +182,7 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
 
     // Verificar si se encontró el registro
     if (!registro) {
-      return res.status(404).json({
-        ok: false,
-        data: null,
-        error: 'Registro de auditoría no encontrado',
-      });
+      return res.status(404).json(fail('Registro de auditoría no encontrado'));
     }
 
     // Registrar esta consulta en la auditoría
@@ -217,11 +196,7 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
       modulo: 'auditoria',
     });
 
-    return res.status(200).json({
-      ok: true,
-      data: registro,
-      error: null,
-    });
+    return res.status(200).json(success(registro));
   } catch (error: any) {
     console.error('Error al obtener registro de auditoría:', error);
 
@@ -235,11 +210,7 @@ export const obtenerAuditoriaPorId = async (req: Request, res: Response) => {
       modulo: 'auditoria',
     });
 
-    return res.status(500).json({
-      ok: false,
-      data: null,
-      error: 'Error al obtener el registro de auditoría',
-    });
+    return res.status(500).json(fail('Error al obtener el registro de auditoría'));
   }
 };
 
@@ -262,11 +233,11 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
 
     // Validar que los parámetros de paginación sean valores válidos
     if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1 || limitNum > 100) {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'Parámetros de paginación inválidos. Página debe ser >= 1 y límite entre 1 y 100.',
-      });
+      return res
+        .status(400)
+        .json(
+          fail('Parámetros de paginación inválidos. Página debe ser >= 1 y límite entre 1 y 100.')
+        );
     }
 
     // Calcular offset para paginación
@@ -313,9 +284,8 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
     });
 
     // Enviar respuesta con metadatos de paginación
-    return res.status(200).json({
-      ok: true,
-      data: {
+    return res.status(200).json(
+      success({
         registros,
         paginacion: {
           total: totalRegistros,
@@ -323,9 +293,8 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
           limite: limitNum,
           paginas: totalPaginas,
         },
-      },
-      error: null,
-    });
+      })
+    );
   } catch (error: any) {
     console.error('Error al filtrar registros de auditoría por módulo:', error);
 
@@ -339,11 +308,7 @@ export const filtrarAuditoriaPorModulo = async (req: Request, res: Response) => 
       modulo: 'auditoria',
     });
 
-    return res.status(500).json({
-      ok: false,
-      data: null,
-      error: 'Error al filtrar registros de auditoría por módulo',
-    });
+    return res.status(500).json(fail('Error al filtrar registros de auditoría por módulo'));
   }
 };
 
@@ -363,11 +328,7 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
     // Validar que el usuarioId sea un UUID válido
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!usuarioId || typeof usuarioId !== 'string' || !uuidRegex.test(usuarioId)) {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'ID de usuario inválido',
-      });
+      return res.status(400).json(fail('ID de usuario inválido'));
     }
 
     // Convertir parámetros de paginación a números
@@ -376,11 +337,11 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
 
     // Validar que los parámetros de paginación sean valores válidos
     if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1 || limitNum > 100) {
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'Parámetros de paginación inválidos. Página debe ser >= 1 y límite entre 1 y 100.',
-      });
+      return res
+        .status(400)
+        .json(
+          fail('Parámetros de paginación inválidos. Página debe ser >= 1 y límite entre 1 y 100.')
+        );
     }
 
     // Calcular offset para paginación
@@ -428,9 +389,8 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
     });
 
     // Enviar respuesta con metadatos de paginación
-    return res.status(200).json({
-      ok: true,
-      data: {
+    return res.status(200).json(
+      success({
         registros,
         paginacion: {
           total: totalRegistros,
@@ -438,9 +398,8 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
           limite: limitNum,
           paginas: totalPaginas,
         },
-      },
-      error: null,
-    });
+      })
+    );
   } catch (error: any) {
     console.error('Error al filtrar registros de auditoría por usuario:', error);
 
@@ -454,11 +413,7 @@ export const filtrarAuditoriaPorUsuario = async (req: Request, res: Response) =>
       modulo: 'auditoria',
     });
 
-    return res.status(500).json({
-      ok: false,
-      data: null,
-      error: 'Error al filtrar registros de auditoría por usuario',
-    });
+    return res.status(500).json(fail('Error al filtrar registros de auditoría por usuario'));
   }
 };
 

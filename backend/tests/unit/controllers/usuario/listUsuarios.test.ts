@@ -1,128 +1,126 @@
-// Mock the Prisma client first to avoid hoisting issues
+// First, set up the mocks
 const mockFindMany = jest.fn();
-const mockPrisma = {
+const mockLogError = jest.fn();
+const mockLogSuccess = jest.fn();
+
+// Mock Prisma client and its methods
+jest.mock('@prisma/client', () => {
+  return {
+    PrismaClient: jest.fn().mockImplementation(() => ({
+      usuario: {
+        findMany: mockFindMany,
+      },
+    })),
+  };
+});
+
+// Mock the audit functions
+jest.mock('@/utils/audit', () => ({
+  logError: (...args: any[]) => mockLogError(...args),
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+}));
+
+// Mock the prisma instance
+jest.mock('@/utils/prisma', () => ({
   usuario: {
     findMany: mockFindMany,
   },
-};
-
-// Mock the Prisma client directly before any imports
-jest.mock('@prisma/client', () => ({
-  PrismaClient: jest.fn(() => mockPrisma)
 }));
 
-// Mock the audit module
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
-
-jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria
-}));
-
-// Now import the controller and other dependencies
+// Now import the modules that use the mocks
 import { Request, Response } from 'express';
-import { listarUsuarios } from '../../../../src/controllers/usuarioController';
-import { mockUsuarioAdmin, mockUsuarioVendedor } from '../../__fixtures__/usuarioFixtures';
+import { listarUsuarios } from '@/controllers/usuarioController';
+import { success, fail } from '@/utils/response';
 
-// Extended user type for testing
-interface TestUser {
-  id: string;
-  email: string;
-  nombreCompleto: string;
-  roles: string[];
-  [key: string]: any; // Allow any other properties
+// Test data
+const mockUsuarios = [
+  {
+    id: 'user-1',
+    nombreCompleto: 'Admin User',
+    email: 'admin@example.com',
+    telefono: '1234567890',
+    activo: true,
+    roles: [
+      { rol: { nombre: 'admin' } },
+    ],
+  },
+  {
+    id: 'user-2',
+    nombreCompleto: 'Vendor User',
+    email: 'vendor@example.com',
+    telefono: '0987654321',
+    activo: true,
+    roles: [
+      { rol: { nombre: 'vendedor' } },
+    ],
+  },
+];
+
+// Extended Request type for testing
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    nombreCompleto: string;
+    roles: string[];
+  };
+  ip: string;
 }
 
-// Mock response type for testing
-type MockResponse = Response & {
-  status: jest.Mock<MockResponse, [number]>;
-  json: jest.Mock<MockResponse, [any]>;
-  send: jest.Mock<MockResponse, [any?]>;
-  mockClear: () => void;
-};
-
 // Helper function to create a mock request
-const mockRequest = (options: {
-  user?: Partial<TestUser>;
-  ip?: string;
-  query?: Record<string, any>;
-  params?: Record<string, any>;
-  body?: any;
-} = {}): Request => {
+const createMockRequest = (overrides: Partial<AuthenticatedRequest> = {}): AuthenticatedRequest => {
   const req: any = {
     method: 'GET',
     url: '/api/usuarios',
     headers: {},
-    ip: options.ip || '127.0.0.1',
-    params: options.params || {},
-    query: options.query || {},
-    body: options.body || {},
+    ip: '127.0.0.1',
+    params: {},
+    query: {},
+    body: {},
     user: {
       id: 'test-user-id',
       email: 'test@example.com',
       nombreCompleto: 'Test User',
       roles: ['admin'],
-      ...(options.user || {})
     },
-    // Add other required Request properties
-    get: jest.fn(),
-    header: jest.fn(),
-    accepts: jest.fn().mockReturnValue('application/json'),
-    acceptsCharsets: jest.fn().mockReturnValue(['utf-8']),
-    // Add other Express Request methods as needed
+    ...overrides,
   };
-  return req as Request;
+  return req as AuthenticatedRequest;
 };
 
 // Helper function to create a mock response
-const mockResponse = (): MockResponse => {
-  const res: any = {};
-  
-  // Mock essential response methods
-  res.status = jest.fn().mockImplementation((statusCode: number) => {
-    res.statusCode = statusCode;
-    return res;
-  });
-  
-  res.json = jest.fn().mockImplementation((data: any) => {
-    res._json = data;
-    return res;
-  });
-  
-  res.send = jest.fn().mockReturnValue(res);
-  
-  // Mock clear function
-  res.mockClear = () => {
-    res.status.mockClear();
-    res.json.mockClear();
-    res.send.mockClear();
+const createMockResponse = () => {
+  const res: any = {
+    json: jest.fn().mockReturnThis(),
+    status: jest.fn().mockReturnThis(),
+    send: jest.fn().mockReturnThis(),
   };
-  
-  return res as MockResponse;
+  return res as Response;
 };
 
 describe('listarUsuarios', () => {
-  let req: Request;
-  let res: MockResponse;
+  let req: AuthenticatedRequest;
+  let res: Response;
 
   beforeEach(() => {
-    // Reset mocks before each test
+    // Reset all mocks before each test
     jest.clearAllMocks();
     
     // Setup default request and response
-    req = mockRequest({
+    req = createMockRequest({
       user: {
         id: 'test-user-id',
         email: 'test@example.com',
         nombreCompleto: 'Test User',
         roles: ['admin']
-      }
+      },
+      ip: '127.0.0.1'
     });
-    res = mockResponse();
-    mockFindMany.mockClear();
-    mockRegistrarAuditoria.mockClear();
+    
+    res = createMockResponse();
     
     // Default mock implementation
-    mockFindMany.mockResolvedValue([mockUsuarioAdmin, mockUsuarioVendedor]);
+    mockFindMany.mockResolvedValue(mockUsuarios);
   });
 
   afterEach(() => {
@@ -130,58 +128,20 @@ describe('listarUsuarios', () => {
   });
 
   it('debe devolver una lista de usuarios activos', async () => {
-    // Reset mocks before test
-    jest.clearAllMocks();
-    
-    const mockUsuarios = [
-      {
-        ...mockUsuarioAdmin,
-        id: 'user-1',
-        password: 'hashedpassword',
-        roles: [
-          { rol: { nombre: 'ADMIN' } }
-        ]
-      },
-      {
-        ...mockUsuarioVendedor,
-        id: 'user-2',
-        password: 'hashedpassword',
-        roles: [
-          { rol: { nombre: 'VENDEDOR' } }
-        ]
-      },
-    ];
+    // Act
+    await listarUsuarios(req, res);
 
-    // Mock de la respuesta de Prisma
-    mockFindMany.mockResolvedValue(mockUsuarios);
-
-    // Mock the success function
-    const mockSuccess = jest.fn().mockImplementation((data) => ({
-      success: true,
-      data
-    }));
-    
-    // Mock the response object
-    const mockRes = {
-      json: jest.fn(),
-      status: jest.fn().mockReturnThis()
-    };
-
-    // Call the controller function
-    await listarUsuarios(req as Request, mockRes as unknown as Response);
-
-    // Verify Prisma was called correctly
+    // Assert
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { activo: true },
       include: { roles: { include: { rol: true } } },
     });
 
-    // Verify response was sent with correct data
-    expect(mockRes.json).toHaveBeenCalled();
+    // Verify response structure
+    expect(res.json).toHaveBeenCalled();
+    const responseData = (res.json as jest.Mock).mock.calls[0][0];
     
-    const responseData = (mockRes.json as jest.Mock).mock.calls[0][0];
-    
-    // Basic response structure
+    // Verify success response structure
     expect(responseData).toHaveProperty('ok', true);
     expect(responseData.error).toBeNull();
     expect(Array.isArray(responseData.data)).toBe(true);
@@ -191,78 +151,88 @@ describe('listarUsuarios', () => {
       expect(user).toHaveProperty('id');
       expect(user).toHaveProperty('nombreCompleto');
       expect(user).toHaveProperty('email');
+      expect(user).toHaveProperty('telefono');
       expect(user).toHaveProperty('activo', true);
       expect(Array.isArray(user.roles)).toBe(true);
       expect(user).not.toHaveProperty('password');
     });
-  });
-
-  it('debe manejar errores correctamente', async () => {
-    // Reset mocks before test
-    jest.clearAllMocks();
     
-    // Mock de un error inesperado
-    const error = new Error('Error de base de datos');
-    mockFindMany.mockRejectedValueOnce(error);
-
-    // Mock de console.error para evitar ruido en la salida de prueba
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    
-    // Mock response object
-    const mockRes = {
-      json: jest.fn(),
-      status: jest.fn().mockReturnThis()
-    };
-
-    await listarUsuarios(req as Request, mockRes as unknown as Response);
-
-    try {
-      // Verificar que se manejó el error correctamente
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      
-      // Verificar que se llamó a res.json
-      expect(mockRes.json).toHaveBeenCalled();
-      
-      // Obtener los argumentos con los que se llamó a res.json
-      const errorResponse = (mockRes.json as jest.Mock).mock.calls[0][0];
-      
-      // Verificar la estructura de la respuesta de error
-      expect(errorResponse).toHaveProperty('ok', false);
-      expect(errorResponse.data).toBeNull();
-      expect(typeof errorResponse.error).toBe('string');
-      expect(errorResponse.error).toBe('Error de base de datos');
-    } finally {
-      // Limpiar el mock
-      consoleErrorSpy.mockRestore();
-    }
-  });
-
-  it('no debe incluir contraseñas en la respuesta', async () => {
-    // Reset mocks before test
-    jest.clearAllMocks();
-    
-    // Crear un usuario con contraseña
-    const usuarioConPassword = {
-      ...mockUsuarioAdmin,
-      password: 'hashedpassword123',
-      roles: [
-        { rol: { nombre: 'ADMIN' } }
-      ]
-    };
-
-    mockFindMany.mockResolvedValue([usuarioConPassword]);
-
-    await listarUsuarios(req as Request, res as Response);
-
-    // Verificar que se llamó a res.json
-    expect(res.json).toHaveBeenCalled();
-    
-    // Obtener los argumentos con los que se llamó a res.json
-    const responseData = (res.json as jest.Mock).mock.calls[0][0];
-    
-    // Verificar que la respuesta no incluye la contraseña
-    responseData.data.forEach((user: any) => {
-      expect(user).not.toHaveProperty('password');
+    // Verify audit log
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'listarUsuarios',
+      action: 'listar_usuarios_exitoso',
+      message: `Se listaron ${mockUsuarios.length} usuarios`,
+      details: {
+        totalUsuarios: mockUsuarios.length
+      }
     });
+  });
+
+  it('debe manejar errores de base de datos correctamente', async () => {
+    // Arrange
+    const dbError = new Error('Error de conexión a la base de datos');
+    mockFindMany.mockRejectedValueOnce(dbError);
+    
+    // Act
+    await listarUsuarios(req, res);
+    
+    // Assert
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      fail('Error de conexión a la base de datos')
+    );
+    
+    // Verify error audit log
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'listarUsuarios',
+      action: 'listar_usuarios_fallido',
+      message: 'Error al listar usuarios',
+      error: dbError,
+      context: {
+        totalUsuarios: 0
+      }
+    });
+  });
+  
+  it('debe manejar el caso cuando no hay usuarios', async () => {
+    // Arrange
+    mockFindMany.mockResolvedValueOnce([]);
+    
+    // Act
+    await listarUsuarios(req, res);
+    
+    // Assert
+    expect(mockFindMany).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(success([]));
+    
+    // Verify audit log for empty result
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Se listaron 0 usuarios',
+      details: { totalUsuarios: 0 }
+    }));
+  });
+  
+  it('debe funcionar correctamente sin usuario autenticado', async () => {
+    // Arrange
+    req.user = undefined;
+    
+    // Act
+    await listarUsuarios(req, res);
+    
+    // Assert
+    expect(mockFindMany).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(expect.anything());
+    
+    // Verify audit log with null userId
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      userId: null,
+      ip: '127.0.0.1'
+    }));
   });
 });

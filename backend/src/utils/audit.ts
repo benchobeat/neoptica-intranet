@@ -1,9 +1,12 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
-interface JsonObject { [key: string]: JsonValue; }
+interface JsonObject {
+  [key: string]: JsonValue;
+}
 interface JsonArray extends Array<JsonValue> {}
 
 export type AuditoriaParams = {
@@ -47,7 +50,7 @@ type ErrorAuditParams = {
  */
 export const logSuccess = async (params: SuccessAuditParams): Promise<void> => {
   const { userId, ip, entityType, entityId, module, action, message, details } = params;
-  
+
   await registrarAuditoria({
     usuarioId: userId,
     accion: action,
@@ -55,12 +58,12 @@ export const logSuccess = async (params: SuccessAuditParams): Promise<void> => {
     descripcion: {
       mensaje: message,
       timestamp: new Date().toISOString(),
-      ...(details && { detalles: details })
+      ...(details && { detalles: details }),
     },
     ip,
     entidadTipo: entityType,
     entidadId: entityId,
-    modulo: module
+    modulo: module,
   });
 };
 
@@ -70,22 +73,26 @@ export const logSuccess = async (params: SuccessAuditParams): Promise<void> => {
 export const logError = async (params: ErrorAuditParams): Promise<void> => {
   const { userId, ip, entityType, entityId, module, action, message, error, context } = params;
   const errorObj = error as Error;
-  
+
+  const errorMessage = error instanceof Error ? error.message : String(error);
   await registrarAuditoria({
     usuarioId: userId,
     accion: action,
     resultado: 'fallido',
-    mensajeError: errorObj.message,
+    mensajeError: errorMessage,
     descripcion: {
       mensaje: message,
       timestamp: new Date().toISOString(),
       ...(context && { contexto: context }),
-      ...(process.env.NODE_ENV === 'development' && { stack: errorObj.stack })
+      ...(process.env.NODE_ENV === 'development' && {
+        stack: errorObj.stack,
+        error: errorMessage,
+      }),
     },
     ip,
     entidadTipo: entityType,
     entidadId: entityId,
-    modulo: module
+    modulo: module,
   });
 };
 
@@ -97,6 +104,7 @@ export const registrarAuditoria = async (params: AuditoriaParams): Promise<void>
   const {
     accion,
     resultado,
+    mensajeError,
     entidadTipo,
     entidadId,
     descripcion,
@@ -111,22 +119,36 @@ export const registrarAuditoria = async (params: AuditoriaParams): Promise<void>
     const descripcionJson: Prisma.InputJsonValue = {
       timestamp: new Date().toISOString(),
       accion,
-      ...(typeof descripcion === 'string' 
-        ? { mensaje: descripcion, ...(datosAdicionales || {}) } 
-        : { ...(descripcion as Record<string, unknown>), ...(datosAdicionales || {}) })
+      ...(typeof descripcion === 'string'
+        ? { mensaje: descripcion, ...(datosAdicionales || {}) }
+        : { ...(descripcion as Record<string, unknown>), ...(datosAdicionales || {}) }),
     };
 
+    // Prepare the data for creation
+    const auditData: any = {
+      accion,
+      resultado,
+      mensajeError: mensajeError || null,
+      entidadTipo: entidadTipo || null,
+      entidadId: entidadId || null,
+      descripcion: descripcionJson,
+      ip: ip || null,
+      modulo,
+    };
+
+    // Only include usuarioId if it's a valid UUID
+    if (
+      usuarioId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(usuarioId)
+    ) {
+      auditData.usuarioId = usuarioId;
+    } else {
+      // If no valid usuarioId, set it to null
+      auditData.usuarioId = null;
+    }
+
     await prisma.logAuditoria.create({
-      data: {
-        accion,
-        resultado,
-        entidadTipo: entidadTipo || null,
-        entidadId: entidadId || null,
-        descripcion: descripcionJson,
-        ip: ip || null,
-        modulo,
-        usuarioId,
-      },
+      data: auditData,
     });
   } catch (error) {
     console.error('Error al registrar auditoría:', error);

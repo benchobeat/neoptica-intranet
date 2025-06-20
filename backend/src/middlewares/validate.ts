@@ -3,6 +3,7 @@ import type { ValidationChain } from 'express-validator';
 import { validationResult } from 'express-validator';
 
 import type { ApiResponse } from '../types/response';
+import { fail } from '../utils/response';
 
 // Tipo para errores de validación estandarizados
 interface ValidationError {
@@ -40,21 +41,14 @@ export const validateRequest = (validations: ValidationChain[]) => {
       // Si hay errores, mapearlos a un formato estándar
       const errorMessages = mapExpressValidatorErrors(errors.array());
 
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'Error de validación',
-        meta: {
+      return res.status(400).json(
+        fail('Error de validación', {
           errors: errorMessages,
-        },
-      } as ApiResponse<null>);
+        } as any)
+      );
     } catch (error) {
       console.error('Error en el middleware de validación:', error);
-      return res.status(500).json({
-        ok: false,
-        data: null,
-        error: 'Error interno del servidor al validar la solicitud',
-      } as ApiResponse<null>);
+      return res.status(500).json(fail('Error interno del servidor al validar la solicitud'));
     }
   };
 };
@@ -68,22 +62,15 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
     if (!errors.isEmpty()) {
       const errorMessages = mapExpressValidatorErrors(errors.array());
 
-      return res.status(400).json({
-        ok: false,
-        data: null,
-        error: 'Error de validación',
-        meta: {
+      return res.status(400).json(
+        fail('Error de validación', {
           errors: errorMessages,
-        },
-      } as ApiResponse<null>);
+        } as any)
+      );
     }
     next();
   } catch (error) {
     console.error('Error al manejar errores de validación:', error);
-    return res.status(500).json({
-      ok: false,
-      data: null,
-      error: 'Error interno del servidor al procesar la validación',
-    } as ApiResponse<null>);
+    return res.status(500).json(fail('Error interno del servidor al procesar la validación'));
   }
 };

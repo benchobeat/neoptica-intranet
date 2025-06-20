@@ -12,20 +12,20 @@ Modelo centralizado que registra todas las acciones importantes realizadas en el
 - **descripcion**: Descripción detallada de la acción
 - **fecha**: Fecha y hora del registro (por defecto: fecha actual)
 - **ip**: Dirección IP desde donde se realizó la acción
-- **tipo_correo**: Tipo de correo electrónico (si aplica)
-- **correo_destino**: Dirección de correo electrónico del destinatario (si aplica)
-- **usuario_destino**: ID del usuario destinatario (si aplica)
-- **entidad_tipo**: Tipo de entidad afectada (ej: "USUARIO", "PRODUCTO", "CITA")
-- **entidad_id**: ID de la entidad afectada (UUID)
-- **estado_envio**: Estado del envío (si aplica)
-- **mensaje_error**: Mensaje de error en caso de fallo
-- **enviado_por**: ID del usuario que realizó el envío (si aplica)
-- **origen_envio**: Origen del envío (si aplica)
+- **tipoCorreo**: Tipo de correo electrónico (si aplica)
+- **correoDestino**: Dirección de correo electrónico del destinatario (si aplica)
+- **usuarioDestino**: ID del usuario destinatario (si aplica)
+- **entidadTipo**: Tipo de entidad afectada (ej: "USUARIO", "PRODUCTO", "CITA")
+- **entidadId**: ID de la entidad afectada (UUID)
+- **estadoEnvio**: Estado del envío (si aplica)
+- **mensajeError**: Mensaje de error en caso de fallo
+- **enviadoPor**: ID del usuario que realizó el envío (si aplica)
+- **origenEnvio**: Origen del envío (si aplica)
 - **intentos**: Número de intentos de envío (por defecto: 1)
 - **modulo**: Módulo del sistema donde se originó la acción
 - **entidadId**: ID alternativo de la entidad (compatibilidad)
 - **entidadTipo**: Tipo alternativo de entidad (compatibilidad)
-- **movimiento_id**: ID del movimiento contable relacionado (si aplica)
+- **movimientoId**: ID del movimiento contable relacionado (si aplica)
 
 #### Relaciones:
 - `usuario`: Relación con el usuario que realizó la acción
@@ -45,9 +45,177 @@ Modelo centralizado que registra todas las acciones importantes realizadas en el
 3. Los resultados se muestran en formato tabular con opciones de ordenamiento
 4. Se pueden exportar los resultados a diferentes formatos
 
-## Sistema de Auditoría
+## Sistema de Auditoría Centralizada
 
-El sistema implementa un módulo completo de auditoría que registra todas las acciones significativas en la plataforma, asegurando trazabilidad y cumplimiento.
+El sistema implementa un módulo completo de auditoría que registra todas las acciones significativas en la plataforma, asegurando trazabilidad y cumplimiento. La auditoría está centralizada en el módulo `audit.ts` para garantizar consistencia y facilitar el mantenimiento.
+
+### Arquitectura Centralizada
+
+El control de auditoría está centralizado en el archivo `backend/src/utils/audit.ts`, que exporta dos funciones principales:
+
+1. `logSuccess`: Para registrar operaciones exitosas
+2. `logError`: Para registrar errores y fallos
+
+### Uso de las Funciones de Auditoría
+
+#### `logSuccess(params: SuccessAuditParams)`
+
+Registra una operación exitosa en el sistema.
+
+**Parámetros:**
+- `userId`: ID del usuario que realizó la acción
+- `ip`: Dirección IP del solicitante
+- `entityType`: Tipo de entidad afectada (ej: 'color', 'marca')
+- `entityId`: ID de la entidad afectada
+- `module`: Módulo donde ocurrió la acción (ej: 'colorController')
+- `action`: Tipo de acción (ej: 'crear_color', 'actualizar_marca')
+- `message`: Mensaje descriptivo de la acción
+- `details`: (Opcional) Objeto con detalles adicionales
+
+**Ejemplo de Uso:**
+```typescript
+try {
+  // Lógica de negocio exitosa
+  await logSuccess({
+    userId: req.user.id,
+    ip: req.ip,
+    entityType: 'color',
+    entityId: colorCreado.id,
+    module: 'colorController',
+    action: 'crear_color',
+    message: 'Color creado exitosamente',
+    details: {
+      nombre: colorCreado.nombre,
+      codigoHex: colorCreado.codigoHex
+    }
+  });
+} catch (error) {
+  // Manejo de errores...
+}
+```
+
+#### `logError(params: ErrorAuditParams)`
+
+Registra un error o fallo en el sistema.
+
+**Parámetros adicionales a los de `logSuccess`:**
+- `error`: Objeto de error o mensaje de error
+- `context`: (Opcional) Contexto adicional para ayudar en la depuración
+
+**Ejemplo de Uso:**
+```typescript
+try {
+  // Código que puede fallar
+} catch (error) {
+  await logError({
+    userId: req.user?.id,
+    ip: req.ip,
+    entityType: 'color',
+    entityId: req.params.id,
+    module: 'colorController',
+    action: 'actualizar_color',
+    message: 'Error al actualizar el color',
+    error: error,
+    context: {
+      datosSolicitud: req.body,
+      idSolicitado: req.params.id
+    }
+  });
+  // Manejo del error...
+}
+```
+
+### Ventajas del Sistema Centralizado
+
+1. **Consistencia**: Todas las operaciones de auditoría siguen el mismo formato
+2. **Mantenibilidad**: Los cambios en el formato de auditoría se realizan en un solo lugar
+3. **Trazabilidad**: Fácil seguimiento de todas las acciones en el sistema
+4. **Rendimiento**: Optimizado para registrar operaciones sin afectar el rendimiento
+5. **Flexibilidad**: Fácil de extender con nueva funcionalidad
+
+### Mejores Prácticas
+
+1. **Siempre** usar `logSuccess` después de operaciones exitosas
+2. **Siempre** usar `logError` en bloques catch
+3. Proporcionar mensajes claros y descriptivos
+4. Incluir suficiente contexto para facilitar la depuración
+5. No registrar información sensible en los logs
+6. Usar nombres de acciones consistentes (ej: `verbo_entidad`)
+
+### Estructura del Log de Auditoría
+
+Cada entrada de auditoría incluye:
+
+```typescript
+{
+  usuarioId: string;          // ID del usuario
+  accion: string;             // Acción realizada
+  resultado: 'exitoso' | 'fallido';
+  descripcion: {
+    mensaje: string;         // Mensaje descriptivo
+    timestamp: string;        // Fecha y hora ISO
+    detalles?: any;           // Detalles adicionales (opcional)
+  };
+  ip?: string;               // Dirección IP
+  entidadTipo?: string;       // Tipo de entidad afectada
+  entidadId?: string;         // ID de la entidad afectada
+  modulo?: string;            // Módulo donde ocurrió la acción
+}
+```
+
+### Ejemplo de Integración en un Controlador
+
+```typescript
+import { logSuccess, logError } from '../utils/audit';
+
+class ColorController {
+  async crearColor(req: Request, res: Response) {
+    try {
+      // Validar entrada...
+      
+      const color = await prisma.color.create({
+        data: {
+          // ...datos del color
+          creadoPor: req.user.id
+        }
+      });
+
+      // Registrar éxito
+      await logSuccess({
+        userId: req.user.id,
+        ip: req.ip,
+        entityType: 'color',
+        entityId: color.id,
+        module: 'colorController',
+        action: 'crear_color',
+        message: 'Color creado exitosamente',
+        details: {
+          nombre: color.nombre,
+          codigoHex: color.codigoHex
+        }
+      });
+
+      return res.status(201).json(color);
+    } catch (error) {
+      // Registrar error
+      await logError({
+        userId: req.user?.id,
+        ip: req.ip,
+        entityType: 'color',
+        module: 'colorController',
+        action: 'crear_color',
+        message: 'Error al crear el color',
+        error: error,
+        context: {
+          datosSolicitud: req.body
+        }
+      });
+
+      // Manejar el error...
+    }
+  }
+}
+```
 
 ### Características Principales
 
@@ -131,10 +299,55 @@ El sistema implementa un módulo completo de auditoría que registra todas las a
 #### GET /api/auditoria/modulo/:modulo
 - **Descripción**: Filtra registros por módulo del sistema
 - **Módulos disponibles**:
+  - `auth`: Autenticación y autorización
   - `usuarios`: Gestión de usuarios y permisos
   - `productos`: Catálogo de productos
   - `inventario`: Control de existencias
   - `ventas`: Procesos de venta
+  - `colores`: Gestión de colores de productos
+  - `marcas`: Gestión de marcas de productos
+  - `sucursales`: Gestión de sucursales
+  - `auditoria`: Consulta de registros de auditoría
+
+## Ejemplos de Consultas
+
+### Buscar todas las acciones de un usuario específico
+```sql
+SELECT * FROM log_auditoria 
+WHERE usuario_id = '550e8400-e29b-41d4-a716-446655440000'
+ORDER BY fecha DESC;
+```
+
+### Buscar acciones recientes en un módulo específico
+```sql
+SELECT * FROM log_auditoria 
+WHERE modulo = 'colorController' 
+  AND fecha > NOW() - INTERVAL '7 days'
+ORDER BY fecha DESC;
+```
+
+### Buscar errores recientes
+```sql
+SELECT * FROM log_auditoria 
+WHERE resultado = 'fallido'
+  AND fecha > NOW() - INTERVAL '24 hours'
+ORDER BY fecha DESC;
+```
+
+### Extraer datos específicos del JSON
+```sql
+SELECT 
+  id,
+  fecha,
+  usuario_id,
+  accion,
+  descripcion->>'message' as mensaje,
+  descripcion->'context'->>'datosAnteriores' as datos_anteriores
+FROM log_auditoria
+WHERE entidad_tipo = 'color'
+ORDER BY fecha DESC
+LIMIT 10;
+```
   - `citas`: Agendamiento
   - `configuracion`: Ajustes del sistema
 

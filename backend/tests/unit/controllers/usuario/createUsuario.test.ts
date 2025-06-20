@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 
-// Mock modules before importing the controller
+// Simular módulos antes de importar el controlador
 const mockFindUnique = jest.fn();
 const mockCreate = jest.fn();
 const mockCreateMany = jest.fn();
 const mockFindMany = jest.fn();
 const mockTransaction = jest.fn();
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
+const mockLogSuccess = jest.fn();
+const mockLogError = jest.fn();
 
 jest.mock('@/utils/prisma', () => ({
   __esModule: true,
@@ -27,19 +28,20 @@ jest.mock('@/utils/prisma', () => ({
 }));
 
 jest.mock('@/utils/audit', () => ({
-  registrarAuditoria: mockRegistrarAuditoria,
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+  logError: (...args: any[]) => mockLogError(...args),
 }));
 
-// Add a spy on bcrypt.hash to avoid actual hashing in tests
+// Espiar bcrypt.hash para evitar hashing real en las pruebas
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed_password'),
   compare: jest.fn().mockResolvedValue(true),
 }));
 
-// Import controller after setting up mocks
+// Importar controlador después de configurar los mocks
 import { crearUsuario } from '@/controllers/usuarioController';
 
-// Test data
+// Datos de prueba
 const testUserData = {
   nombreCompleto: 'Nuevo Usuario',
   email: 'nuevo@example.com',
@@ -52,7 +54,7 @@ const testUserData = {
   emailVerificado: false,
 };
 
-// Mock request and response
+// Simular objetos de solicitud y respuesta
 const mockRequest = (data: {
   body?: any;
   params?: any;
@@ -86,11 +88,11 @@ describe('crearUsuario', () => {
 
 
   beforeEach(() => {
-    // Reset mocks before each test
+    // Reiniciar mocks antes de cada prueba
     jest.clearAllMocks();
 
-    mockFindUnique.mockResolvedValue(null); // Default: no existing user
-    mockFindMany.mockResolvedValue([{id: 'rol-id-1', nombre: 'admin'}]); // Default: role exists
+    mockFindUnique.mockResolvedValue(null); // Por defecto: usuario no existe
+    mockFindMany.mockResolvedValue([{id: 'rol-id-1', nombre: 'admin'}]); // Por defecto: rol existe
     mockCreate.mockResolvedValue({
       ...testUserData, 
       id: 'new-user-id',
@@ -105,7 +107,7 @@ describe('crearUsuario', () => {
     });
     mockCreateMany.mockResolvedValue({count: 1});
     mockTransaction.mockImplementation(async (callback) => {
-      // Simulamos el comportamiento de un transaction ejecutando el callback con nuestros mocks
+      // Simular el comportamiento de una transacción ejecutando el callback con nuestros mocks
       return await callback({
         usuario: { 
           findUnique: mockFindUnique,
@@ -139,10 +141,10 @@ describe('crearUsuario', () => {
     await crearUsuario(req, res);
 
     // Assert
-    // Verify user creation
+    // Verificar creación de usuario
     expect(mockCreate).toHaveBeenCalled();
     
-    // Verify role check and user creation were called
+    // Verificar que se llamó a la verificación de roles y creación de usuario
     const findManyCalled = mockFindMany.mock.calls.some(call => 
       call[0]?.where?.nombre?.in?.includes('admin')
     );
@@ -151,7 +153,7 @@ describe('crearUsuario', () => {
     expect(findManyCalled).toBe(true);
     expect(createCalled).toBe(true);
 
-    // Verify response
+    // Verificar respuesta
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -164,14 +166,22 @@ describe('crearUsuario', () => {
       }),
     );
 
-    // Verify audit was called with success
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(
+    // Verificar que se llamó al log de auditoría exitoso
+    expect(mockLogSuccess).toHaveBeenCalledWith(
       expect.objectContaining({
-        accion: 'crear_usuario_exitoso',
-        entidadId: 'new-user-id',
-        descripcion: expect.any(String),
-        modulo: 'usuarios',
-        entidadTipo: 'usuario'
+        userId: 'admin-user-id',
+        ip: '127.0.0.1',
+        entityType: 'usuario',
+        module: 'crearUsuario',
+        action: 'crear_usuario_exitoso',
+        entityId: 'new-user-id',
+        message: expect.stringContaining('Usuario creado exitosamente'),
+        details: expect.objectContaining({
+          email: 'nuevo@example.com',
+          telefono: '1234567890',
+          activo: true,
+          roles: ['admin']
+        })
       })
     );
   });
@@ -199,9 +209,18 @@ describe('crearUsuario', () => {
     );
 
     // Verify audit
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(
+    expect(mockLogError).toHaveBeenCalledWith(
       expect.objectContaining({
-        accion: 'crear_usuario_fallido',
+        userId: 'admin-user-id',
+        ip: '127.0.0.1',
+        entityType: 'usuario',
+        module: 'crearUsuario',
+        action: 'crear_usuario_fallido',
+        message: 'El email ya está registrado',
+        error: expect.any(Error),
+        context: expect.objectContaining({
+          email: 'nuevo@example.com'
+        })
       })
     );
   });
@@ -258,16 +277,37 @@ describe('crearUsuario', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         ok: false,
-        error: expect.stringContaining('error'),
+        data: null,
+        error: 'Error al crear el usuario',
       }),
     );
 
     // Verify audit
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(
-      expect.objectContaining({
-        accion: 'crear_usuario_fallido',
+    const errorCalls = mockLogError.mock.calls[0];
+    const errorCall = errorCalls[0];
+    
+    // Verificar estructura básica
+    expect(errorCall).toMatchObject({
+      userId: 'admin-user-id',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'crearUsuario',
+      action: 'crear_usuario_fallido',
+      message: 'Error al crear el usuario',
+      error: expect.any(Error)
+    });
+    
+    // Verificar estructura del contexto sin ser demasiado estricto con propiedades adicionales
+    expect(errorCall.context).toMatchObject({
+      datosSolicitud: expect.objectContaining({
+        email: 'nuevo@example.com',
+        nombreCompleto: 'Nuevo Usuario',
+        rolesSolicitados: ['admin'],
+        telefono: '1234567890',
+        tieneDNI: true,
+        tieneDireccion: true
       })
-    );
+    });
   });
 
   it('solo debe permitir a administradores crear usuarios', async () => {

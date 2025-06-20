@@ -1,5 +1,167 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+
+/**
+ * Elimina las categorías en orden jerárquico, desde las hojas hasta la raíz
+ * @param prisma Instancia de PrismaClient
+ */
+/**
+ * Elimina las cuentas contables en orden jerárquico, desde las hojas hasta la raíz
+ * @param prisma Instancia de PrismaClient
+ */
+async function deleteCuentasContablesInOrder(prisma: PrismaClient): Promise<void> {
+  console.log('Iniciando limpieza jerárquica de cuentas contables...');
+
+  try {
+    // Primero, obtenemos todas las cuentas con su jerarquía
+    const allCuentas = await prisma.cuentaContable.findMany({
+      include: {
+        cuentasHijas: true,
+      },
+    });
+
+    // Creamos un mapa de cuentas por ID para un acceso más fácil
+    const cuentaMap = new Map<string, { id: string; cuentasHijas: string[] }>();
+
+    // Llenamos el mapa y establecemos las relaciones padre-hijo
+    allCuentas.forEach((cuenta) => {
+      cuentaMap.set(cuenta.id, {
+        id: cuenta.id,
+        cuentasHijas: cuenta.cuentasHijas.map((hija) => hija.id),
+      });
+    });
+
+    // Función para encontrar cuentas sin hijas (hojas del árbol)
+    function findLeafCuentas(): string[] {
+      const leafCuentaIds: string[] = [];
+
+      for (const [id, cuenta] of cuentaMap.entries()) {
+        // Si la cuenta no tiene hijas o todas sus hijas ya fueron eliminadas
+        if (cuenta.cuentasHijas.length === 0) {
+          leafCuentaIds.push(id);
+        } else {
+          const allChildrenRemoved = cuenta.cuentasHijas.every((hijaId) => !cuentaMap.has(hijaId));
+          if (allChildrenRemoved) {
+            leafCuentaIds.push(id);
+          }
+        }
+      }
+
+      return leafCuentaIds;
+    }
+
+    // Proceso de eliminación por niveles
+    let deletedCount = 0;
+    while (cuentaMap.size > 0) {
+      const leafCuentaIds = findLeafCuentas();
+
+      if (leafCuentaIds.length === 0) {
+        console.error(
+          'No se pueden encontrar más cuentas hoja, pero aún hay cuentas por eliminar. Esto puede indicar un ciclo en la jerarquía.'
+        );
+        break;
+      }
+
+      // Eliminamos las cuentas hoja actuales
+      await prisma.cuentaContable.deleteMany({
+        where: { id: { in: leafCuentaIds } },
+      });
+
+      // Eliminamos las cuentas del mapa
+      leafCuentaIds.forEach((id) => cuentaMap.delete(id));
+      deletedCount += leafCuentaIds.length;
+
+      console.log(
+        `Eliminadas ${leafCuentaIds.length} cuentas contables en este nivel. Restantes: ${cuentaMap.size}`
+      );
+    }
+
+    console.log(`Se eliminaron un total de ${deletedCount} cuentas contables en orden jerárquico.`);
+  } catch (error) {
+    console.error('Error al limpiar cuentas contables jerárquicamente:', error);
+    throw error;
+  }
+}
+
+/**
+ * Elimina las categorías en orden jerárquico, desde las hojas hasta la raíz
+ * @param prisma Instancia de PrismaClient
+ */
+async function deleteCategoriesInOrder(prisma: PrismaClient): Promise<void> {
+  console.log('Iniciando limpieza jerárquica de categorías...');
+
+  try {
+    // Primero, obtenemos todas las categorías con su jerarquía
+    const allCategories = await prisma.categoria.findMany({
+      include: {
+        subcategorias: true,
+      },
+    });
+
+    // Creamos un mapa de categorías por ID para un acceso más fácil
+    const categoryMap = new Map<string, { id: string; subcategorias: string[] }>();
+
+    // Llenamos el mapa y establecemos las relaciones padre-hijo
+    allCategories.forEach((cat) => {
+      categoryMap.set(cat.id, {
+        id: cat.id,
+        subcategorias: cat.subcategorias.map((sub) => sub.id),
+      });
+    });
+
+    // Función para encontrar categorías sin hijos (hojas del árbol)
+    function findLeafCategories(): string[] {
+      const leafCategoryIds: string[] = [];
+
+      for (const [id, category] of categoryMap.entries()) {
+        // Si la categoría no tiene subcategorías o todas sus subcategorías ya fueron eliminadas
+        if (category.subcategorias.length === 0) {
+          leafCategoryIds.push(id);
+        } else {
+          const allChildrenRemoved = category.subcategorias.every(
+            (subId) => !categoryMap.has(subId)
+          );
+          if (allChildrenRemoved) {
+            leafCategoryIds.push(id);
+          }
+        }
+      }
+
+      return leafCategoryIds;
+    }
+
+    // Proceso de eliminación por niveles
+    let deletedCount = 0;
+    while (categoryMap.size > 0) {
+      const leafCategoryIds = findLeafCategories();
+
+      if (leafCategoryIds.length === 0) {
+        console.error(
+          'No se pueden encontrar más categorías hoja, pero aún hay categorías por eliminar. Esto puede indicar un ciclo en la jerarquía.'
+        );
+        break;
+      }
+
+      // Eliminamos las categorías hoja actuales
+      await prisma.categoria.deleteMany({
+        where: { id: { in: leafCategoryIds } },
+      });
+
+      // Eliminamos las categorías del mapa
+      leafCategoryIds.forEach((id) => categoryMap.delete(id));
+      deletedCount += leafCategoryIds.length;
+
+      console.log(
+        `Eliminadas ${leafCategoryIds.length} categorías en este nivel. Restantes: ${categoryMap.size}`
+      );
+    }
+
+    console.log(`Se eliminaron un total de ${deletedCount} categorías en orden jerárquico.`);
+  } catch (error) {
+    console.error('Error al limpiar categorías jerárquicamente:', error);
+    throw error;
+  }
+}
 
 /**
  * Limpia completamente la base de datos, eliminando todos los registros de todas las tablas.
@@ -70,7 +232,97 @@ export async function cleanDatabase(): Promise<void> {
       console.error('Error limpiando usuario_rol', e);
     }
 
-    // 2. Luego tablas de entidades principales
+    // 2. Primero manejamos las categorías en orden jerárquico
+    try {
+      await deleteCategoriesInOrder(prisma);
+      console.log('Categorías eliminadas en orden jerárquico');
+    } catch (e) {
+      console.error(
+        'Error al limpiar categorías jerárquicamente, intentando eliminación directa',
+        e
+      );
+      // Si falla la eliminación jerárquica, intentamos eliminación directa
+      try {
+        await prisma.categoria.deleteMany({});
+        console.log('Categorías eliminadas (enfoque directo)');
+      } catch (innerError) {
+        console.error('Error en eliminación directa de categorías:', innerError);
+      }
+    }
+
+    // 3. Luego manejamos las cuentas contables en orden jerárquico
+    try {
+      await deleteCuentasContablesInOrder(prisma);
+      console.log('Cuentas contables eliminadas en orden jerárquico');
+    } catch (e) {
+      console.error(
+        'Error al limpiar cuentas contables jerárquicamente, intentando eliminación directa',
+        e
+      );
+      // Si falla la eliminación jerárquica, intentamos eliminación directa
+      try {
+        await prisma.cuentaContable.deleteMany({});
+        console.log('Cuentas contables eliminadas (enfoque directo)');
+      } catch (innerError) {
+        console.error('Error en eliminación directa de cuentas contables:', innerError);
+      }
+    }
+
+    // 3. Luego tablas de entidades principales
+    try {
+      await prisma.archivoEntidad.deleteMany({});
+      console.log('Tabla archivo_entidad limpiada');
+    } catch (e) {
+      console.error('Error limpiando archivo_entidad', e);
+    }
+    try {
+      await prisma.archivoAdjunto.deleteMany({});
+      console.log('Tabla archivo_adjunto limpiada');
+    } catch (e) {
+      console.error('Error limpiando archivo_adjunto', e);
+    }
+    try {
+      await prisma.historialClinico.deleteMany({});
+      console.log('Tabla historial_clinico limpiada');
+    } catch (e) {
+      console.error('Error limpiando historial_clinico', e);
+    }
+    try {
+      await prisma.receta.deleteMany({});
+      console.log('Tabla receta limpiada');
+    } catch (e) {
+      console.error('Error limpiando receta', e);
+    }
+    try {
+      await prisma.cita.deleteMany({});
+      console.log('Tabla cita limpiada');
+    } catch (e) {
+      console.error('Error limpiando cita', e);
+    }
+    try {
+      await prisma.descansoEmpleado.deleteMany({});
+      console.log('Tabla descanso_empleado limpiada');
+    } catch (e) {
+      console.error('Error limpiando descanso_empleado', e);
+    }
+    try {
+      await prisma.gasto.deleteMany({});
+      console.log('Tabla gasto limpiada');
+    } catch (e) {
+      console.error('Error limpiando gasto', e);
+    }
+    try {
+      await prisma.movimientoContable.deleteMany({});
+      console.log('Tabla movimiento_contable limpiada');
+    } catch (e) {
+      console.error('Error limpiando movimiento_contable', e);
+    }
+    try {
+      await prisma.cuentaContable.deleteMany({});
+      console.log('Tabla cuenta_contable limpiada');
+    } catch (e) {
+      console.error('Error limpiando cuenta_contable', e);
+    }
     try {
       await prisma.producto.deleteMany({});
       console.log('Tabla producto limpiada');

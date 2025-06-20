@@ -34,7 +34,7 @@ export const crearColor = async (req: Request, res: Response) => {
           descripcion,
           activo,
           codigoHex,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -59,7 +59,7 @@ export const crearColor = async (req: Request, res: Response) => {
           descripcion,
           activo,
           codigoHex,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -84,7 +84,7 @@ export const crearColor = async (req: Request, res: Response) => {
           descripcion,
           activo,
           codigoHex,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -118,8 +118,8 @@ export const crearColor = async (req: Request, res: Response) => {
           descripcion,
           activo,
           codigoHex,
-          colorExistenteId: colorExistente.id
-        }
+          colorExistenteId: colorExistente.id,
+        },
       });
       return res.status(409).json({
         ok: false,
@@ -144,8 +144,8 @@ export const crearColor = async (req: Request, res: Response) => {
             nombre,
             codigoHex,
             activo,
-            descripcion
-          }
+            descripcion,
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -177,8 +177,8 @@ export const crearColor = async (req: Request, res: Response) => {
             nombre: nombreLimpio,
             codigoHex: codigoHexLimpio,
             activo: activo !== undefined ? activo : true,
-            descripcion: descripcion?.trim() || null
-          }
+            descripcion: descripcion?.trim() || null,
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -217,8 +217,8 @@ export const crearColor = async (req: Request, res: Response) => {
         nombre: nuevoColor.nombre,
         codigoHex: nuevoColor.codigoHex || null,
         activo: nuevoColor.activo,
-        descripcion: nuevoColor.descripcion || null
-      }
+        descripcion: nuevoColor.descripcion || null,
+      },
     });
 
     return res.status(201).json({
@@ -232,7 +232,7 @@ export const crearColor = async (req: Request, res: Response) => {
     // Registrar auditoría de error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     await logError({
       userId,
       ip: req.ip,
@@ -246,8 +246,8 @@ export const crearColor = async (req: Request, res: Response) => {
         nombre: req.body.nombre || 'No disponible',
         codigoHex: req.body.codigoHex || 'No proporcionado',
         activo: req.body.activo !== undefined ? req.body.activo : 'No especificado',
-        descripcion: req.body.descripcion || 'No proporcionada'
-      }
+        descripcion: req.body.descripcion || 'No proporcionada',
+      },
     });
 
     return res.status(500).json({
@@ -309,9 +309,9 @@ export const listarColores = async (req: Request, res: Response) => {
         totalRegistros: colores.length,
         filtrosAplicados: {
           activo: req.query.activo !== undefined ? req.query.activo === 'true' : undefined,
-          busqueda: req.query.search || null
-        }
-      }
+          busqueda: req.query.search || null,
+        },
+      },
     });
 
     return res.status(200).json({
@@ -325,7 +325,7 @@ export const listarColores = async (req: Request, res: Response) => {
     // Registrar auditoría de error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     await logError({
       userId,
       ip: req.ip,
@@ -338,9 +338,9 @@ export const listarColores = async (req: Request, res: Response) => {
         errorStack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
         filtrosAplicados: {
           activo: req.query.activo,
-          busqueda: req.query.search
-        }
-      }
+          busqueda: req.query.search,
+        },
+      },
     });
 
     return res.status(500).json({
@@ -366,20 +366,17 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
     // Obtener parámetros de paginación y búsqueda
     const pageRaw = parseInt(req.query.pagina as string);
     const pageSizeRaw = parseInt(req.query.limite as string);
-    
+
     // Verificar si los valores son NaN (entrada no numérica)
     const page = !isNaN(pageRaw) ? pageRaw : 1;
     const pageSize = !isNaN(pageSizeRaw) ? pageSizeRaw : 10;
     const searchTerm = (req.query.search as string) || '';
-    
+
     // Verificar si los parámetros originales eran no-numéricos
-    if (
-      (req.query.pagina && isNaN(pageRaw)) || 
-      (req.query.limite && isNaN(pageSizeRaw))
-    ) {
+    if ((req.query.pagina && isNaN(pageRaw)) || (req.query.limite && isNaN(pageSizeRaw))) {
       const errorMsg = `Parámetros de paginación inválidos: valores no numéricos (pagina=${req.query.pagina}, limite=${req.query.limite})`;
       console.error(errorMsg);
-      
+
       // Registrar auditoría de error de validación
       await logError({
         userId,
@@ -393,9 +390,9 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
           error: errorMsg,
           parametros: {
             page: req.query.page,
-            pageSize: req.query.pageSize
-          }
-        }
+            pageSize: req.query.pageSize,
+          },
+        },
       });
 
       return res.status(500).json({
@@ -409,7 +406,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       const errorMsg = `Parámetros de paginación inválidos: página=${page}, pageSize=${pageSize}`;
       console.error(errorMsg);
-      
+
       // Registrar auditoría de error de validación
       await logError({
         userId,
@@ -423,9 +420,9 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
           error: errorMsg,
           parametros: {
             page,
-            pageSize
-          }
-        }
+            pageSize,
+          },
+        },
       });
 
       return res.status(500).json({
@@ -485,9 +482,9 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
         totalPaginas: Math.ceil(total / pageSize),
         filtros: {
           activo: req.query.activo !== undefined ? req.query.activo === 'true' : undefined,
-          busqueda: searchTerm || null
-        }
-      }
+          busqueda: searchTerm || null,
+        },
+      },
     });
 
     // Devolver resultados con formato estándar de paginación
@@ -508,7 +505,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
     // Registrar auditoría de error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     await logError({
       userId,
       ip: req.ip,
@@ -523,9 +520,9 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
           pagina: req.query.page,
           porPagina: req.query.pageSize,
           activo: req.query.activo,
-          busqueda: req.query.search
-        }
-      }
+          busqueda: req.query.search,
+        },
+      },
     });
 
     return res.status(500).json({
@@ -562,8 +559,8 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
         message: 'Se presento un error durante la obtencion del color',
         error: new Error('ID inválido. 400'),
         context: {
-          id: id
-        }
+          id,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -591,8 +588,8 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
         message: 'Se presento un error durante la obtencion del color',
         error: new Error('Color no encontrado. 404'),
         context: {
-          id: id
-        }
+          id,
+        },
       });
       return res.status(404).json({
         ok: false,
@@ -613,8 +610,8 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
       details: {
         nombre: color.nombre,
         activo: color.activo,
-        tieneCodigoHex: color.codigoHex !== null
-      }
+        tieneCodigoHex: color.codigoHex !== null,
+      },
     });
 
     return res.status(200).json({
@@ -627,7 +624,8 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
 
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    const errorCode = error && typeof error === 'object' && 'code' in error ? (error as any).code : undefined;
+    const errorCode =
+      error && typeof error === 'object' && 'code' in error ? (error as any).code : undefined;
 
     // Log the error with appropriate context
     await logError({
@@ -641,8 +639,8 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
       context: {
         idSolicitado: id,
         errorCode,
-        ...(process.env.NODE_ENV === 'development' && errorStack ? { stack: errorStack } : {})
-      }
+        ...(process.env.NODE_ENV === 'development' && errorStack ? { stack: errorStack } : {}),
+      },
     });
 
     // Handle specific error cases
@@ -689,9 +687,9 @@ export const actualizarColor = async (req: Request, res: Response) => {
       error: new Error('ID inválido. 400'),
       context: {
         idSolicitado: id,
-      }
+      },
     });
-    
+
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
       return res.status(400).json({
         ok: false,
@@ -717,15 +715,15 @@ export const actualizarColor = async (req: Request, res: Response) => {
         action: 'error_actualizar_color',
         message: 'Color no encontrado.',
         context: {
-          id: id,
-          datosSolicitud: req.body
+          id,
+          datosSolicitud: req.body,
         },
-        error: new Error('Color no encontrado. 404')
+        error: new Error('Color no encontrado. 404'),
       });
       return res.status(404).json({
         ok: false,
         data: null,
-        error: 'Color no encontrado.'
+        error: 'Color no encontrado.',
       });
     }
 
@@ -747,7 +745,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
         error: new Error('El nombre debe ser una cadena de texto. 400'),
         context: {
           idSolicitado: id,
-        }
+        },
       });
       if (typeof nombre !== 'string') {
         await logError({
@@ -760,7 +758,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
           error: new Error('El nombre debe ser una cadena de texto. 400'),
           context: {
             idSolicitado: id,
-          }
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -781,7 +779,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
           error: new Error('El nombre debe tener entre 2 y 100 caracteres. 400'),
           context: {
             idSolicitado: id,
-          }
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -803,7 +801,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
           error: new Error('El nombre contiene caracteres no permitidos. 400'),
           context: {
             idSolicitado: id,
-          }
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -837,7 +835,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
           error: new Error('Ya existe otro color con ese nombre. 409'),
           context: {
             idSolicitado: id,
-          }
+          },
         });
         return res.status(409).json({
           ok: false,
@@ -866,7 +864,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
             error: new Error('El código hexadecimal debe ser una cadena de texto. 400'),
             context: {
               idSolicitado: id,
-            }
+            },
           });
           return res.status(400).json({
             ok: false,
@@ -893,10 +891,12 @@ export const actualizarColor = async (req: Request, res: Response) => {
             module: 'actualizarColor',
             action: 'error_actualizar_color',
             message: 'Se presento un error durante la actualizacion del color',
-            error: new Error('Formato de código hexadecimal inválido. Debe ser #RRGGBB o #RGB. 400'),
+            error: new Error(
+              'Formato de código hexadecimal inválido. Debe ser #RRGGBB o #RGB. 400'
+            ),
             context: {
               idSolicitado: id,
-            }
+            },
           });
           return res.status(400).json({
             ok: false,
@@ -930,7 +930,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
         error: new Error('No se proporcionaron datos para actualizar. 400'),
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -956,15 +956,15 @@ export const actualizarColor = async (req: Request, res: Response) => {
       entityId: colorActualizado.id,
       details: {
         cambios: Object.keys(datosActualizados)
-          .filter(key => !['modificadoPor', 'modificadoEn'].includes(key))
+          .filter((key) => !['modificadoPor', 'modificadoEn'].includes(key))
           .reduce((obj: Record<string, any>, key) => {
             obj[key] = {
               anterior: colorExistente[key as keyof typeof colorExistente],
-              nuevo: colorActualizado[key as keyof typeof colorActualizado]
+              nuevo: colorActualizado[key as keyof typeof colorActualizado],
             };
             return obj;
-          }, {})
-      }
+          }, {}),
+      },
     });
 
     return res.status(200).json({
@@ -978,7 +978,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
     // Registrar auditoría de error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido. 500';
     const errorStack = error instanceof Error && error.stack ? { stack: error.stack } : {};
-    
+
     if (error && typeof error === 'object' && 'code' in error) {
       switch (error.code) {
         case 'P2023':
@@ -993,8 +993,8 @@ export const actualizarColor = async (req: Request, res: Response) => {
             context: {
               id,
               datosSolicitud: req.body,
-              ...errorStack
-            }
+              ...errorStack,
+            },
           });
           return res.status(400).json({
             ok: false,
@@ -1013,8 +1013,8 @@ export const actualizarColor = async (req: Request, res: Response) => {
             context: {
               id,
               datosSolicitud: req.body,
-              ...errorStack
-            }
+              ...errorStack,
+            },
           });
           return res.status(500).json({
             ok: false,
@@ -1034,8 +1034,8 @@ export const actualizarColor = async (req: Request, res: Response) => {
         context: {
           id,
           datosSolicitud: req.body,
-          ...errorStack
-        }
+          ...errorStack,
+        },
       });
       return res.status(500).json({
         ok: false,
@@ -1073,7 +1073,7 @@ export const eliminarColor = async (req: Request, res: Response) => {
         context: {
           id,
           datosSolicitud: req.body,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -1102,7 +1102,7 @@ export const eliminarColor = async (req: Request, res: Response) => {
         context: {
           id,
           datosSolicitud: req.body,
-        }
+        },
       });
       return res.status(404).json({
         ok: false,
@@ -1131,8 +1131,8 @@ export const eliminarColor = async (req: Request, res: Response) => {
         context: {
           id,
           datosSolicitud: req.body,
-          productosAsociados
-        }
+          productosAsociados,
+        },
       });
       return res.status(409).json({
         ok: false,
@@ -1164,8 +1164,8 @@ export const eliminarColor = async (req: Request, res: Response) => {
       details: {
         nombre: colorExistente.nombre,
         tipo: 'soft_delete',
-        fechaEliminacion: fechaActual.toISOString()
-      }
+        fechaEliminacion: fechaActual.toISOString(),
+      },
     });
 
     return res.status(200).json({
@@ -1181,7 +1181,7 @@ export const eliminarColor = async (req: Request, res: Response) => {
     const tieneProductosAsociados = errorObj?.productosAsociados || 0;
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido. 500';
     const errorStack = error instanceof Error && error.stack ? { stack: error.stack } : {};
-    
+
     if (error && typeof error === 'object' && 'code' in error) {
       switch (error.code) {
         case 'P2023':
@@ -1196,8 +1196,8 @@ export const eliminarColor = async (req: Request, res: Response) => {
             context: {
               id,
               datosSolicitud: req.body,
-              ...errorStack
-            }
+              ...errorStack,
+            },
           });
           return res.status(400).json({
             ok: false,
@@ -1217,8 +1217,8 @@ export const eliminarColor = async (req: Request, res: Response) => {
               id,
               datosSolicitud: req.body,
               tieneProductosAsociados,
-              ...errorStack
-            }
+              ...errorStack,
+            },
           });
           return res.status(500).json({
             ok: false,
@@ -1239,8 +1239,8 @@ export const eliminarColor = async (req: Request, res: Response) => {
           id,
           datosSolicitud: req.body,
           tieneProductosAsociados,
-          ...errorStack
-        }
+          ...errorStack,
+        },
       });
       return res.status(500).json({
         ok: false,

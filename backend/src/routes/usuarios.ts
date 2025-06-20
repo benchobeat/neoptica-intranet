@@ -1,14 +1,21 @@
 import { Router } from 'express';
 
 import { autoregistroCliente } from '@/controllers/autoregistroController';
-import * as usuarioController from '@/controllers/usuarioController';
 import {
-  actualizarPerfilUsuario,
-  cambiarPassword,
-  resetPasswordAdmin,
+  actualizarUsuario,
   eliminarUsuario,
   listarUsuariosPaginados,
+  listarUsuarios,
+  crearUsuario,
+  obtenerUsuario,
+  resetPasswordAdmin,
+  reactivarUsuario,
 } from '@/controllers/usuarioController';
+import {
+  actualizarPerfilUsuario,
+  cambiarPasswordUsuario,
+  obtenerPerfilUsuario,
+} from '@/controllers/usuarioMeController';
 import { authenticateJWT } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/roles';
 
@@ -19,14 +26,14 @@ import { requireRole } from '@/middlewares/roles';
  *     UsuarioInput:
  *       type: object
  *       required:
- *         - nombre_completo
+ *         - nombreCompleto
  *         - email
  *         - password
  *         - direccion
  *         - telefono
  *         - dni
  *       properties:
- *         nombre_completo:
+ *         nombreCompleto:
  *           type: string
  *           example: "Juan Pérez"
  *         email:
@@ -44,7 +51,7 @@ import { requireRole } from '@/middlewares/roles';
  *           example: "0999999999"
  *         dni:
  *           type: string
- *           example: "12345678"
+ *           example: "1234567812"
  *         roles:
  *           type: array
  *           description: "Lista de roles a asignar al usuario"
@@ -86,7 +93,7 @@ import { requireRole } from '@/middlewares/roles';
 
 /**
  * @swagger
- * /api/usuarios/autoregistro:
+ * /api/usuarios/me/autoregistro:
  *   post:
  *     summary: Autoregistro de cliente (formulario o redes sociales)
  *     tags: [Usuarios]
@@ -98,7 +105,7 @@ import { requireRole } from '@/middlewares/roles';
  *           schema:
  *             type: object
  *             properties:
- *               nombre_completo:
+ *               nombreCompleto:
  *                 type: string
  *                 example: "Juan Pérez"
  *               email:
@@ -110,18 +117,18 @@ import { requireRole } from '@/middlewares/roles';
  *               telefono:
  *                 type: string
  *                 example: "0999999999"
- *               proveedor_oauth:
+ *               proveedorOauth:
  *                 type: string
  *                 enum: [google, facebook, instagram]
  *                 example: "google"
- *               oauth_id:
+ *               oauthId:
  *                 type: string
  *                 example: "1234567890"
  *             required:
  *               - email
  *             description: |
- *               Para registro tradicional se requiere nombre_completo, email y password.
- *               Para registro social se requiere email, proveedor_oauth y oauth_id.
+ *               Para registro tradicional se requiere nombreCompleto, email y password.
+ *               Para registro social se requiere email, proveedorOauth y oauthId.
  *     responses:
  *       201:
  *         description: Cliente registrado correctamente
@@ -130,13 +137,106 @@ import { requireRole } from '@/middlewares/roles';
  *       409:
  *         description: Ya existe un usuario con ese email
  */
-
 const router = Router();
-router.post('/autoregistro', autoregistroCliente);
+router.post('/me/autoregistro', autoregistroCliente);
 
 /**
  * @swagger
- * /api/usuarios/perfil:
+ * /api/usuarios/me/password:
+ *   put:
+ *     summary: Cambia la contraseña del usuario autenticado (self-service)
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [passwordActual, passwordNuevo]
+ *             properties:
+ *               passwordActual:
+ *                 type: string
+ *                 example: "Admin1234!"
+ *               passwordNuevo:
+ *                 type: string
+ *                 example: "NuevoPass2024!"
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Error en la petición (faltan datos, password débil, etc)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Password actual incorrecto o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: No tienes permiso para cambiar esa contraseña
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/me/password', authenticateJWT, cambiarPasswordUsuario);
+
+/**
+ * @swagger
+ * /api/usuarios/me/perfil:
+ *   get:
+ *     summary: Obtiene el perfil del usuario autenticado
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Perfil del usuario obtenido con éxito
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Usuario'
+ *                 error:
+ *                   type: null
+ *       401:
+ *         description: No autenticado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Usuario no encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Error del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/me/perfil', authenticateJWT, obtenerPerfilUsuario);
+
+/**
+ * @swagger
+ * /api/usuarios/me/perfil:
  *   put:
  *     summary: Permite a un usuario modificar su propio perfil (nombre, teléfono, dirección, dni solo si está null)
  *     tags:
@@ -150,7 +250,7 @@ router.post('/autoregistro', autoregistroCliente);
  *           schema:
  *             type: object
  *             properties:
- *               nombre_completo:
+ *               nombreCompleto:
  *                 type: string
  *                 example: "Juan Perez"
  *               telefono:
@@ -200,7 +300,7 @@ router.post('/autoregistro', autoregistroCliente);
  *       500:
  *         description: Error interno del servidor
  */
-router.put('/perfil', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista', 'cliente'), actualizarPerfilUsuario);
+router.put('/me/perfil', authenticateJWT, actualizarPerfilUsuario);
 
 /**
  * @swagger
@@ -260,7 +360,37 @@ router.put('/perfil', authenticateJWT, requireRole('admin', 'vendedor', 'optomet
  *       401:
  *         description: No autorizado
  */
-router.get('/paginated', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista'), listarUsuariosPaginados);
+router.get(
+  '/paginated',
+  authenticateJWT,
+  requireRole('admin', 'vendedor', 'optometrista'),
+  listarUsuariosPaginados
+);
+
+/**
+ * @swagger
+ * /api/usuarios:
+ *   get:
+ *     summary: Lista todos los usuarios
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean, example: true }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Usuario'
+ *                 error: { type: string, example: null }
+ */
+router.get('/', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista'), listarUsuarios);
 
 /**
  * @swagger
@@ -298,38 +428,8 @@ router.get('/paginated', authenticateJWT, requireRole('admin', 'vendedor', 'opto
 router.get(
   '/:id',
   authenticateJWT,
-  requireRole('admin', 'vendedor', 'optometrista', 'cliente'),
-  usuarioController.obtenerUsuario
-);
-
-/**
- * @swagger
- * /api/usuarios:
- *   get:
- *     summary: Lista todos los usuarios
- *     tags: [Usuarios]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de usuarios
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok: { type: boolean, example: true }
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Usuario'
- *                 error: { type: string, example: null }
- */
-router.get(
-  '/',
-  authenticateJWT,
   requireRole('admin', 'vendedor', 'optometrista'),
-  usuarioController.listarUsuarios
+  obtenerUsuario
 );
 
 /**
@@ -365,7 +465,7 @@ router.get(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', authenticateJWT, requireRole('admin'), usuarioController.crearUsuario);
+router.post('/', authenticateJWT, requireRole('admin'), crearUsuario);
 
 /**
  * @swagger
@@ -412,12 +512,7 @@ router.post('/', authenticateJWT, requireRole('admin'), usuarioController.crearU
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put(
-  '/:id',
-  authenticateJWT,
-  requireRole('admin'),
-  usuarioController.actualizarUsuario
-);
+router.put('/:id', authenticateJWT, requireRole('admin'), actualizarUsuario);
 
 /**
  * @swagger
@@ -455,59 +550,57 @@ router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarUsuario);
 
 /**
  * @swagger
- * /api/usuarios/{id}/password:
+ * /api/usuarios/{id}/reactivar:
  *   put:
- *     summary: Cambia la contraseña del usuario autenticado (self-service)
+ *     summary: Reactiva un usuario eliminado lógicamente (solo admin)
  *     tags: [Usuarios]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
- *         required: true
+ *       - in: path
+ *         name: id
  *         schema: { type: string }
- *         description: ID del usuario (debe coincidir con el usuario autenticado)
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [password_actual, password_nuevo]
- *             properties:
- *               password_actual:
- *                 type: string
- *                 example: "Admin1234!"
- *               password_nuevo:
- *                 type: string
- *                 example: "NuevoPass2024!"
+ *         required: true
+ *         description: ID del usuario a reactivar
  *     responses:
  *       200:
- *         description: Contraseña actualizada correctamente
+ *         description: Usuario reactivado correctamente
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Success'
  *       400:
- *         description: Error en la petición (faltan datos, password débil, etc)
+ *         description: El usuario ya está activo
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       401:
- *         description: Password actual incorrecto o token inválido
+ *         description: No autenticado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: No tienes permiso para cambiar esa contraseña
+ *         description: No autorizado (se requiere rol admin)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Usuario no encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Error del servidor
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id/password', authenticateJWT, cambiarPassword);
+router.put('/:id/reactivar', authenticateJWT, requireRole('admin'), reactivarUsuario);
 
 /**
  * @swagger
@@ -529,9 +622,9 @@ router.put('/:id/password', authenticateJWT, cambiarPassword);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [password_nuevo]
+ *             required: [passwordNuevo]
  *             properties:
- *               password_nuevo:
+ *               newPassword:
  *                 type: string
  *                 example: "NuevoAdmin123!"
  *     responses:

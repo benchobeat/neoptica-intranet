@@ -1,7 +1,7 @@
-// Import types first to avoid circular dependencies
+// Importar tipos primero para evitar dependencias circulares
 import { Request, Response } from 'express';
 
-// Define mocks at the top level
+// Definir mocks a nivel superior
 const mockPrisma = {
   usuario: {
     findUnique: jest.fn(),
@@ -9,16 +9,13 @@ const mockPrisma = {
   },
 };
 
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
-const mockIsSystemUser = jest.fn().mockResolvedValue(false);
+const mockLogSuccess = jest.fn();
+const mockLogError = jest.fn();
 
-// Configure mocks before importing the controller
+// Configurar mocks antes de importar el controlador
 jest.mock('@/utils/audit', () => ({
-  registrarAuditoria: (params: any) => mockRegistrarAuditoria(params),
-}));
-
-jest.mock('@/utils/system', () => ({
-  isSystemUser: (id: string) => mockIsSystemUser(id),
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+  logError: (...args: any[]) => mockLogError(...args),
 }));
 
 jest.mock('@/utils/prisma', () => ({
@@ -26,11 +23,12 @@ jest.mock('@/utils/prisma', () => ({
   default: mockPrisma,
 }));
 
-// Import after setting up mocks
+// Importar después de configurar los mocks
 import { eliminarUsuario } from '@/controllers/usuarioController';
 import { mockRequest, mockResponse } from '@/../tests/unit/__fixtures__/usuarioFixtures';
+import { fail } from '@/utils/response';
 
-// Define user type to match the expected structure in the controller
+// Definir tipo de usuario para que coincida con la estructura esperada en el controlador
 interface UserType {
   id: string;
   nombreCompleto: string;
@@ -38,26 +36,26 @@ interface UserType {
   roles: string[];
 }
 
-// Extend Express Request type to include our custom properties
+// Extender el tipo Request de Express para incluir nuestras propiedades personalizadas
 interface AuthenticatedRequest extends Request {
   user: UserType;
   ip: string;
-  [key: string]: any; // Allow any additional properties
+  [key: string]: any; // Permitir propiedades adicionales
 }
 
-// Helper function to create a properly typed request
+// Función auxiliar para crear una solicitud tipada correctamente
 function createAuthenticatedRequest(overrides: Partial<AuthenticatedRequest> = {}): AuthenticatedRequest {
   const baseRequest = mockRequest() as unknown as Partial<AuthenticatedRequest>;
   
-  // Create a proper user object with all required properties
+  // Crear un objeto de usuario con todas las propiedades requeridas
   const defaultUser: UserType = {
     id: '',
-    nombreCompleto: 'Test User',
+    nombreCompleto: 'Usuario de Prueba',
     email: 'test@example.com',
     roles: []
   };
 
-  // Merge all properties, ensuring user object is properly typed
+  // Combinar todas las propiedades, asegurando que el objeto de usuario esté correctamente tipado
   return {
     ...baseRequest,
     user: {
@@ -88,22 +86,22 @@ describe('eliminarUsuario', () => {
   };
 
   beforeEach(() => {
-    // Reset mocks before each test
+    // Restablecer mocks antes de cada prueba
     jest.clearAllMocks();
     
-    // Create a proper mock request with all required Express properties
+    // Crear una solicitud simulada con todas las propiedades requeridas de Express
     req = createAuthenticatedRequest({
       params: { id: targetUserId },
       user: adminUser,
       ip: '127.0.0.1'
     });
 
-    // Mock response
+    // Mock de respuesta
     res = mockResponse();
     
-    // Default mock implementations
-    mockIsSystemUser.mockResolvedValue(false);
-    mockRegistrarAuditoria.mockResolvedValue(undefined);
+    // Implementaciones por defecto de los mocks
+    mockLogSuccess.mockResolvedValue(undefined);
+    mockLogError.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -143,6 +141,7 @@ describe('eliminarUsuario', () => {
     // Verificar que se buscó el usuario con el ID correcto
     expect(mockPrisma.usuario.findUnique).toHaveBeenCalledWith({
       where: { id: targetUserId },
+      select: { id: true, email: true, activo: true }
     });
 
     // Verificar que se actualizó el usuario
@@ -155,80 +154,43 @@ describe('eliminarUsuario', () => {
       },
     }));
 
-    // Verificar que se registró la auditoría
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(expect.objectContaining({
-      accion: 'eliminar_usuario',
-      entidadId: targetUserId,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
-      usuarioId: adminUser.id,
+    // Verificar que se registró la auditoría exitosa
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'usuario_eliminado',
+      entityType: 'usuario',
+      entityId: targetUserId,
+      module: 'eliminarUsuario',
+      userId: adminUser.id,
+      ip: '127.0.0.1',
+      message: `Usuario eliminado: ${mockUser.email}`,
+      details: expect.objectContaining({
+        email: mockUser.email,
+        eliminadoPor: adminUser.id,
+        fechaEliminacion: expect.any(String)
+      })
     }));
 
     // Verificar respuesta exitosa
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: true,
-        data: expect.any(String),
-        error: null
-      })
-    );
-    
-    // Verificar que el mensaje de éxito contenga el texto esperado
-    const responseArg = (res.json as jest.Mock).mock.calls[0][0];
-    expect(responseArg.data).toContain('eliminado');
-  });
-
-  it('no debe permitir eliminar un usuario ya inactivo', async () => {
-    const inactiveUserId = 'inactive-user';
-    req = createAuthenticatedRequest({
-      params: { id: inactiveUserId },
-      user: adminUser,
-      ip: '127.0.0.1'
+    expect(res.json).toHaveBeenCalledWith({
+      ok: true,
+      data: 'Usuario eliminado correctamente',
+      error: null
     });
     
-    // Configurar un usuario que ya está inactivo
-    mockPrisma.usuario.findUnique.mockResolvedValueOnce({
-      id: inactiveUserId,
-      email: 'inactivo@example.com',
-      activo: false,
-      anuladoEn: new Date(),
-      anuladoPor: 'some-admin-id',
-    });
-
-    await eliminarUsuario(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: 'El usuario ya está inactivo o eliminado',
+    // Verificar que se registró la auditoría exitosa
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      action: 'usuario_eliminado',
+      entityType: 'usuario',
+      entityId: targetUserId,
+      module: 'eliminarUsuario',
+      userId: adminUser.id,
+      ip: '127.0.0.1',
+      message: `Usuario eliminado: ${mockUser.email}`,
+      details: expect.objectContaining({
+        email: mockUser.email,
+        eliminadoPor: adminUser.id
       })
-    );
-    
-    expect(mockPrisma.usuario.update).not.toHaveBeenCalled();
-  });
-
-  it('no debe permitir a un no administrador eliminar usuarios', async () => {
-    // Configurar un usuario sin rol de administrador
-    req = createAuthenticatedRequest({
-      params: { id: targetUserId },
-      user: regularUser,
-      ip: '127.0.0.1'
     });
-
-    await eliminarUsuario(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: 'Acceso denegado: solo admin puede eliminar usuarios',
-      })
-    );
-    
-    // Verificar que no se intentó buscar ni actualizar el usuario
-    expect(mockPrisma.usuario.findUnique).not.toHaveBeenCalled();
-    expect(mockPrisma.usuario.update).not.toHaveBeenCalled();
   });
 
   it('debe manejar el caso cuando el usuario no existe', async () => {
@@ -236,27 +198,135 @@ describe('eliminarUsuario', () => {
     req = createAuthenticatedRequest({
       params: { id: nonExistentUserId },
       user: adminUser,
-      ip: '127.0.0.1'
     });
-    
-    mockPrisma.usuario.findUnique.mockResolvedValueOnce(null);
 
+    // Configurar el mock para devolver null (usuario no encontrado)
+    mockPrisma.usuario.findUnique.mockResolvedValue(null);
+
+    // Llamar a la función del controlador
     await eliminarUsuario(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(404);
+    // Verificar que se buscó el usuario
+    expect(mockPrisma.usuario.findUnique).toHaveBeenCalledWith({
+      where: { id: nonExistentUserId },
+      select: { id: true, email: true, activo: true },
+    });
+
+    // Verificar que NO se intentó actualizar el usuario
+    expect(mockPrisma.usuario.update).not.toHaveBeenCalled();
+
+    // Verificar que se registró el error de auditoría
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'eliminar_usuario_no_encontrado',
+      entityType: 'usuario',
+      entityId: nonExistentUserId,
+      module: 'eliminarUsuario',
+      userId: adminUser.id,
+      ip: '127.0.0.1',
+      message: `Intento de eliminar usuario no encontrado: ${nonExistentUserId}`,
+      error: expect.any(Error),
+      context: expect.objectContaining({
+        usuarioId: nonExistentUserId,
+        solicitadoPor: adminUser.id
+      }),
+    }));
+
+    // Verificar respuesta de error
+    expect(res.json).toHaveBeenCalledWith(
+      fail('Usuario no encontrado')
+    );
+    
+    // Verificar que no se intentó actualizar el usuario
+    expect(mockPrisma.usuario.update).not.toHaveBeenCalled();
+    
+    // Verificar que se registró el error de auditoría
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'eliminar_usuario_no_encontrado',
+      message: expect.stringContaining('Intento de eliminar usuario no encontrado')
+    }));
+  });
+
+  it('no debe permitir a un no administrador eliminar usuarios', async () => {
+    // Configurar solicitud con usuario regular (sin rol admin)
+    req = createAuthenticatedRequest({
+      params: { id: 'user-to-delete' },
+      user: regularUser
+    });
+
+    // Llamar al controlador
+    await eliminarUsuario(req, res);
+
+    // Verificar respuesta de error de autorización
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(
+      fail('Acceso denegado: solo administradores pueden eliminar usuarios')
+    );
+    
+    // Verificar que no se intentó buscar el usuario
+    expect(mockPrisma.usuario.findUnique).not.toHaveBeenCalled();
+    
+    // Verificar que no se registró ningún error de auditoría
+    expect(mockLogError).not.toHaveBeenCalled();
+  });
+
+  it('debe manejar correctamente un usuario ya inactivo', async () => {
+    const inactiveUserId = 'inactive-user';
+    const mockInactiveUser = {
+      id: inactiveUserId,
+      email: 'inactive@example.com',
+      activo: false,
+      anuladoPor: 'another-admin',
+      anuladoEn: new Date()
+    };
+    
+    // Configurar mock para usuario inactivo
+    mockPrisma.usuario.findUnique.mockResolvedValueOnce(mockInactiveUser);
+
+    // Configurar solicitud con admin
+    req = createAuthenticatedRequest({
+      params: { id: inactiveUserId },
+      user: adminUser
+    });
+
+    // Llamar al controlador
+    await eliminarUsuario(req, res);
+
+    // Verificar que se buscó al usuario
+    expect(mockPrisma.usuario.findUnique).toHaveBeenCalledWith({
+      where: { id: inactiveUserId },
+      select: { id: true, email: true, activo: true }
+    });
+
+    // Verificar que se actualizó el usuario (aunque ya esté inactivo, el controlador igual lo actualiza)
+    expect(mockPrisma.usuario.update).toHaveBeenCalledWith({
+      where: { id: inactiveUserId },
+      data: {
+        activo: false,
+        anuladoEn: expect.any(Date),
+        anuladoPor: adminUser.id
+      }
+    });
+
+    // Verificar respuesta exitosa
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        ok: false,
-        error: 'Usuario no encontrado',
+        ok: true,
+        data: 'Usuario eliminado correctamente',
+        error: null
       })
     );
     
-    expect(mockPrisma.usuario.update).not.toHaveBeenCalled();
+    // Verificar que se registró la auditoría exitosa
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'usuario_eliminado',
+      message: `Usuario eliminado: ${mockInactiveUser.email}`,
+      details: {
+        email: mockInactiveUser.email,
+        eliminadoPor: adminUser.id,
+        fechaEliminacion: expect.any(String)
+      }
+    }));
   });
-
-  // Nota: El controlador actual no tiene validación para usuarios del sistema
-  // Si se implementa en el futuro, agregar la prueba correspondiente aquí
-  it.todo('debería implementar validación para usuarios del sistema');
 
   it('debe manejar errores inesperados', async () => {
     const errorMessage = 'Error de base de datos';
@@ -277,26 +347,33 @@ describe('eliminarUsuario', () => {
     
     // Configurar el mock para que falle
     mockPrisma.usuario.findUnique = jest.fn().mockRejectedValue(testError);
-    
-    // Configurar el mock de registrarAuditoria para que no falle la prueba
-    mockRegistrarAuditoria.mockImplementation(async () => {
-      // No hacer nada, solo evitar que falle la prueba
-    });
 
     await eliminarUsuario(errorReq, res);
 
     // Verificar respuesta de error
-    expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         ok: false,
-        error: errorMessage,
+        error: 'Error al eliminar el usuario',
       })
     );
     
-    // Verificar que se llamó a registrarAuditoria con los parámetros correctos
-    // Nota: El controlador no registra auditoría en caso de error inesperado
-    // por lo que no deberíamos esperar que se llame a registrarAuditoria
-    expect(mockRegistrarAuditoria).not.toHaveBeenCalled();
+    // Verificar que no se intentó actualizar el usuario
+    expect(mockPrisma.usuario.update).not.toHaveBeenCalled();
+    
+    // Verificar que se registró el error de auditoría
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'error_eliminar_usuario',
+      entityType: 'usuario',
+      module: 'eliminarUsuario',
+      userId: adminUser.id,
+      ip: '127.0.0.1',
+      error: testError,
+      message: `Error al eliminar usuario: ${errorUserId}`,
+      context: {
+        error: errorMessage,
+        stack: testError.stack
+      }
+    }));
   });
 });

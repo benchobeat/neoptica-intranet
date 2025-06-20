@@ -3,13 +3,14 @@
 import 'module-alias/register';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import type { Request, Response, RequestHandler } from 'express';
+import type { Request, Response, RequestHandler, NextFunction } from 'express';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 
 import { authenticateJWT } from '@/middlewares/auth';
 import auditoriaRoutes from '@/routes/auditoria'; // Importamos la ruta de auditoría
 import authRoutes from '@/routes/auth';
+import categoriaRoutes from '@/routes/categoria'; // Importamos la ruta de categorías
 import colorRoutes from '@/routes/color'; // Importamos la ruta de colores
 import marcaRoutes from '@/routes/marca'; // Importamos la ruta de marcas
 import productoRoutes from '@/routes/producto';
@@ -18,7 +19,7 @@ import sucursalesRoutes from '@/routes/sucursales';
 import testMultirolRoutes from '@/routes/test-multirol'; // Importamos rutas de prueba para multirol
 import usuariosRoutes from '@/routes/usuarios';
 import { sendMail } from '@/utils/mailer';
-import { success } from '@/utils/response';
+import { success, fail } from '@/utils/response';
 import { swaggerSpec } from '@/utils/swagger';
 
 import passport from './config/passport';
@@ -34,7 +35,49 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Configuración de express.json con manejo de errores personalizado
+app.use(
+  express.json({
+    strict: true, // Solo acepta objetos y arrays
+    verify: (req: any, res: any, buf: Buffer) => {
+      try {
+        JSON.parse(buf.toString());
+      } catch (e) {
+        const error = e as Error;
+        (req as any).invalidJson = true;
+        (req as any).jsonError = error.message;
+      }
+    },
+  })
+);
+
+// Middleware para manejar errores de JSON inválido
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json(
+      fail('JSON inválido en el cuerpo de la petición', {
+        field: 'body',
+        message: 'El cuerpo de la petición no es un JSON válido',
+        details: err.message,
+      } as any)
+    );
+  }
+  next();
+});
+
+// Middleware para verificar si el JSON era inválido
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if ((req as any).invalidJson) {
+    return res.status(400).json(
+      fail('JSON inválido', {
+        field: 'body',
+        message: 'El cuerpo de la petición no es un JSON válido',
+        details: (req as any).jsonError,
+      } as any)
+    );
+  }
+  next();
+});
 app.use(passport.initialize());
 // Si usas sesiones:
 // import session from 'express-session';
@@ -46,6 +89,7 @@ app.use('/api/roles', rolesRoutes);
 app.use('/api/sucursales', sucursalesRoutes);
 app.use('/api/productos', productoRoutes);
 app.use('/api/marcas', marcaRoutes); // Registramos la ruta de marcas
+app.use('/api/categorias', categoriaRoutes); // Registramos la ruta de categorías
 app.use('/api/colores', colorRoutes); // Registramos la ruta de colores
 app.use('/api/auditoria', auditoriaRoutes); // Registramos la ruta de auditoría
 app.use('/api', testMultirolRoutes); // Registramos las rutas de prueba para multirol

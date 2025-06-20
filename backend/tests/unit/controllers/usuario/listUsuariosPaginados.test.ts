@@ -1,244 +1,260 @@
-// Mock Prisma client first to avoid hoisting issues
+// Configuración inicial de los mocks
 const mockCount = jest.fn();
 const mockFindMany = jest.fn();
-const mockPrisma = {
-  usuario: {
-    count: mockCount,
-    findMany: mockFindMany,
+const mockLogError = jest.fn();
+const mockLogSuccess = jest.fn();
+
+// Mock de las funciones de auditoría
+jest.mock('../../../../src/utils/audit', () => ({
+  logError: mockLogError,
+  logSuccess: mockLogSuccess,
+}));
+
+// Mock de la instancia de Prisma
+jest.mock('../../../../src/utils/prisma', () => ({
+  __esModule: true,
+  default: {
+    usuario: {
+      count: mockCount,
+      findMany: mockFindMany,
+    },
   },
+}));
+
+// Importar controlador y utilidades necesarias
+import { Request, Response } from 'express';
+import { listarUsuariosPaginados } from '../../../../src/controllers/usuarioController';
+
+// Datos de prueba
+const mockUsuarios = [
+  {
+    id: 'user-1',
+    nombreCompleto: 'Admin User',
+    email: 'admin@example.com',
+    telefono: '1234567890',
+    activo: true,
+    roles: [
+      { rol: { nombre: 'admin' } },
+    ],
+    password: 'hashed_password',
+  },
+  {
+    id: 'user-2',
+    nombreCompleto: 'Vendor User',
+    email: 'vendor@example.com',
+    telefono: '0987654321',
+    activo: true,
+    roles: [
+      { rol: { nombre: 'vendedor' } },
+    ],
+    password: 'hashed_password',
+  },
+];
+
+// Extended Request type for testing
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    nombreCompleto: string;
+    roles: string[];
+  };
+  ip: string;
+}
+
+// Helper function to create a mock request
+const createMockRequest = (overrides: Partial<AuthenticatedRequest> = {}) => {
+  const req: any = {
+    method: 'GET',
+    url: '/api/usuarios',
+    headers: {},
+    ip: '127.0.0.1',
+    params: {},
+    query: {},
+    body: {},
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      nombreCompleto: 'Test User',
+      roles: ['admin'],
+    },
+    ...overrides,
+  };
+  return req as AuthenticatedRequest;
 };
 
-// Mock the modules
-jest.mock('../../../../src/utils/audit', () => ({
-  registrarAuditoria: jest.fn().mockResolvedValue(undefined),
-}));
+// Interfaz extendida para simular la respuesta de Express
+interface MockResponse extends Omit<Response, 'json' | 'status' | 'send'> {
+  json: jest.Mock;
+  status: jest.Mock;
+  send: jest.Mock;
+}
 
-// Mock Prisma client
-jest.mock('@prisma/client', () => ({
-  PrismaClient: jest.fn(() => mockPrisma),
-}));
-
-// Import the controller and fixtures after setting up mocks
-import { listarUsuariosPaginados } from '../../../../src/controllers/usuarioController';
-import { mockUsuarioAdmin, mockUsuarioVendedor } from '../../__fixtures__/usuarioFixtures';
-
-// Mock the PrismaClient from @prisma/client
-jest.mock('@prisma/client', () => ({
-  PrismaClient: jest.fn(() => mockPrisma)
-}));
-
-// Mock request and response
-const mockRequest = (query = {}) => ({
-  query,
-  ip: '127.0.0.1',
-  user: { id: 'test-user-id', roles: ['ADMIN'] },
-  get: jest.fn(),
-  header: jest.fn(),
-  accepts: jest.fn().mockReturnValue('application/json'),
-});
-
-const mockResponse = () => {
-  const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  return res;
+// Función auxiliar para crear una respuesta simulada
+const createMockResponse = (): MockResponse => {
+  const res: Partial<MockResponse> = {
+    json: jest.fn().mockReturnThis(),
+    status: jest.fn().mockReturnThis(),
+    send: jest.fn().mockReturnThis(),
+  };
+  return res as MockResponse;
 };
 
 describe('listarUsuariosPaginados', () => {
-  let req: any;
-  let res: any;
-  let next: jest.Mock;
-
-  const mockUsuarios = [
-    { ...mockUsuarioAdmin, password: undefined, roles: [{ rol: { nombre: 'ADMIN' } }] },
-    { ...mockUsuarioVendedor, password: undefined, roles: [{ rol: { nombre: 'VENDEDOR' } }] },
-  ];
+  let req: AuthenticatedRequest;
+  let res: MockResponse;
 
   beforeEach(() => {
-    // Reset mocks before each test
+    // Limpiar todos los mocks antes de cada prueba
     jest.clearAllMocks();
     
-    // Setup default request and response
-    req = mockRequest();
-    res = mockResponse();
-    next = jest.fn();
+    // Configurar solicitud y respuesta por defecto
+    req = createMockRequest();
+    res = createMockResponse();
 
-    // Default mock implementations
+    // Implementaciones por defecto de los mocks
     mockCount.mockResolvedValue(2);
     mockFindMany.mockResolvedValue(mockUsuarios);
   });
 
   afterEach(() => {
+    // Limpiar mocks después de cada prueba
     jest.clearAllMocks();
   });
 
-  it('debe devolver una lista paginada de usuarios', async () => {
-    // Arrange
-    const mockUsers = mockUsuarios.map(user => ({
-      ...user,
-      roles: [{
-        id: 'mocked-role-id',
-        rol: { nombre: user.roles[0].rol.nombre },
-        rolId: 'mocked-role-id',
-        usuarioId: user.id
-      }]
-    }));
+  it('debe devolver una lista paginada de usuarios (página 1)', async () => {
+    // Preparación 
+    req.query = {}; // Valores por defecto: page=1, pageSize=10
 
-    mockCount.mockResolvedValue(2);
-    mockFindMany.mockResolvedValue(mockUsers);
-
-    // Act
+    // Ejecutar
     await listarUsuariosPaginados(req, res);
 
-    // Assert
+    // Verificar
     expect(mockCount).toHaveBeenCalledWith({
-      where: { anuladoEn: null }
+      where: {}
     });
     expect(mockFindMany).toHaveBeenCalledWith({
-      take: 10,
-      skip: 0,
+      where: {},
       orderBy: { nombreCompleto: 'asc' },
-      where: { anuladoEn: null },
+      skip: 0,
+      take: 10,
       include: { roles: { include: { rol: true } } },
     });
-    
-    const response = res.json.mock.calls[0][0];
-    expect(response).toMatchObject({
+
+    // Verificar el estado y datos de la respuesta
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
       ok: true,
-      error: null,
       data: {
         items: expect.any(Array),
+        total: 2,
         page: 1,
         pageSize: 10,
-        total: 2
-      }
-    });
-  });
-
-  it('debe filtrar por búsqueda si se proporciona searchText', async () => {
-    // Arrange
-    req.query.searchText = 'admin';
-    
-    const mockUserWithRoles = {
-      ...mockUsuarioAdmin,
-      roles: [{
-        id: '1',
-        rol: { nombre: 'ADMIN' },
-        rolId: '1',
-        usuarioId: mockUsuarioAdmin.id
-      }]
-    };
-    
-    // The controller maps roles to a simple array of role names
-    const expectedResponseUser = {
-      ...mockUsuarioAdmin,
-      roles: ['ADMIN']
-    };
-
-    mockCount.mockResolvedValue(1);
-    mockFindMany.mockResolvedValue([mockUserWithRoles]);
-
-    // Act
-    await listarUsuariosPaginados(req, res);
-
-    // Assert
-    expect(mockCount).toHaveBeenCalledWith({
-      where: {
-        anuladoEn: null,
-        nombreCompleto: {
-          contains: 'admin',
-          mode: 'insensitive'
-        }
-      }
-    });
-
-    const response = res.json.mock.calls[0][0];
-    expect(response).toHaveProperty('ok', true);
-    expect(response.error).toBeNull();
-    expect(response.data).toHaveProperty('items');
-    expect(response.data.items).toHaveLength(1);
-    expect(response.data.items[0]).toMatchObject({
-      ...expectedResponseUser
-    });
-  });
-
-  it('debe manejar la paginación personalizada correctamente', async () => {
-    // Arrange
-    const page = 2;
-    const pageSize = 5;
-    const totalItems = 15;
-    
-    req = mockRequest({ 
-      page: page.toString(), 
-      pageSize: pageSize.toString() 
-    });
-    
-    mockCount.mockResolvedValue(totalItems);
-    
-    const mockPaginatedUsers = mockUsuarios.map(user => ({
-      ...user,
-      roles: [{
-        id: '1',
-        rol: { nombre: user.roles[0].rol.nombre },
-        rolId: '1',
-        usuarioId: user.id
-      }]
-    }));
-    
-    mockFindMany.mockResolvedValue(mockPaginatedUsers);
-
-    // Act
-    await listarUsuariosPaginados(req, res);
-
-    // Assert
-    expect(mockCount).toHaveBeenCalledWith({
-      where: { anuladoEn: null }
-    });
-    
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { anuladoEn: null },
-      orderBy: { nombreCompleto: 'asc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: { 
-        roles: { 
-          include: { rol: true } 
-        } 
       },
+      error: null,
     });
 
-    const response = res.json.mock.calls[0][0];
-    expect(response).toMatchObject({
-      ok: true,
-      error: null,
-      data: {
-        items: expect.any(Array),
-        page: page,
-        pageSize: pageSize,
-        total: totalItems
+    // Verificar que tenemos el número esperado de elementos
+    const responseData = (res.json as jest.Mock).mock.calls[0][0].data;
+    expect(responseData.items.length).toBe(2);
+    
+    // Verificar el registro de auditoría exitoso
+    expect(mockLogSuccess).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'listarUsuariosPaginados',
+      action: 'listar_usuarios_paginados_exitoso',
+      message: 'Se listaron 2 usuarios (página 1)',
+      details: {
+        page: 1,
+        pageSize: 10,
+        total: 2,
+        totalPages: 1
       }
     });
   });
 
-  it('debe manejar errores correctamente', async () => {
+  it('debe aplicar filtros de búsqueda correctamente', async () => {
     // Arrange
-    const error = new Error('Error de base de datos');
-    mockCount.mockRejectedValueOnce(error);
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    req.query = {
+      searchText: 'admin',
+      activo: 'true'
+    };
 
-    try {
-      // Act
-      await listarUsuariosPaginados(req, res);
+    // Act
+    await listarUsuariosPaginados(req, res);
 
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        ok: false,
-        data: null,
-        error: 'Ocurrió un error al obtener el listado paginado de usuarios.'
-      });
-    } finally {
-      consoleErrorSpy.mockRestore();
-    }
+    // Assert
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          nombreCompleto: expect.objectContaining({
+            contains: 'admin',
+            mode: 'insensitive'
+          }),
+          activo: true,
+        }),
+      })
+    );
+    
+    // Verify audit log includes search parameters
+    expect(mockLogSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('Se listaron')
+      })
+    );
+  });
+
+  it('debe manejar errores de base de datos correctamente', async () => {
+    // Preparación
+    const dbError = new Error('Error de base de datos');
+    mockCount.mockRejectedValueOnce(dbError);
+
+    // Ejecutar
+    await listarUsuariosPaginados(req, res);
+
+    // Verificar
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'Ocurrió un error al obtener el listado paginado de usuarios.'
+    });
+    
+    // Verificar registro de error en auditoría
+    expect(mockLogError).toHaveBeenCalledWith({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'usuario',
+      module: 'listarUsuariosPaginados',
+      action: 'listar_usuarios_paginados_fallido',
+      message: 'Error al listar usuarios paginados',
+      error: dbError,
+      context: {
+        page: 1,
+        pageSize: 10,
+        searchText: null
+      }
+    });
+  });
+
+  it('debe funcionar correctamente sin usuario autenticado', async () => {
+    // Preparación
+    req.user = undefined;
+    
+    // Ejecutar
+    await listarUsuariosPaginados(req, res);
+    
+    // Verificar
+    expect(mockFindMany).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    
+    // Verificar que el registro de auditoría tiene userId indefinido cuando no hay autenticación
+    expect(mockLogSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: undefined
+      })
+    );
   });
 });

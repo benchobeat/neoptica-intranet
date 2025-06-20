@@ -1,10 +1,10 @@
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 
+import { logSuccess, logError } from '@/utils/audit';
 import prisma from '@/utils/prisma';
-import { registrarAuditoria } from '@/utils/audit';
 import { success, fail } from '@/utils/response';
-import { isSystemUser } from '@/utils/system';
+import { emailValido, passwordFuerte, telefonoValido } from '@/utils/validacions';
 
 /**
  * Lista todos los usuarios (sin exponer password)
@@ -30,17 +30,32 @@ export async function listarUsuarios(req: Request, res: Response): Promise<void>
     }));
 
     // Registrar auditoría de consulta de usuarios
-    await registrarAuditoria({
-      usuarioId: (req as any).user?.id || null,
-      accion: 'listar_usuarios',
-      descripcion: `Se listaron ${data.length} usuarios`,
+    await logSuccess({
+      userId: (req as any).user?.id || null,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'listarUsuarios',
+      action: 'listar_usuarios_exitoso',
+      message: `Se listaron ${data.length} usuarios`,
+      details: {
+        totalUsuarios: data.length,
+      },
     });
 
     res.json(success(data));
   } catch (error: any) {
+    await logError({
+      userId: (req as any).user?.id || null,
+      ip: req.ip,
+      entityType: 'usuario',
+      module: 'listarUsuarios',
+      action: 'listar_usuarios_fallido',
+      message: `Error al listar usuarios`,
+      error: error instanceof Error ? error : new Error(error),
+      context: {
+        totalUsuarios: 0,
+      },
+    });
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     res.status(500).json(fail(errorMessage));
   }
@@ -48,19 +63,16 @@ export async function listarUsuarios(req: Request, res: Response): Promise<void>
 
 export const listarUsuariosPaginados = async (req: Request, res: Response) => {
   const userId = (req as any).usuario?.id || (req as any).user?.id;
-  try {
-    // Extraer parámetros de paginación y búsqueda
-    const page = parseInt(req.query.page as string) || 1;
-    const pageSize = parseInt(req.query.pageSize as string) || 10;
-    const searchText = (req.query.searchText as string) || '';
+  const page = parseInt(req.query.page as string) || 1;
+  const pageSize = parseInt(req.query.pageSize as string) || 10;
+  const searchText = (req.query.searchText as string) || '';
 
+  try {
     // Calcular offset para la paginación
     const skip = (page - 1) * pageSize;
 
     // Preparar filtros
-    const filtro: any = {
-      anuladoEn: null, // Solo marcas no anuladas (soft delete)
-    };
+    const filtro: any = {}; // Mostrar todos los usuarios, incluyendo eliminados lógicamente
 
     // Filtro adicional por nombreCompleto si se proporciona en la búsqueda
     if (searchText) {
@@ -100,13 +112,19 @@ export const listarUsuariosPaginados = async (req: Request, res: Response) => {
     }));
 
     // Registrar auditoría de listado exitoso
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'listar_usuarios_paginados',
-      descripcion: `Se listaron ${usuarios.length} usuarios (página ${page})`,
+    await logSuccess({
+      userId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'listarUsuariosPaginados',
+      action: 'listar_usuarios_paginados_exitoso',
+      message: `Se listaron ${usuarios.length} usuarios (página ${page})`,
+      details: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
     });
 
     return res.status(200).json({
@@ -122,13 +140,19 @@ export const listarUsuariosPaginados = async (req: Request, res: Response) => {
   } catch (error) {
     // Registrar auditoría de error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'listar_usuarios_paginados_fallido',
-      descripcion: errorMessage,
+    await logError({
+      userId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'listarUsuariosPaginados',
+      action: 'listar_usuarios_paginados_fallido',
+      message: 'Error al listar usuarios paginados',
+      error: error instanceof Error ? error : new Error(errorMessage),
+      context: {
+        page,
+        pageSize,
+        searchText: searchText || null,
+      },
     });
 
     return res.status(500).json({
@@ -153,6 +177,18 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
     });
 
     if (!usuario) {
+      await logError({
+        userId: (req as any).user?.id || null,
+        ip: req.ip,
+        entityType: 'usuario',
+        module: 'obtenerUsuario',
+        action: 'obtener_usuario_fallido',
+        message: 'Usuario no encontrado',
+        error: new Error('Usuario no encontrado. 404'),
+        context: {
+          usuarioId: id,
+        },
+      });
       res.status(404).json(fail('Usuario no encontrado'));
       return;
     }
@@ -169,40 +205,175 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
     };
 
     // Registrar auditoría de consulta de usuario
-    await registrarAuditoria({
-      usuarioId: (req as any).user?.id || null,
-      accion: 'obtener_usuario',
-      descripcion: `Se consultó el usuario: ${usuario.email}`,
+    await logSuccess({
+      userId: (req as any).user?.id || null,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuario.id,
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      entityId: usuario.id,
+      module: 'obtenerUsuario',
+      action: 'obtener_usuario',
+      message: `Se consultó el usuario: ${usuario.email}`,
+      details: {
+        usuarioId: usuario.id,
+        email: usuario.email,
+      },
     });
 
     res.json(success(data));
   } catch (_error: any) {
+    await logError({
+      userId: (req as any).user?.id || null,
+      ip: req.ip,
+      entityType: 'usuario',
+      module: 'obtenerUsuario',
+      action: 'obtener_usuario_fallido',
+      message: 'Error al obtener usuario',
+      error: _error instanceof Error ? _error : new Error(_error),
+      context: {
+        usuarioId: (req as any).user?.id || null,
+        email: (req as any).user?.email || null,
+      },
+    });
     const errorMessage = _error instanceof Error ? _error.message : 'Error desconocido';
     res.status(500).json(fail(errorMessage));
   }
 }
 
 /**
+ * Reactiva un usuario eliminado lógicamente (solo admin)
+ */
+export async function reactivarUsuario(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = (req as any).user?.id;
+
+  // Validación de rol de administrador
+  const userRoles = (req as any).user?.roles || [];
+  const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
+
+  if (!esAdmin) {
+    await logError({
+      userId,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: id,
+      module: 'reactivarUsuario',
+      action: 'reactivar_usuario_fallido',
+      message: `Intento de reactivar usuario no autorizado: ${id}`,
+      error: new Error('Acceso denegado: solo administradores pueden reactivar usuarios. 403'),
+      context: {
+        usuarioId: id,
+        solicitadoPor: userId,
+      },
+    });
+    res.status(403).json(fail('Acceso denegado: solo administradores pueden reactivar usuarios'));
+    return;
+  }
+
+  try {
+    // Primero obtenemos el usuario para verificar su estado
+    const usuario = await prisma.usuario.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        activo: true,
+        anuladoEn: true,
+      },
+    });
+
+    if (!usuario) {
+      await logError({
+        userId,
+        ip: req.ip,
+        entityType: 'usuario',
+        entityId: id,
+        module: 'reactivarUsuario',
+        action: 'reactivar_usuario_fallido',
+        message: `Intento de reactivar usuario no encontrado: ${id}`,
+        error: new Error('Usuario no encontrado. 404'),
+        context: {
+          usuarioId: id,
+          solicitadoPor: userId,
+        },
+      });
+      res.status(404).json(fail('Usuario no encontrado'));
+      return;
+    }
+
+    // Verificar si el usuario ya está activo
+    if (usuario.activo && !usuario.anuladoEn) {
+      await logError({
+        userId,
+        ip: req.ip,
+        entityType: 'usuario',
+        entityId: id,
+        module: 'reactivarUsuario',
+        action: 'reactivar_usuario_fallido',
+        message: `Intento de reactivar usuario ya activo: ${id}`,
+        error: new Error('El usuario ya está activo. 400'),
+        context: {
+          usuarioId: id,
+          solicitadoPor: userId,
+        },
+      });
+      res.status(400).json(fail('El usuario ya está activo'));
+      return;
+    }
+
+    // Reactivar el usuario
+    await prisma.usuario.update({
+      where: { id },
+      data: {
+        activo: true,
+        anuladoEn: null,
+        anuladoPor: null,
+        modificadoEn: new Date(),
+        modificadoPor: userId,
+      },
+    });
+
+    // Registrar éxito
+    await logSuccess({
+      userId,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: id,
+      module: 'reactivarUsuario',
+      action: 'reactivar_usuario_exitoso',
+      message: `Usuario reactivado: ${usuario.email}`,
+      details: {
+        email: usuario.email,
+        reactivadoPor: userId,
+        fechaReactivacion: new Date().toISOString(),
+      },
+    });
+
+    res.json(success('Usuario reactivado correctamente'));
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+
+    await logError({
+      userId,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: id,
+      module: 'reactivarUsuario',
+      action: 'reactivar_usuario_fallido',
+      message: `Error al reactivar usuario: ${id}`,
+      error: error instanceof Error ? error : new Error(errorMessage),
+      context: {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
+
+    res.status(500).json(fail('Error al reactivar el usuario'));
+  }
+}
+
+/**
  * Crea un nuevo usuario (solo admin)
  */
-function emailValido(email: string): boolean {
-  // Regex simple, puedes reemplazar por una librería si lo prefieres
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function passwordFuerte(password: string): boolean {
-  // Mínimo 8 caracteres, una mayúscula, una minúscula y un número
-  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
-}
-
-function telefonoValido(telefono: string): boolean {
-  // Solo dígitos, exactamente 10 caracteres
-  return /^\d{10}$/.test(telefono);
-}
 
 export async function crearUsuario(req: Request, res: Response): Promise<void> {
   const { nombreCompleto, email, password, telefono, roles, dni, direccion } = req.body;
@@ -213,13 +384,21 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   if (!nombreCompleto || !email || !password) {
     mensajeError = 'Faltan datos obligatorios';
     res.status(400).json(fail(mensajeError));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'crear_usuario_fallido',
-      descripcion: mensajeError,
+    await logError({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'crearUsuario',
+      action: 'crear_usuario_fallido',
+      message: mensajeError,
+      error: new Error('Datos de entrada inválidos'),
+      context: {
+        datosRecibidos: {
+          nombreCompleto,
+          email,
+          telefono: telefono ? 'proporcionado' : 'no proporcionado',
+        },
+      },
     });
     return;
   }
@@ -228,13 +407,17 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   if (telefono && !telefonoValido(telefono)) {
     mensajeError = 'El teléfono debe ser un número celular de 10 dígitos';
     res.status(400).json(fail(mensajeError));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'crear_usuario_fallido',
-      descripcion: mensajeError,
+    await logError({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'crearUsuario',
+      action: 'crear_usuario_fallido',
+      message: mensajeError,
+      error: new Error('Formato de teléfono inválido'),
+      context: {
+        telefonoProporcionado: telefono,
+      },
     });
     return;
   }
@@ -243,13 +426,17 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   if (!emailValido(email)) {
     mensajeError = 'El email no es válido';
     res.status(400).json(fail(mensajeError));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'crear_usuario_fallido',
-      descripcion: mensajeError,
+    await logError({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'crearUsuario',
+      action: 'crear_usuario_fallido',
+      message: mensajeError,
+      error: new Error('Formato de email inválido'),
+      context: {
+        emailProporcionado: email,
+      },
     });
     return;
   }
@@ -258,13 +445,22 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   if (!passwordFuerte(password)) {
     mensajeError = 'El password debe tener al menos 8 caracteres, mayúscula, minúscula y número';
     res.status(400).json(fail(mensajeError));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'crear_usuario_fallido',
-      descripcion: mensajeError,
+    await logError({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'crearUsuario',
+      action: 'crear_usuario_fallido',
+      message: mensajeError,
+      error: new Error('Contraseña no cumple con los requisitos de seguridad'),
+      context: {
+        requisitos: {
+          longitudMinima: 8,
+          requiereMayuscula: true,
+          requiereMinuscula: true,
+          requiereNumero: true,
+        },
+      },
     });
     return;
   }
@@ -275,13 +471,18 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   if (!esAdmin) {
     mensajeError = 'Solo admin puede crear usuarios';
     res.status(403).json(fail(mensajeError));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'crear_usuario_fallido',
-      descripcion: mensajeError,
+    await logError({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'crearUsuario',
+      action: 'crear_usuario_fallido',
+      message: mensajeError,
+      error: new Error('Permisos insuficientes'),
+      context: {
+        rolesUsuario: userRoles,
+        requiereRol: 'admin',
+      },
     });
     return;
   }
@@ -292,13 +493,18 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     if (yaExiste) {
       mensajeError = 'El email ya está registrado';
       res.status(409).json(fail(mensajeError));
-      await registrarAuditoria({
-        usuarioId,
-        accion: 'crear_usuario_fallido',
-        descripcion: mensajeError,
+      await logError({
+        userId: usuarioId,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        modulo: 'usuarios',
+        entityType: 'usuario',
+        module: 'crearUsuario',
+        action: 'crear_usuario_fallido',
+        message: mensajeError,
+        error: new Error('Email duplicado'),
+        context: {
+          email,
+          usuarioExistente: yaExiste.id,
+        },
       });
       return;
     }
@@ -315,13 +521,19 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     if (rolesDb.length !== rolesAsignar.length) {
       mensajeError = 'Uno o más roles especificados no existen';
       res.status(400).json(fail(mensajeError));
-      await registrarAuditoria({
-        usuarioId,
-        accion: 'crear_usuario_fallido',
-        descripcion: mensajeError,
+      await logError({
+        userId: usuarioId,
         ip: req.ip,
-        entidadTipo: 'usuario',
-        modulo: 'usuarios',
+        entityType: 'usuario',
+        module: 'crearUsuario',
+        action: 'crear_usuario_fallido',
+        message: mensajeError,
+        error: new Error('Roles inválidos'),
+        context: {
+          rolesSolicitados: rolesAsignar,
+          rolesEncontrados: rolesDb.map((r) => r.nombre),
+          rolesFaltantes: rolesAsignar.filter((r) => !rolesDb.some((rdb) => rdb.nombre === r)),
+        },
       });
       return;
     }
@@ -347,14 +559,20 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     });
 
     // Registrar auditoría con el rol en la descripción
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'crear_usuario_exitoso',
-      descripcion: `Usuario creado: ${usuario.email} (roles: ${usuario.roles.map((ur) => ur.rol.nombre).join(', ')})`,
+    await logSuccess({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuario.id,
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      entityId: usuario.id,
+      module: 'crearUsuario',
+      action: 'crear_usuario_exitoso',
+      message: `Usuario creado exitosamente: ${usuario.email}`,
+      details: {
+        email: usuario.email,
+        roles: usuario.roles.map((ur) => ur.rol.nombre),
+        activo: usuario.activo,
+        telefono: usuario.telefono || 'No proporcionado',
+      },
     });
 
     // Respuesta segura
@@ -372,14 +590,26 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-    res.status(500).json(fail(errorMessage));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'crear_usuario_fallido',
-      descripcion: errorMessage,
+    res.status(500).json(fail('Error al crear el usuario'));
+    await logError({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      module: 'crearUsuario',
+      action: 'crear_usuario_fallido',
+      message: 'Error al crear el usuario',
+      error: error instanceof Error ? error : new Error(errorMessage),
+      context: {
+        datosSolicitud: {
+          nombreCompleto,
+          email,
+          telefono: telefono || 'No proporcionado',
+          rolesSolicitados: roles || ['No definidos'],
+          tieneDNI: !!dni,
+          tieneDireccion: !!direccion,
+        },
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
   }
 }
@@ -397,96 +627,113 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
   if (!esAdmin && usuarioId !== id) {
     // Mensaje debe contener la palabra 'admin' para que los tests lo reconozcan
     res.status(403).json(fail('Acceso denegado: solo admin puede modificar usuarios'));
+    await logError({
+      userId: req.user?.id || 'sistema',
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: usuarioId,
+      module: 'actualizarUsuario',
+      action: 'actualizar_usuario_fallido',
+      message: 'Acceso denegado: solo admin puede modificar usuarios',
+      error: new Error('Permisos insuficientes'),
+      context: {
+        rolesUsuario: userRoles,
+        requiereRol: 'admin',
+      },
+    });
     return;
   }
   const { nombreCompleto, email, telefono, dni, direccion } = req.body;
   let mensajeError = '';
 
   try {
-    const usuario = await prisma.usuario.findUnique({ where: { id } });
-    if (!usuario) {
+    const usuarioExistente = await prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: { roles: { include: { rol: true } } },
+    });
+
+    if (!usuarioExistente) {
       mensajeError = 'Usuario no encontrado';
       res.status(404).json(fail(mensajeError));
-      await registrarAuditoria({
-        usuarioId,
-        accion: 'modificar_usuario_fallido',
-        descripcion: mensajeError,
+      await logError({
+        userId: req.user?.id || 'sistema',
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: id,
-        modulo: 'usuarios',
+        entityType: 'usuario',
+        entityId: usuarioId,
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_fallido',
+        message: mensajeError,
+        error: new Error('Usuario no encontrado. 404'),
+        context: {
+          usuarioIdBuscado: usuarioId,
+          accion: 'actualizar_usuario',
+        },
       });
       return;
-    }
-
-    try {
-      // Verificar si es el usuario system
-      if (await isSystemUser(id)) {
-        mensajeError =
-          'No se puede modificar el usuario del sistema. Esta cuenta es utilizada para operaciones internas.';
-        res.status(403).json(fail(mensajeError));
-        await registrarAuditoria({
-          usuarioId,
-          accion: 'modificar_usuario_fallido',
-          descripcion: `Intento de modificar el usuario system (${id}). Operación denegada.`,
-          ip: req.ip,
-          entidadTipo: 'usuario',
-          entidadId: id,
-          modulo: 'usuarios',
-        });
-        return;
-      }
-    } catch (_error: any) {
-      // Si no podemos verificar si es usuario system, continuamos normalmente
-      // Esto es importante para que los tests sigan funcionando
     }
 
     // Validación de email
     if (email && !emailValido(email)) {
       mensajeError = 'El email no es válido';
-      res.status(400).json(fail(mensajeError));
-      await registrarAuditoria({
-        usuarioId,
-        accion: 'modificar_usuario_fallido',
-        descripcion: mensajeError,
+      await logError({
+        userId: req.user?.id || 'sistema',
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: id,
-        modulo: 'usuarios',
+        entityType: 'usuario',
+        entityId: usuarioId,
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_fallido',
+        message: mensajeError,
+        error: new Error('Email inválido. 400'),
+        context: {
+          email,
+          usuarioExistente: usuarioExistente.id,
+        },
       });
+      res.status(400).json(fail(mensajeError));
       return;
     }
+
     // Validación de teléfono
     if (telefono && !telefonoValido(telefono)) {
       mensajeError = 'El teléfono debe ser un número celular de 10 dígitos';
       res.status(400).json(fail(mensajeError));
-      await registrarAuditoria({
-        usuarioId,
-        accion: 'modificar_usuario_fallido',
-        descripcion: mensajeError,
+      await logError({
+        userId: req.user?.id || 'sistema',
         ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: id,
-        modulo: 'usuarios',
+        entityType: 'usuario',
+        entityId: usuarioId,
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_fallido',
+        message: mensajeError,
+        error: new Error('Teléfono inválido'),
+        context: {
+          telefono,
+          usuarioExistente: usuarioExistente.id,
+        },
       });
       return;
     }
 
     // Lógica para dni: solo permitir si actualmente es null
-    let nuevoDni = usuario.dni;
+    let nuevoDni = usuarioExistente.dni;
     if (dni !== undefined) {
       // Si el usuario ya tiene DNI, no permitir cambios
-      if (usuario.dni !== null) {
+      if (usuarioExistente.dni !== null) {
         mensajeError = 'El DNI ya está registrado y no puede ser modificado';
         res.status(400).json(fail(mensajeError));
-        await registrarAuditoria({
-          usuarioId,
-          accion: 'modificar_usuario_fallido',
-          descripcion: mensajeError,
+        await logError({
+          userId: req.user?.id || 'sistema',
           ip: req.ip,
-          entidadTipo: 'usuario',
-          entidadId: id,
-          modulo: 'usuarios',
+          entityType: 'usuario',
+          entityId: usuarioId,
+          module: 'actualizarUsuario',
+          action: 'actualizar_usuario_fallido',
+          message: mensajeError,
+          error: new Error('DNI ya registrado'),
+          context: {
+            dni,
+            usuarioExistente: usuarioExistente.id,
+          },
         });
         return;
       } else if (dni && dni.trim() !== '') {
@@ -496,14 +743,20 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
         if (dniExistente) {
           mensajeError = 'El DNI ya está registrado para otro usuario';
           res.status(409).json(fail(mensajeError));
-          await registrarAuditoria({
-            usuarioId,
-            accion: 'modificar_usuario_fallido',
-            descripcion: mensajeError,
+          await logError({
+            userId: req.user?.id || 'sistema',
             ip: req.ip,
-            entidadTipo: 'usuario',
-            entidadId: id,
-            modulo: 'usuarios',
+            entityType: 'usuario',
+            entityId: usuarioId,
+            module: 'actualizarUsuario',
+            action: 'actualizar_usuario_fallido',
+            message: mensajeError,
+            error: new Error('DNI duplicado'),
+            context: {
+              dni,
+              usuarioExistente: usuarioExistente.id,
+              usuarioConDni: dniExistente.id,
+            },
           });
           return;
         }
@@ -512,19 +765,25 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
     }
 
     // Validación de email duplicado (si se quiere cambiar el email)
-    if (email && email !== usuario.email) {
+    if (email && email !== usuarioExistente.email) {
       const emailExistente = await prisma.usuario.findUnique({ where: { email } });
-      if (emailExistente && emailExistente.id !== usuario.id) {
+      if (emailExistente && emailExistente.id !== usuarioExistente.id) {
         mensajeError = 'El email ya está registrado por otro usuario';
         res.status(409).json(fail(mensajeError));
-        await registrarAuditoria({
-          usuarioId,
-          accion: 'modificar_usuario_fallido',
-          descripcion: mensajeError,
+        await logError({
+          userId: req.user?.id || 'sistema',
           ip: req.ip,
-          entidadTipo: 'usuario',
-          entidadId: id,
-          modulo: 'usuarios',
+          entityType: 'usuario',
+          entityId: usuarioId,
+          module: 'actualizarUsuario',
+          action: 'actualizar_usuario_fallido',
+          message: mensajeError,
+          error: new Error('Email duplicado'),
+          context: {
+            email,
+            usuarioExistente: usuarioExistente.id,
+            usuarioConEmail: emailExistente.id,
+          },
         });
         return;
       }
@@ -532,41 +791,62 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
 
     // Detectar cambios
     const cambios: string[] = [];
-    if (nombreCompleto !== usuario.nombreCompleto) {
-      cambios.push(`nombreCompleto: "${usuario.nombreCompleto}" → "${nombreCompleto}"`);
+    if (nombreCompleto !== usuarioExistente.nombreCompleto) {
+      cambios.push(`nombreCompleto: "${usuarioExistente.nombreCompleto}" → "${nombreCompleto}"`);
     }
-    if (email && email !== usuario.email) {
-      cambios.push(`email: "${usuario.email}" → "${email}"`);
+    if (email && email !== usuarioExistente.email) {
+      cambios.push(`email: "${usuarioExistente.email}" → "${email}"`);
     }
-    if (telefono !== undefined && telefono !== usuario.telefono) {
-      cambios.push(`telefono: "${usuario.telefono || ''}" → "${telefono || ''}"`);
+    if (telefono !== undefined && telefono !== usuarioExistente.telefono) {
+      cambios.push(`telefono: "${usuarioExistente.telefono || ''}" → "${telefono || ''}"`);
     }
-    if (nuevoDni !== usuario.dni) {
-      cambios.push(`dni: "${usuario.dni || ''}" → "${nuevoDni || ''}"`);
+    if (nuevoDni !== usuarioExistente.dni) {
+      cambios.push(`dni: "${usuarioExistente.dni || ''}" → "${nuevoDni || ''}"`);
     }
-    if (direccion !== undefined && direccion !== usuario.direccion) {
-      cambios.push(`direccion: "${usuario.direccion || ''}" → "${direccion || ''}"`);
+    if (direccion !== undefined && direccion !== usuarioExistente.direccion) {
+      cambios.push(`direccion: "${usuarioExistente.direccion || ''}" → "${direccion || ''}"`);
     }
 
     // Validación de roles si se quiere actualizar (multirol)
     if (req.body.roles) {
       // Solo los administradores pueden cambiar roles de usuario
       if (!esAdmin) {
-        res.status(403).json(fail('Acceso denegado: solo admin puede modificar roles de usuario'));
+        const errorMsg = 'Acceso denegado: solo admin puede modificar roles de usuario';
+        res.status(403).json(fail(errorMsg));
+        await logError({
+          userId: req.user?.id || 'sistema',
+          ip: req.ip,
+          entityType: 'usuario',
+          entityId: usuarioId,
+          module: 'actualizarUsuario',
+          action: 'actualizar_usuario_fallido',
+          message: 'Acceso denegado: solo admin puede modificar roles de usuario',
+          error: new Error('Permisos insuficientes'),
+          context: {
+            rolesUsuario: userRoles,
+            requiereRol: 'admin',
+          },
+        });
         return;
       }
       const rolesNuevos = req.body.roles;
       if (!Array.isArray(rolesNuevos) || rolesNuevos.length === 0) {
         mensajeError = 'Debes enviar un array de roles válido';
         res.status(400).json(fail(mensajeError));
-        await registrarAuditoria({
-          usuarioId,
-          accion: 'modificar_usuario_fallido',
-          descripcion: mensajeError,
+        await logError({
+          userId: req.user?.id || 'sistema',
           ip: req.ip,
-          entidadTipo: 'usuario',
-          entidadId: id,
-          modulo: 'usuarios',
+          entityType: 'usuario',
+          entityId: usuarioId,
+          module: 'actualizarUsuario',
+          action: 'actualizar_usuario_fallido',
+          message: mensajeError,
+          error: new Error('Roles inválidos'),
+          context: {
+            rolesSolicitados: rolesNuevos,
+            rolesEncontrados: [],
+            rolesFaltantes: rolesNuevos,
+          },
         });
         return;
       }
@@ -575,14 +855,20 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
       if (rolesDb.length !== rolesNuevos.length) {
         mensajeError = 'Uno o más roles especificados no existen';
         res.status(400).json(fail(mensajeError));
-        await registrarAuditoria({
-          usuarioId,
-          accion: 'modificar_usuario_fallido',
-          descripcion: mensajeError,
+        await logError({
+          userId: req.user?.id || 'sistema',
           ip: req.ip,
-          entidadTipo: 'usuario',
-          entidadId: id,
-          modulo: 'usuarios',
+          entityType: 'usuario',
+          entityId: usuarioId,
+          module: 'actualizarUsuario',
+          action: 'actualizar_usuario_fallido',
+          message: mensajeError,
+          error: new Error('Roles inválidos'),
+          context: {
+            rolesSolicitados: rolesNuevos,
+            rolesEncontrados: rolesDb.map((r) => r.nombre),
+            rolesFaltantes: rolesNuevos.filter((r) => !rolesDb.some((rdb) => rdb.nombre === r)),
+          },
         });
         return;
       }
@@ -607,15 +893,6 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
       cambios.push(`roles: [${actualesIds.join(',')}] → [${nuevosIds.join(',')}]`);
     }
 
-    // Log para debug
-    console.log('[DEBUG] Datos a actualizar:', {
-      nombreCompleto: nombreCompleto || undefined,
-      email: email || undefined,
-      telefono: telefono ?? null,
-      dni: nuevoDni,
-      direccion: direccion !== undefined ? direccion : usuario.direccion,
-    });
-
     // Actualiza el usuario
     const usuarioActualizado = await prisma.usuario.update({
       where: { id },
@@ -626,7 +903,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
         // Solo actualizamos el DNI si es explícitamente nuevo y ha pasado todas las validaciones
         dni: nuevoDni,
         // Manejamos dirección de forma explícita para permitir strings vacías
-        direccion: direccion !== undefined ? direccion : usuario.direccion,
+        direccion: direccion !== undefined ? direccion : usuarioExistente.direccion,
         modificadoEn: new Date(),
         modificadoPor: usuarioId,
       },
@@ -635,14 +912,27 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
       },
     });
 
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'modificar_usuario_exitoso',
-      descripcion: `Usuario modificado: ${usuarioActualizado.email}. Cambios: ${cambios.length > 0 ? cambios.join('; ') : 'sin cambios'}`,
+    // Registrar éxito con detalles de los cambios
+    await logSuccess({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuarioActualizado.id,
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      entityId: usuarioActualizado.id,
+      module: 'actualizarUsuario',
+      action: 'actualizar_usuario_exitoso',
+      message: `Usuario actualizado exitosamente: ${usuarioActualizado.email}`,
+      details: {
+        cambios: cambios.length > 0 ? cambios : ['Sin cambios en los datos principales'],
+        camposActualizados: {
+          nombreCompleto: nombreCompleto !== undefined,
+          email: email !== undefined,
+          telefono: telefono !== undefined,
+          dni: dni !== undefined,
+          direccion: direccion !== undefined,
+          roles: req.body.roles !== undefined,
+        },
+        roles: usuarioActualizado.roles.map((r) => r.rol.nombre),
+      },
     });
 
     res.json(
@@ -657,16 +947,28 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
       })
     );
   } catch (err) {
-    mensajeError = err instanceof Error ? err.message : 'Error desconocido';
-    res.status(500).json(fail(mensajeError));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'modificar_usuario_fallido',
-      descripcion: mensajeError,
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+    res.status(500).json(fail('Error al actualizar el usuario'));
+    await logError({
+      userId: usuarioId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: id,
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      entityId: id,
+      module: 'actualizarUsuario',
+      action: 'actualizar_usuario_fallido',
+      message: 'Error al actualizar el usuario',
+      error: err instanceof Error ? err : new Error(errorMessage),
+      context: {
+        datosSolicitud: {
+          nombreCompleto: nombreCompleto !== undefined ? 'proporcionado' : 'no modificado',
+          email: email !== undefined ? 'proporcionado' : 'no modificado',
+          telefono: telefono !== undefined ? 'proporcionado' : 'no modificado',
+          dni: dni !== undefined ? 'proporcionado' : 'no modificado',
+          direccion: direccion !== undefined ? 'proporcionada' : 'no modificada',
+          roles: req.body.roles ? 'modificados' : 'no modificados',
+        },
+        ...(err instanceof Error && err.stack ? { stack: err.stack } : {}),
+      },
     });
   }
 }
@@ -674,173 +976,8 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
 // En usuarioController.ts
 
 /**
- * Permite a un usuario modificar su propio perfil (nombre, telefono, direccion, dni solo si está null)
+ * Marca un usuario como inactivo (borrado lógico). Solo admin puede hacerlo.
  */
-/**
- * Permite a un usuario modificar su propio perfil (nombre, telefono, direccion, dni solo si está null)
- * No permite modificar roles ni email para evitar escalada de privilegios
- */
-export async function actualizarPerfilUsuario(req: Request, res: Response): Promise<void> {
-  const usuarioId = (req as any).user?.id || 'sistema';
-  const { nombreCompleto, telefono, direccion, dni, roles, email } = req.body;
-
-  // Rechazar intentos de cambiar roles
-  if (roles !== undefined) {
-    res.status(403).json(fail('Acceso denegado: no puedes modificar tus propios roles'));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'modificar_perfil_fallido',
-      descripcion: 'Intento de modificar roles propios',
-      ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuarioId,
-      modulo: 'usuarios',
-    });
-    return;
-  }
-
-  // Rechazar intentos de cambiar email (por seguridad)
-  if (email !== undefined) {
-    res.status(403).json(fail('No puedes modificar tu email desde este endpoint por seguridad'));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'modificar_perfil_fallido',
-      descripcion: 'Intento de modificar email propio',
-      ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuarioId,
-      modulo: 'usuarios',
-    });
-    return;
-  }
-
-  try {
-    const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
-    if (!usuario) {
-      res.status(404).json(fail('Usuario no encontrado'));
-      await registrarAuditoria({
-        usuarioId,
-        accion: 'modificar_perfil_fallido',
-        descripcion: 'Usuario no encontrado',
-        ip: req.ip,
-        entidadTipo: 'usuario',
-        entidadId: usuarioId,
-        modulo: 'usuarios',
-      });
-      return;
-    }
-
-    // DNI: Solo permitir actualización si actualmente está vacío o es null
-    let nuevoDni = usuario.dni;
-    if (dni !== undefined) {
-      try {
-        // Comprobamos tanto null como string vacía para mayor robustez
-        if (usuario.dni !== null && usuario.dni !== '') {
-          res.status(400).json(fail('El DNI ya está registrado y no puede ser modificado'));
-          await registrarAuditoria({
-            usuarioId,
-            accion: 'modificar_perfil_fallido',
-            descripcion: 'Intento de modificar DNI existente',
-            ip: req.ip,
-            entidadTipo: 'usuario',
-            entidadId: usuarioId,
-            modulo: 'usuarios',
-          });
-          return;
-        } else {
-          // Asegurar que el DNI tenga un formato válido antes de guardarlo
-          if (dni && typeof dni === 'string') {
-            nuevoDni = dni.trim();
-          } else {
-            res.status(400).json(fail('El DNI no puede estar vacío o no es válido'));
-            return;
-          }
-        }
-      } catch (_error) {
-        res.status(500).json(fail('Error al procesar el DNI'));
-        return;
-      }
-    }
-
-    // Validaciones de nombre y teléfono si lo deseas
-    if (telefono && !telefonoValido(telefono)) {
-      res.status(400).json(fail('El teléfono debe ser un número celular de 10 dígitos'));
-      return;
-    }
-
-    // Preparar datos para actualización
-    const updateData: any = {
-      modificadoEn: new Date(),
-      modificadoPor: usuarioId,
-    };
-
-    // Solo incluir campos que realmente se están actualizando
-    if (nombreCompleto !== undefined) updateData.nombreCompleto = nombreCompleto;
-    if (telefono !== undefined) updateData.telefono = telefono;
-    if (direccion !== undefined) updateData.direccion = direccion;
-    if (nuevoDni !== undefined) updateData.dni = nuevoDni;
-
-    // Actualizar usuario
-    const usuarioActualizado = await prisma.usuario.update({
-      where: { id: usuarioId },
-      data: updateData,
-      include: {
-        roles: { include: { rol: true } },
-      },
-    });
-
-    // Detectar cambios
-    const cambios: string[] = [];
-    if (nombreCompleto && nombreCompleto !== usuario.nombreCompleto) {
-      cambios.push(`nombreCompleto: "${usuario.nombreCompleto}" → "${nombreCompleto}"`);
-    }
-    if (telefono !== undefined && telefono !== usuario.telefono) {
-      cambios.push(`telefono: "${usuario.telefono || ''}" → "${telefono || ''}"`);
-    }
-    if (direccion !== undefined && direccion !== usuario.direccion) {
-      cambios.push(`direccion: "${usuario.direccion || ''}" → "${direccion || ''}"`);
-    }
-    if (nuevoDni !== usuario.dni) {
-      cambios.push(`dni: "${usuario.dni || ''}" → "${nuevoDni || ''}"`);
-    }
-
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'modificar_perfil_exitoso',
-      descripcion: `Perfil modificado. Cambios: ${cambios.length > 0 ? cambios.join('; ') : 'sin cambios'}`,
-      ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuarioId,
-      modulo: 'usuarios',
-    });
-
-    res.json(
-      success({
-        id: usuarioActualizado.id,
-        nombreCompleto: usuarioActualizado.nombreCompleto,
-        telefono: usuarioActualizado.telefono,
-        direccion: usuarioActualizado.direccion,
-        dni: usuarioActualizado.dni,
-        roles: usuarioActualizado.roles.map((ur) => ur.rol.nombre),
-        email: usuarioActualizado.email,
-      })
-    );
-  } catch (err) {
-
-    const mensajeError = err instanceof Error ? err.message : 'Error desconocido';
-    res.status(500).json(fail(mensajeError));
-    await registrarAuditoria({
-      usuarioId,
-      accion: 'modificar_perfil_fallido',
-      descripcion: mensajeError,
-      ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: usuarioId,
-      modulo: 'usuarios',
-    });
-  }
-}
-
 /**
  * Marca un usuario como inactivo (borrado lógico). Solo admin puede hacerlo.
  */
@@ -848,59 +985,46 @@ export async function eliminarUsuario(req: Request, res: Response): Promise<void
   const { id } = req.params;
   const userId = (req as any).user?.id;
 
-  // Validación interna de rol admin (multirol)
+  // Validación de rol de administrador
   const userRoles = (req as any).user?.roles || [];
   const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
-  // Solo los administradores pueden eliminar usuarios. El mensaje debe contener 'admin' para los tests.
-  // Si un usuario común intenta eliminarse a sí mismo, también debe recibir este mensaje.
+
   if (!esAdmin) {
-    res.status(403).json(fail('Acceso denegado: solo admin puede eliminar usuarios'));
+    res.status(403).json(fail('Acceso denegado: solo administradores pueden eliminar usuarios'));
     return;
   }
 
   try {
-    // Verificar si el usuario existe
-    const usuario = await prisma.usuario.findUnique({ where: { id } });
+    // Primero obtenemos el usuario para registrar su email
+    const usuarioAEliminar = await prisma.usuario.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        activo: true,
+      },
+    });
 
-    if (!usuario) {
+    if (!usuarioAEliminar) {
+      await logError({
+        userId,
+        ip: req.ip,
+        entityType: 'usuario',
+        entityId: id,
+        module: 'eliminarUsuario',
+        action: 'eliminar_usuario_no_encontrado',
+        message: `Intento de eliminar usuario no encontrado: ${id}`,
+        error: new Error('Usuario no encontrado'),
+        context: {
+          usuarioId: id,
+          solicitadoPor: userId,
+        },
+      });
       res.status(404).json(fail('Usuario no encontrado'));
       return;
     }
 
-    try {
-      // Verificar si es el usuario system
-      if (await isSystemUser(id)) {
-        await registrarAuditoria({
-          usuarioId: userId,
-          accion: 'eliminar_usuario_fallido',
-          descripcion: `Intento de eliminar el usuario system (${id}). Operación denegada.`,
-          ip: req.ip,
-          entidadTipo: 'usuario',
-          entidadId: id,
-          modulo: 'usuarios',
-        });
-        res
-          .status(403)
-          .json(
-            fail(
-              'No se puede eliminar el usuario del sistema. Esta cuenta es utilizada para operaciones internas.'
-            )
-          );
-        return;
-      }
-    } catch (_error: any) {
-      // Si no podemos verificar si es usuario system, continuamos normalmente
-      // Esto es importante para que los tests sigan funcionando
-    }
-
-    // Validación: no permitir eliminar si ya está inactivo
-    if (usuario.activo === false) {
-      // 409 Conflict indica que la operación no es válida en el estado actual
-      res.status(409).json(fail('El usuario ya está inactivo o eliminado'));
-      return;
-    }
-
-    // Eliminación lógica: marcar como inactivo y guardar fecha/anulador
+    // Realizar el borrado lógico
     await prisma.usuario.update({
       where: { id },
       data: {
@@ -910,110 +1034,42 @@ export async function eliminarUsuario(req: Request, res: Response): Promise<void
       },
     });
 
-    // Registrar auditoría
-    await registrarAuditoria({
-      usuarioId: userId,
-      accion: 'eliminar_usuario',
-      descripcion: `El usuario ${usuario.email} fue eliminado lógicamente.`,
+    // Registrar éxito
+    await logSuccess({
+      userId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: id,
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      entityId: id,
+      module: 'eliminarUsuario',
+      action: 'usuario_eliminado',
+      message: `Usuario eliminado: ${usuarioAEliminar.email}`,
+      details: {
+        email: usuarioAEliminar.email,
+        eliminadoPor: userId,
+        fechaEliminacion: new Date().toISOString(),
+      },
     });
 
-    res.json(success('Usuario eliminado lógicamente'));
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-    res.status(500).json(fail(errorMessage));
-  }
-}
+    res.json(success('Usuario eliminado correctamente'));
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
 
-/**
- * Cambia la contraseña del propio usuario
- */
-export async function cambiarPassword(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
-  // Compatibilidad: aceptamos tanto {password_actual, password_nuevo} como {actual, nueva}
-  // para soportar ambos formatos de payload usados por los tests y clientes.
-  const password_actual = req.body.password_actual || req.body.actual;
-  const password_nuevo = req.body.password_nuevo || req.body.nueva;
-
-  // Verifica que el usuario autenticado es el mismo
-  const userId = (req as any).user?.id;
-  if (userId !== id) {
-    res.status(403).json(fail('Solo puedes cambiar tu propia contraseña'));
-    return;
-  }
-
-  // Validación básica
-  if (!password_actual || !password_nuevo) {
-    res.status(400).json(fail('Se requieren el password actual y el nuevo'));
-    return;
-  }
-  // Validación de password fuerte antes de consultar el usuario
-  if (!passwordFuerte(password_nuevo)) {
-    res
-      .status(400)
-      .json(
-        fail(
-          'El password nuevo debe ser fuerte: mínimo 8 caracteres, incluir mayúsculas, minúsculas y números'
-        )
-      );
-    return;
-  }
-
-  try {
-    // Validación de password fuerte debe ocurrir antes de buscar el usuario.
-    // Esto es importante para que siempre se devuelva 400 si el password nuevo es débil,
-    // incluso si el usuario no existe (por motivos de seguridad y para cumplir con los tests).
-    if (!passwordFuerte(password_nuevo)) {
-      res
-        .status(400)
-        .json(
-          fail(
-            'El password nuevo debe ser fuerte: mínimo 8 caracteres, incluir mayúsculas, minúsculas y números'
-          )
-        );
-      return;
-    }
-
-    const usuario = await prisma.usuario.findUnique({ where: { id } });
-    if (!usuario) {
-      // Nota: No validamos el password aquí, ya que la validación débil ocurre antes.
-      res.status(404).json(fail('Usuario no encontrado'));
-      return;
-    }
-    if (!usuario.password) {
-      res.status(400).json(fail('El usuario no tiene password local configurado'));
-      return;
-    }
-    const ok = await bcrypt.compare(password_actual, usuario.password);
-    if (!ok) {
-      res.status(401).json(fail('El password actual es incorrecto'));
-      return;
-    }
-    // Hashear el nuevo password
-    const nuevoHash = await bcrypt.hash(password_nuevo, 10);
-    await prisma.usuario.update({
-      where: { id },
-      data: { password: nuevoHash },
-    });
-
-    // Registrar auditoría (sin password)
-    await registrarAuditoria({
-      usuarioId: id,
-      accion: 'cambiar_password',
-      descripcion: 'El usuario cambió su contraseña.',
+    await logError({
+      userId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: id,
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      entityId: id,
+      module: 'eliminarUsuario',
+      action: 'error_eliminar_usuario',
+      message: `Error al eliminar usuario: ${id}`,
+      error: error instanceof Error ? error : new Error(errorMessage),
+      context: {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+      },
     });
 
-    res.json(success('Contraseña actualizada correctamente'));
-  } catch (_error: any) {
-    const errorMessage = _error instanceof Error ? _error.message : 'Error desconocido';
-    res.status(500).json(fail(errorMessage));
+    res.status(500).json(fail('Error al eliminar el usuario'));
   }
 }
 
@@ -1025,61 +1081,93 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
   const newPassword = req.body.password_nuevo || req.body.newPassword;
 
   // Control de acceso: solo admin
+  const userId = (req as any).user?.id || 'sistema';
   const userRoles = (req as any).user?.roles || [];
   const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
   if (!esAdmin) {
-    res.status(403).json(fail('Solo admin puede restablecer contraseñas'));
+    const errorMsg = 'Solo admin puede restablecer contraseñas';
+    res.status(403).json(fail(errorMsg));
+    await logError({
+      userId,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: id,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_fallido',
+      message: errorMsg,
+      error: new Error('Permisos insuficientes. 403'),
+      context: {
+        accion: 'validacion_permisos',
+        rolRequerido: 'admin',
+        rolesDisponibles: userRoles,
+      },
+    });
     return;
   }
 
   // Validación mínima
   if (!newPassword) {
-    res.status(400).json(fail('Debes enviar el nuevo password'));
+    const errorMsg = 'Debes enviar el nuevo password';
+    res.status(400).json(fail(errorMsg));
+    await logError({
+      userId,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: id,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_fallido',
+      message: errorMsg,
+      error: new Error('Datos de solicitud inválidos. 400'),
+      context: {
+        accion: 'validacion_datos',
+        campoFaltante: 'password_nuevo',
+      },
+    });
     return;
   }
   // Validación de fuerza
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword)) {
-    res
-      .status(400)
-      .json(
-        fail(
-          'El password nuevo debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y números'
-        )
-      );
+  if (!passwordFuerte(newPassword)) {
+    const errorMsg =
+      'El password nuevo debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y números';
+    res.status(400).json(fail(errorMsg));
+    await logError({
+      userId,
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: id,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_fallido',
+      message: 'Validación de contraseña fallida. 400',
+      error: new Error(errorMsg),
+      context: {
+        accion: 'validacion_password',
+        requisitos: ['min_8_caracteres', 'mayusculas', 'minusculas', 'numeros'],
+      },
+    });
     return;
   }
 
   try {
+    // Verificar si el usuario existe
     const usuario = await prisma.usuario.findUnique({ where: { id } });
     if (!usuario) {
-      res.status(404).json(fail('Usuario no encontrado'));
+      const errorMsg = 'Usuario no encontrado';
+      res.status(404).json(fail(errorMsg));
+      await logError({
+        userId,
+        ip: req.ip,
+        entityType: 'usuario',
+        entityId: id,
+        module: 'resetPasswordAdmin',
+        action: 'reset_password_admin_fallido',
+        message: errorMsg,
+        error: new Error('Usuario no encontrado. 404'),
+        context: {
+          accion: 'buscar_usuario',
+          usuarioBuscado: id,
+        },
+      });
       return;
-    }
-
-    try {
-      // Verificar si es el usuario system
-      if (await isSystemUser(id)) {
-        await registrarAuditoria({
-          usuarioId: (req as any).user?.id || null,
-          accion: 'reset_password_admin_fallido',
-          descripcion: `Intento de cambiar contraseña del usuario system (${id}). Operación denegada.`,
-          ip: req.ip,
-          entidadTipo: 'usuario',
-          entidadId: id,
-          modulo: 'usuarios',
-        });
-        res
-          .status(403)
-          .json(
-            fail(
-              'No se puede modificar la contraseña del usuario del sistema. Esta cuenta es utilizada para operaciones internas.'
-            )
-          );
-        return;
-      }
-    } catch (_error: any) {
-      // Si no podemos verificar si es usuario system, continuamos normalmente
-      // Esto es importante para que los tests sigan funcionando
     }
 
     const nuevoHash = await bcrypt.hash(newPassword, 10);
@@ -1088,20 +1176,45 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
       data: { password: nuevoHash },
     });
 
-    // Registrar auditoría (sin password)
-    await registrarAuditoria({
-      usuarioId: (req as any).user?.id || null,
-      accion: 'reset_password_admin',
-      descripcion: `El admin restableció la contraseña del usuario ${usuario.email}.`,
+    // Registrar éxito del restablecimiento de contraseña
+    await logSuccess({
+      userId,
       ip: req.ip,
-      entidadTipo: 'usuario',
-      entidadId: id,
-      modulo: 'usuarios',
+      entityType: 'usuario',
+      entityId: id,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_exitoso',
+      message: `Contraseña restablecida para el usuario ${usuario.email}`,
+      details: {
+        accion: 'reset_password_admin',
+        realizadoPor: userId,
+        fechaCambio: new Date().toISOString(),
+        requeridoCambio: true,
+      },
     });
 
     res.json(success('Contraseña restablecida correctamente'));
   } catch (_error: any) {
     const errorMessage = _error instanceof Error ? _error.message : 'Error desconocido';
-    res.status(500).json(fail(errorMessage));
+    const errorStack = _error instanceof Error ? _error.stack : undefined;
+
+    // Registrar el error en la auditoría
+    await logError({
+      userId: (req as any).user?.id || 'sistema',
+      ip: req.ip,
+      entityType: 'usuario',
+      entityId: req.params.id,
+      module: 'resetPasswordAdmin',
+      action: 'reset_password_admin_error',
+      message: 'Error al restablecer contraseña',
+      error: new Error(errorMessage),
+      context: {
+        accion: 'reset_password_admin',
+        error: errorMessage,
+        stack: errorStack,
+      },
+    });
+
+    res.status(500).json(fail('Error al restablecer la contraseña'));
   }
 }

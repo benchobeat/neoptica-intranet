@@ -33,10 +33,10 @@ export const crearMarca = async (req: Request, res: Response) => {
         message: 'Error al crear la marca',
         error: 'El nombre es obligatorio y debe ser una cadena de texto. 400',
         context: {
-          nombre: nombre,
-          descripcion: descripcion,
-          activo: activo,
-        }
+          nombre,
+          descripcion,
+          activo,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -58,10 +58,10 @@ export const crearMarca = async (req: Request, res: Response) => {
         message: 'Error al crear la marca',
         error: 'El nombre debe tener entre 2 y 100 caracteres. 400',
         context: {
-          nombre: nombre,
-          descripcion: descripcion,
-          activo: activo,
-        }
+          nombre,
+          descripcion,
+          activo,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -83,10 +83,10 @@ export const crearMarca = async (req: Request, res: Response) => {
         message: 'Error al crear la marca',
         error: 'El nombre contiene caracteres no permitidos. 400',
         context: {
-          nombre: nombre,
-          descripcion: descripcion,
-          activo: activo,
-        }
+          nombre,
+          descripcion,
+          activo,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -117,10 +117,10 @@ export const crearMarca = async (req: Request, res: Response) => {
         message: 'Error al crear la marca',
         error: 'Ya existe una marca con ese nombre. 409',
         context: {
-          nombre: nombre,
-          descripcion: descripcion,
-          activo: activo,
-        }
+          nombre,
+          descripcion,
+          activo,
+        },
       });
       return res.status(409).json({
         ok: false,
@@ -141,7 +141,7 @@ export const crearMarca = async (req: Request, res: Response) => {
     });
 
     // Registrar auditoría de creación exitosa
-    logSuccess({  
+    logSuccess({
       userId,
       ip: req.ip,
       entityType: 'marca',
@@ -152,8 +152,8 @@ export const crearMarca = async (req: Request, res: Response) => {
       details: {
         nombre: nuevaMarca.nombre,
         descripcion: nuevaMarca.descripcion || null,
-        activo: nuevaMarca.activo
-      }
+        activo: nuevaMarca.activo,
+      },
     });
     return res.status(201).json({
       ok: true,
@@ -171,12 +171,12 @@ export const crearMarca = async (req: Request, res: Response) => {
       module: 'crearMarca',
       action: 'crear_marca_fallido',
       message: 'Error al crear la marca',
-      error: error,
+      error,
       context: {
         datosSolicitud: req.body,
         error: error instanceof Error ? error.message : 'Error desconocido',
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     return res.status(500).json({
@@ -259,9 +259,9 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
         totalPaginas: Math.ceil(total / pageSize),
         filtrosAplicados: {
           activo: req.query.activo !== undefined ? req.query.activo === 'true' : null,
-          busqueda: req.query.search || null
-        }
-      }
+          busqueda: req.query.search || null,
+        },
+      },
     });
 
     return res.status(200).json({
@@ -285,14 +285,14 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
       module: 'listarMarcasPaginadas',
       action: 'listar_marcas_paginadas',
       message: 'Error al obtener el listado paginado de marcas',
-      error: error,
+      error,
       context: {
         pagina: req.query.page || 1,
         pageSize: req.query.pageSize || 10,
         searchText: req.query.searchText || null,
         error: error instanceof Error ? error.message : 'Error desconocido',
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     return res.status(500).json({
@@ -357,9 +357,9 @@ export const listarMarcas = async (req: Request, res: Response) => {
         filtrosAplicados: {
           id: req.query.id || null,
           nombre: req.query.nombre || null,
-          activo: req.query.activo !== undefined ? req.query.activo === 'true' : null
-        }
-      }
+          activo: req.query.activo !== undefined ? req.query.activo === 'true' : null,
+        },
+      },
     });
 
     return res.status(200).json({
@@ -369,7 +369,7 @@ export const listarMarcas = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error al listar marcas:', error);
-    
+
     // Registrar error usando logError
     await logError({
       userId,
@@ -378,16 +378,16 @@ export const listarMarcas = async (req: Request, res: Response) => {
       module: 'listarMarcas',
       action: 'error_listar_marcas',
       message: 'Error al listar las marcas',
-      error: error,
+      error,
       context: {
         filtrosAplicados: {
           id: req.query.id || null,
           nombre: req.query.nombre || null,
-          activo: req.query.activo !== undefined ? req.query.activo === 'true' : null
+          activo: req.query.activo !== undefined ? req.query.activo === 'true' : null,
         },
         error: error instanceof Error ? error.message : 'Error desconocido',
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     return res.status(500).json({
@@ -423,8 +423,8 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
         message: 'Error al obtener la marca',
         error: 'ID inválido. 400',
         context: {
-          id: id,
-        }
+          id,
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -453,13 +453,13 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
         message: 'Error al obtener la marca',
         error: 'Marca no encontrada. 404',
         context: {
-          id: id,
-        }
+          id,
+        },
       });
       return res.status(404).json({
         ok: false,
         data: null,
-        error: 'Marca no encontrada'
+        error: 'Marca no encontrada',
       });
     }
 
@@ -477,8 +477,8 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
         nombre: marca.nombre,
         activo: marca.activo,
         creadoEn: marca.creadoEn.toISOString(),
-        modificadoEn: marca.modificadoEn?.toISOString() || null
-      }
+        modificadoEn: marca.modificadoEn?.toISOString() || null,
+      },
     });
 
     return res.status(200).json({
@@ -498,12 +498,12 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
       module: 'obtenerMarcaPorId',
       action: 'error_obtener_marca_por_id',
       message: 'Error al obtener la marca',
-      error: error,
+      error,
       context: {
         idSolicitado: req.params.id,
         error: error instanceof Error ? error.message : 'Error desconocido',
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     // Manejo detallado de errores
@@ -516,12 +516,12 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
         module: 'obtenerMarcaPorId',
         action: 'error_obtener_marca_por_id',
         message: 'Error al obtener la marca',
-        error: error,
+        error,
         context: {
           idSolicitado: req.params.id,
           error: error instanceof Error ? error.message : 'Error desconocido',
-          ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-        }
+          ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -538,12 +538,12 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
       module: 'obtenerMarcaPorId',
       action: 'error_obtener_marca_por_id',
       message: 'Error al obtener la marca',
-      error: error,
+      error,
       context: {
         idSolicitado: req.params.id,
         error: error instanceof Error ? error.message : 'Error desconocido',
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
     return res.status(500).json({
       ok: false,
@@ -580,7 +580,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
         error: 'ID inválido. 400',
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -609,7 +609,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
         error: 'Marca no encontrada. 404',
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(404).json({
         ok: false,
@@ -635,8 +635,8 @@ export const actualizarMarca = async (req: Request, res: Response) => {
           error: 'El nombre debe ser una cadena de texto válida. 400',
           context: {
             idSolicitado: id,
-            nombre: nombre,
-          }
+            nombre,
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -660,8 +660,8 @@ export const actualizarMarca = async (req: Request, res: Response) => {
           error: 'El nombre debe tener al menos 2 caracteres. 400',
           context: {
             idSolicitado: id,
-            nombre: nombre,
-          }
+            nombre,
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -684,8 +684,8 @@ export const actualizarMarca = async (req: Request, res: Response) => {
           error: 'El nombre contiene caracteres no permitidos. 400',
           context: {
             idSolicitado: id,
-            nombre: nombre,
-          }
+            nombre,
+          },
         });
         return res.status(400).json({
           ok: false,
@@ -720,8 +720,8 @@ export const actualizarMarca = async (req: Request, res: Response) => {
           error: 'Ya existe otra marca con ese nombre. 409',
           context: {
             idSolicitado: id,
-            nombre: nombre,
-          }
+            nombre,
+          },
         });
         return res.status(409).json({
           ok: false,
@@ -756,7 +756,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
         error: 'No se proporcionaron datos para actualizar. 400',
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -787,15 +787,18 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       details: {
         id: marcaActualizada.id,
         cambios: Object.keys(datosActualizados)
-          .filter(key => !['modificadoPor', 'modificadoEn'].includes(key))
-          .reduce((obj, key) => ({
-            ...obj,
-            [key]: {
-              anterior: marcaExistente[key as keyof typeof marcaExistente],
-              nuevo: marcaActualizada[key as keyof typeof marcaActualizada]
-            }
-          }), {})
-      }
+          .filter((key) => !['modificadoPor', 'modificadoEn'].includes(key))
+          .reduce(
+            (obj, key) => ({
+              ...obj,
+              [key]: {
+                anterior: marcaExistente[key as keyof typeof marcaExistente],
+                nuevo: marcaActualizada[key as keyof typeof marcaActualizada],
+              },
+            }),
+            {}
+          ),
+      },
     });
 
     return res.status(200).json({
@@ -815,13 +818,13 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       module: 'actualizarMarca',
       action: 'error_actualizar_marca',
       message: 'Error al actualizar la marca. 500',
-      error: error,
+      error,
       context: {
         idSolicitado: req.params.id,
         datosSolicitud: req.body,
         error: error instanceof Error ? error.message : 'Error desconocido',
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     // Manejo detallado de errores de Prisma
@@ -837,7 +840,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
         error: 'ID inválido. 400',
         context: {
           idSolicitado: req.params.id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -856,7 +859,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       error: 'Error interno del servidor al actualizar la marca. 500',
       context: {
         idSolicitado: req.params.id,
-      }
+      },
     });
     return res.status(500).json({
       ok: false,
@@ -893,7 +896,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
         error: 'ID inválido. 400',
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -922,7 +925,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
         error: 'Marca no encontrada. 404',
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(404).json({
         ok: false,
@@ -951,7 +954,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
         error: 'No se puede eliminar la marca porque tiene productos asociados. 409',
         context: {
           idSolicitado: id,
-        }
+        },
       });
       return res.status(409).json({
         ok: false,
@@ -981,10 +984,10 @@ export const eliminarMarca = async (req: Request, res: Response) => {
       action: 'eliminar_marca',
       message: 'Marca eliminada exitosamente',
       details: {
-        id: id,
+        id,
         tipo: 'soft_delete',
-        anuladoEn: fechaActual.toISOString()
-      }
+        anuladoEn: fechaActual.toISOString(),
+      },
     });
 
     return res.status(200).json({
@@ -1004,12 +1007,12 @@ export const eliminarMarca = async (req: Request, res: Response) => {
       module: 'marcas',
       action: 'error_eliminar_marca',
       message: 'Error al eliminar la marca',
-      error: error,
+      error,
       context: {
         idSolicitado: req.params.id,
         error: error instanceof Error ? error.message : 'Error desconocido P2023',
-        ...(error instanceof Error && error.stack ? { stack: error.stack } : {})
-      }
+        ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      },
     });
 
     // Manejo detallado de errores de Prisma
@@ -1025,7 +1028,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
         error: 'ID inválido. 400',
         context: {
           idSolicitado: req.params.id,
-        }
+        },
       });
       return res.status(400).json({
         ok: false,
@@ -1045,7 +1048,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
       error: 'Error interno del servidor al eliminar la marca. 500',
       context: {
         idSolicitado: req.params.id,
-      }
+      },
     });
     return res.status(500).json({
       ok: false,

@@ -1,12 +1,6 @@
 import { Router } from 'express';
-import type { Request, Response, RequestHandler } from 'express';
 
-// Extender el tipo RequestHandler para incluir posibles propiedades personalizadas
-interface CustomRequestHandler extends RequestHandler {
-  (req: Request, res: Response, next: () => void): void;
-}
-import { body, param, query } from 'express-validator';
-
+// Controladores
 import {
   crearProducto,
   listarProductos,
@@ -14,59 +8,44 @@ import {
   actualizarProducto,
   eliminarProducto,
 } from '../controllers/productoController';
+
+// Middlewares
 import { authenticateJWT } from '../middlewares/auth';
 import { requireRole } from '../middlewares/roles';
-import { validateRequest } from '../middlewares/validate';
 
 const router = Router();
 
-// Tipos para las peticiones
-interface ProductoInput {
-  nombre: string;
-  descripcion?: string;
-  precio: number;
-  categoria: string;
-  imagen_url?: string;
-  modelo_3d_url?: string;
-  activo?: boolean;
-}
-
-// Validaciones
-const validarCrearProducto = [
-  body('nombre')
-    .trim()
-    .isLength({ min: 3 })
-    .withMessage('El nombre debe tener al menos 3 caracteres'),
-  body('precio').isFloat({ gt: 0 }).withMessage('El precio debe ser mayor a 0'),
-  body('categoria').trim().notEmpty().withMessage('La categoría es requerida'),
-  body('descripcion').optional().trim(),
-  body('imagen_url').optional().isURL().withMessage('La URL de la imagen no es válida'),
-  body('modelo_3d_url').optional().isURL().withMessage('La URL del modelo 3D no es válida'),
-  body('activo').optional().isBoolean().withMessage('El campo activo debe ser un valor booleano'),
-];
-
-const validarActualizarProducto = [
-  param('id').isString().isLength({ min: 10 }).withMessage('ID de producto inválido'),
-  body('nombre')
-    .optional()
-    .trim()
-    .isLength({ min: 3 })
-    .withMessage('El nombre debe tener al menos 3 caracteres'),
-  body('precio').optional().isFloat({ gt: 0 }).withMessage('El precio debe ser mayor a 0'),
-  body('categoria').optional().trim().notEmpty().withMessage('La categoría no puede estar vacía'),
-  body('descripcion').optional().trim(),
-  body('imagen_url').optional().isURL().withMessage('La URL de la imagen no es válida'),
-  body('modelo_3d_url').optional().isURL().withMessage('La URL del modelo 3D no es válida'),
-  body('activo').optional().isBoolean().withMessage('El campo activo debe ser un valor booleano'),
-];
-
-const validarObtenerProducto = [
-  param('id').isString().isLength({ min: 10 }).withMessage('ID de producto inválido'),
-];
-
-const validarEliminarProducto = [
-  param('id').isString().isLength({ min: 10 }).withMessage('ID de producto inválido'),
-];
+/**
+ * @swagger
+ * /api/productos:
+ *   get:
+ *     summary: Obtiene una lista paginada de productos
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Número de página
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Número de elementos por página
+ *     responses:
+ *       200:
+ *         description: Lista de productos
+ *       401:
+ *         description: No autorizado
+ */
+router.get('/', authenticateJWT, listarProductos);
 
 // Tipos para documentación Swagger
 /**
@@ -79,39 +58,170 @@ const validarEliminarProducto = [
  *         id:
  *           type: string
  *           format: uuid
- *           example: 123e4567-e89b-12d3-a456-426614174000
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
  *         nombre:
  *           type: string
  *           example: "Lentes de Sol Premium"
  *         descripcion:
  *           type: string
+ *           nullable: true
  *           example: "Lentes polarizados con protección UV 400"
  *         precio:
  *           type: number
  *           format: double
  *           example: 149.99
+ *         categoriaId:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
  *         categoria:
- *           type: string
- *           example: "Accesorios"
- *         imagen_url:
+ *           $ref: '#/components/schemas/Categoria'
+ *         imagenUrl:
  *           type: string
  *           format: uri
+ *           nullable: true
  *           example: "https://example.com/images/lentes-sol-premium.jpg"
- *         modelo_3d_url:
+ *         modelo3dUrl:
  *           type: string
  *           format: uri
+ *           nullable: true
  *           example: "https://example.com/models/lentes-sol-premium.glb"
+ *         materialLente:
+ *           type: string
+ *           nullable: true
+ *           example: "Policarbonato"
+ *         tratamientoLente:
+ *           type: string
+ *           nullable: true
+ *           example: "Antirreflejante"
+ *         graduacionEsfera:
+ *           type: number
+ *           format: double
+ *           nullable: true
+ *           example: -2.5
+ *         graduacionCilindro:
+ *           type: number
+ *           format: double
+ *           nullable: true
+ *           example: -0.75
+ *         eje:
+ *           type: integer
+ *           nullable: true
+ *           example: 90
+ *         adicion:
+ *           type: number
+ *           format: double
+ *           nullable: true
+ *           example: 2.0
+ *         tipoArmazon:
+ *           type: string
+ *           nullable: true
+ *           example: "Completo"
+ *         materialArmazon:
+ *           type: string
+ *           nullable: true
+ *           example: "Acetato"
+ *         tamanoPuente:
+ *           type: integer
+ *           nullable: true
+ *           example: 18
+ *         tamanoAros:
+ *           type: integer
+ *           nullable: true
+ *           example: 54
+ *         tamanoVarillas:
+ *           type: integer
+ *           nullable: true
+ *           example: 140
  *         activo:
  *           type: boolean
- *           example: true
- *         creado_en:
+ *           default: true
+ *         marcaId:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
+ *         colorId:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
+ *         creadoEn:
  *           type: string
  *           format: date-time
  *           example: "2023-05-15T10:30:00Z"
- *         modificado_en:
+ *         creadoPor:
+ *           type: string
+ *           nullable: true
+ *           example: "usuario@ejemplo.com"
+ *         modificadoEn:
  *           type: string
  *           format: date-time
+ *           nullable: true
  *           example: "2023-05-16T15:45:00Z"
+ *         modificadoPor:
+ *           type: string
+ *           nullable: true
+ *           example: "admin@ejemplo.com"
+ *         anuladoEn:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           example: null
+ *         anuladoPor:
+ *           type: string
+ *           nullable: true
+ *           example: null
+ *         marca:
+ *           $ref: '#/components/schemas/MarcaRelacion'
+ *         color:
+ *           $ref: '#/components/schemas/ColorRelacion'
+ *         _count:
+ *           type: object
+ *           properties:
+ *             inventario:
+ *               type: integer
+ *               example: 42
+ *         stock:
+ *           type: integer
+ *           example: 42
+ *
+ *     Categoria:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
+ *         nombre:
+ *           type: string
+ *           example: "Accesorios"
+ *
+ *     MarcaRelacion:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           example: "550e8400-e29b-41d4-a716-446655440000"
+ *         nombre:
+ *           type: string
+ *           example: "Ray-Ban"
+ *
+ *     ColorRelacion:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           example: "660e8400-e29b-41d4-a716-446655440001"
+ *         nombre:
+ *           type: string
+ *           example: "Negro"
+ *         codigoHex:
+ *           type: string
+ *           example: "#000000"
  *
  *     ErrorResponse:
  *       type: object
@@ -154,33 +264,105 @@ const validarEliminarProducto = [
  *       required:
  *         - nombre
  *         - precio
- *         - categoria
  *       properties:
  *         nombre:
  *           type: string
  *           minLength: 3
- *           example: "Lentes de Sol"
+ *           maxLength: 255
+ *           example: "Lentes de Sol Premium"
  *         descripcion:
  *           type: string
- *           example: "Lentes polarizados con filtro UV"
+ *           nullable: true
+ *           example: "Lentes polarizados con protección UV 400"
  *         precio:
  *           type: number
+ *           format: double
  *           minimum: 0
- *           example: 49.99
- *         categoria:
+ *           example: 149.99
+ *         categoriaId:
  *           type: string
- *           example: "Accesorios"
- *         imagen_url:
- *           type: string
- *           format: uri
- *           example: "https://example.com/lentes.jpg"
- *         modelo_3d_url:
+ *           format: uuid
+ *           nullable: true
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
+ *         imagenUrl:
  *           type: string
  *           format: uri
- *           example: "https://example.com/lentes-3d.glb"
+ *           nullable: true
+ *           example: "https://example.com/images/lentes-sol-premium.jpg"
+ *         modelo3dUrl:
+ *           type: string
+ *           format: uri
+ *           nullable: true
+ *           example: "https://example.com/models/lentes-sol-premium.glb"
+ *         materialLente:
+ *           type: string
+ *           nullable: true
+ *           example: "Policarbonato"
+ *         tratamientoLente:
+ *           type: string
+ *           nullable: true
+ *           example: "Antirreflejante"
+ *         graduacionEsfera:
+ *           type: number
+ *           format: double
+ *           nullable: true
+ *           example: -2.5
+ *         graduacionCilindro:
+ *           type: number
+ *           format: double
+ *           nullable: true
+ *           example: -1.25
+ *         eje:
+ *           type: number
+ *           nullable: true
+ *           example: 90
+ *         adicion:
+ *           type: number
+ *           format: double
+ *           nullable: true
+ *           example: 1.5
+ *         tipoArmazon:
+ *           type: string
+ *           nullable: true
+ *           example: "Completo"
+ *         materialArmazon:
+ *           type: string
+ *           nullable: true
+ *           example: "Acetato"
+ *         tamanoPuente:
+ *           type: number
+ *           nullable: true
+ *           example: 18
+ *         tamanoAros:
+ *           type: number
+ *           nullable: true
+ *           example: 52
+ *         tamanoVarillas:
+ *           type: number
+ *           nullable: true
+ *           example: 140
  *         activo:
  *           type: boolean
+ *           nullable: true
  *           example: true
+ *         erpId:
+ *           type: number
+ *           nullable: true
+ *           example: 1001
+ *         erpTipo:
+ *           type: string
+ *           nullable: true
+ *           example: "SAP"
+ *         marcaId:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *           example: "550e8400-e29b-41d4-a716-446655440000"
+ *         colorId:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *           example: "660e8400-e29b-41d4-a716-446655440001"
  */
 
 /**
@@ -313,16 +495,8 @@ router.use(authenticateJWT);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-// Ruta para crear un nuevo producto
-router.post<{}, {}, ProductoInput>(
-  '/',
-  authenticateJWT as unknown as CustomRequestHandler,
-  ((req, res, next) =>
-    requireRole('admin', 'inventario')(req, res, next)) as unknown as CustomRequestHandler,
-  ...validarCrearProducto,
-  validateRequest,
-  crearProducto as unknown as CustomRequestHandler
-);
+
+router.post('/', authenticateJWT, requireRole('admin', 'inventario'), crearProducto);
 
 /**
  * @swagger
@@ -359,13 +533,14 @@ router.post<{}, {}, ProductoInput>(
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/:id', validarObtenerProducto, validateRequest, obtenerProductoPorId);
+router.get('/:id', authenticateJWT, obtenerProductoPorId);
 
 /**
  * @swagger
  * /api/productos/{id}:
  *   put:
  *     summary: Actualiza un producto existente
+ *     description: Actualiza los datos de un producto existente. Solo los campos proporcionados serán actualizados.
  *     tags: [Productos]
  *     security:
  *       - bearerAuth: []
@@ -375,9 +550,12 @@ router.get('/:id', validarObtenerProducto, validateRequest, obtenerProductoPorId
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
  *         description: ID del producto a actualizar
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
  *     requestBody:
  *       required: true
+ *       description: Datos del producto a actualizar
  *       content:
  *         application/json:
  *           schema:
@@ -397,243 +575,32 @@ router.get('/:id', validarObtenerProducto, validateRequest, obtenerProductoPorId
  *                   $ref: '#/components/schemas/Producto'
  *       400:
  *         description: Datos de entrada inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: No autorizado - Token no proporcionado o inválido
  *       403:
  *         description: No tiene permisos para realizar esta acción
  *       404:
  *         description: Producto no encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
  *         description: Conflicto - Ya existe un producto con ese nombre
- *       500:
- *         description: Error interno del servidor
- */
-// Ruta para actualizar un producto existente
-router.put<{ id: string }, any, ProductoInput>(
-  '/:id',
-  authenticateJWT as unknown as CustomRequestHandler,
-  ((req, res, next) =>
-    requireRole('admin', 'inventario')(req, res, next)) as unknown as CustomRequestHandler,
-  ...validarActualizarProducto,
-  validateRequest,
-  actualizarProducto as unknown as CustomRequestHandler
-);
-
-/**
- * @swagger
- * /api/productos/{id}:
- *   delete:
- *     summary: Elimina un producto (soft delete)
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del producto a eliminar
- *     responses:
- *       200:
- *         description: Producto eliminado exitosamente
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Producto'
- *       400:
- *         description: ID de producto inválido o producto ya eliminado
- *       401:
- *         description: No autorizado - Token no proporcionado o inválido
- *       403:
- *         description: No tiene permisos para realizar esta acción
- *       404:
- *         description: Producto no encontrado
- *       500:
- *         description: Error interno del servidor
- */
-router.delete(
-  '/:id',
-  (req, res, next) => requireRole('admin', 'inventario')(req, res, next),
-  validarEliminarProducto,
-  validateRequest,
-  eliminarProducto
-);
-
-/**
- * @swagger
- * /api/productos:
- *   post:
- *     summary: Crea un nuevo producto
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               nombre:
- *                 type: string
- *                 example: Lentes de Sol
- *               descripcion:
- *                 type: string
- *                 example: Lentes de sol polarizados
- *               precio:
- *                 type: number
- *                 example: 49.99
- *               categoria:
- *                 type: string
- *                 example: Accesorios
- *               imagen_url:
- *                 type: string
- *                 example: https://example.com/lentes.jpg
- *               modelo_3d_url:
- *                 type: string
- *                 example: https://example.com/lentes-3d.glb
- *               activo:
- *                 type: boolean
- *                 example: true
- *     responses:
- *       201:
- *         description: Producto creado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Producto'
- *                 error:
- *                   type: string
- *                   example: null
- *       400:
- *         description: Error de validación
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Error interno del servidor
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post('/', authenticateJWT, requireRole('admin', 'vendedor', 'optometrista'), crearProducto);
-
-/**
- * @swagger
- * /api/productos/{id}:
- *   get:
- *     summary: Obtiene un producto por ID
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID del producto
- *     responses:
- *       200:
- *         description: Producto encontrado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Producto'
- *                 error:
- *                   type: string
- *                   example: null
- *       404:
- *         description: Producto no encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Error interno del servidor
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/:id', authenticateJWT, obtenerProductoPorId);
-
-/**
- * @swagger
- * /api/productos/{id}:
- *   put:
- *     summary: Actualiza un producto existente
- *     tags: [Productos]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID del producto
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/ProductoInput'
- *     responses:
- *       200:
- *         description: Producto actualizado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Producto'
- *                 error:
- *                   type: string
- *                   example: null
- *       400:
- *         description: Datos inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Producto no encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Error interno del servidor
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put(
   '/:id',
@@ -646,20 +613,23 @@ router.put(
  * @swagger
  * /api/productos/{id}:
  *   delete:
- *     summary: Elimina (borrado lógico) un producto
+ *     summary: Elimina un producto (soft delete)
+ *     description: Realiza una eliminación lógica del producto, marcándolo como inactivo en lugar de eliminarlo físicamente.
  *     tags: [Productos]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID del producto
+ *           format: uuid
+ *         description: ID del producto a eliminar
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
  *     responses:
  *       200:
- *         description: Producto eliminado correctamente
+ *         description: Producto eliminado exitosamente (marcado como inactivo)
  *         content:
  *           application/json:
  *             schema:
@@ -669,32 +639,38 @@ router.put(
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   type: string
- *                   example: 'Producto eliminado'
- *                 error:
- *                   type: string
- *                   example: null
+ *                   $ref: '#/components/schemas/Producto'
+ *       400:
+ *         description: ID de producto inválido o producto ya eliminado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: No autorizado - Token no proporcionado o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: No tiene permisos para realizar esta acción
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Producto no encontrado
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Error interno del servidor
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
-// Ruta para eliminar un producto (soft delete)
-router.delete<{ id: string }>(
-  '/:id',
-  authenticateJWT as unknown as CustomRequestHandler,
-  ((req, res, next) => requireRole('admin')(req, res, next)) as unknown as CustomRequestHandler,
-  ...validarEliminarProducto,
-  validateRequest,
-  eliminarProducto as unknown as CustomRequestHandler
-);
+router.delete('/:id', authenticateJWT, requireRole('admin'), eliminarProducto);
 
 export default router;

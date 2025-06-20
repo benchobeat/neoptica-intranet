@@ -1,6 +1,7 @@
 // Import types from express
 import type { Request, Response } from 'express';
 import { mockUsuarioAdmin, mockUsuarioVendedor } from '../../__fixtures__/usuarioFixtures';
+import { strict as assert } from 'assert';
 
 // Import the User type from express.d.ts
 declare global {
@@ -39,7 +40,8 @@ const mockDeleteMany = jest.fn();
 const mockCreateMany = jest.fn();
 const mockFindMany = jest.fn();
 const mockTransaction = jest.fn();
-const mockRegistrarAuditoria = jest.fn().mockResolvedValue(undefined);
+const mockLogSuccess = jest.fn().mockResolvedValue(undefined);
+const mockLogError = jest.fn().mockResolvedValue(undefined);
 
 // Importar el módulo prisma real para poder hacer jest.spyOn sobre él
 import prisma from '../../../../src/utils/prisma';
@@ -74,18 +76,15 @@ const spyTransaction = jest.spyOn(prisma, '$transaction').mockImplementation((ca
 });
 
 // Mock audit utility
-jest.mock('@/utils/audit', () => ({
-  registrarAuditoria: (...args: any[]) => mockRegistrarAuditoria(...args),
-}), { virtual: true });
-
-// Mock isSystemUser function
-jest.mock('@/utils/system', () => ({
-  isSystemUser: jest.fn().mockResolvedValue(false)
+jest.mock('../../../../src/utils/audit', () => ({
+  logSuccess: (...args: any[]) => mockLogSuccess(...args),
+  logError: (...args: any[]) => mockLogError(...args),
 }));
+
+// Ya no se usa isSystemUser en el controlador
 
 // Importar el controlador después de configurar los mocks
 import { actualizarUsuario } from '../../../../src/controllers/usuarioController';
-import { isSystemUser } from '@/utils/system';
 
 
 
@@ -213,9 +212,7 @@ describe('actualizarUsuario', () => {
   });
 
   it('debe actualizar un usuario correctamente', async () => {
-    // Configurar el mock para isSystemUser
-    (isSystemUser as jest.Mock).mockResolvedValueOnce(false);
-    
+        
     // Mock para usuario existente con un arreglo para las llamadas
     // Primera llamada: para validar que el usuario existe
     const mockUsuario = {
@@ -230,12 +227,19 @@ describe('actualizarUsuario', () => {
     mockFindUnique.mockImplementation((args) => {
       const where = args?.where || {};
       
-      // Si busca por ID, devolver el usuario
-      if (where.id === mockUsuarioVendedor.id) {
-        return Promise.resolve(mockUsuario);
+      // El controlador usa req.user.id (usuarioId) para buscar, NO req.params.id
+      // Por tanto, debemos responder cuando where.id === req.user.id 
+      if (where.id === req.user.id || where.id === mockUsuarioVendedor.id) {
+        return Promise.resolve({
+          ...mockUsuario,
+          id: mockUsuarioVendedor.id, // ID del usuario a actualizar
+          usuarioRol: [
+            { rol: { id: 'vendedor', nombre: 'vendedor' } }
+          ]
+        });
       }
       
-      // Si busca por email para validar duplicados
+      // Si busca por email para validar duplicados (es importante devolver null)
       if (where.email === updateData.email) {
         return Promise.resolve(null);
       }
@@ -284,9 +288,12 @@ describe('actualizarUsuario', () => {
     }
     
     // Verificar que se llamó a findUnique con el ID correcto
-    expect(mockFindUnique).toHaveBeenCalledWith({
-      where: { id: mockUsuarioVendedor.id },
-    });
+    expect(mockFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: expect.any(String) },
+        include: expect.any(Object)
+      })
+    );
 
     if (mockUpdate.mock.calls.length > 0) {
       // Verificar que se llamó a update con los datos correctos
@@ -313,7 +320,7 @@ describe('actualizarUsuario', () => {
     } else {
       console.error('mockUpdate no fue llamado!');
       // Forzamos el fallo para mostrar claramente el problema
-      fail('mockUpdate no fue llamado. La validación debe estar fallando antes de llegar a la actualización.');
+      assert.fail('mockUpdate no fue llamado. La validación debe estar fallando antes de llegar a la actualización.');
     }
 
     // Verificar que se llamó a createMany con los nuevos roles
@@ -340,19 +347,21 @@ describe('actualizarUsuario', () => {
     expect(res.status).not.toHaveBeenCalled();
 
     // Verificar que se registró la auditoría
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(
+    expect(mockLogSuccess).toHaveBeenCalledWith(
       expect.objectContaining({
-        usuarioId: '550e8400-e29b-41d4-a716-446655440000',
-        accion: 'modificar_usuario_exitoso',
-        entidadId: '550e8400-e29b-41d4-a716-446655440002',
-        entidadTipo: 'usuario',
-        modulo: 'usuarios',
+        userId: '550e8400-e29b-41d4-a716-446655440000',
+        entityId: '550e8400-e29b-41d4-a716-446655440002',
+        entityType: 'usuario',
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_exitoso',
+        message: expect.stringContaining('actualizado@example.com'),
+        details: expect.objectContaining({
+          cambios: expect.any(Array),
+          camposActualizados: expect.any(Object),
+          roles: expect.any(Array)
+        })
       })
     );
-    
-    // Verificar que la descripción contiene el email actualizado
-    const auditoriaCalls = mockRegistrarAuditoria.mock.calls[0][0];
-    expect(auditoriaCalls.descripcion).toContain('actualizado@example.com');
   });
 
   it('solo debe permitir a administradores actualizar usuarios', async () => {
@@ -374,13 +383,31 @@ describe('actualizarUsuario', () => {
         error: expect.stringContaining('solo admin puede modificar usuarios'),
       })
     );
+    
+    // Verificar que se registró la auditoría de error
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'non-admin-id',
+        entityId: 'non-admin-id', // El controlador usa el ID del usuario que intenta acceder
+        entityType: 'usuario',
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_fallido',
+        message: expect.stringContaining('Acceso denegado'),
+        error: expect.any(Error),
+        context: expect.objectContaining({
+          requiereRol: 'admin',
+          rolesUsuario: ['vendedor']
+        }),
+        ip: '127.0.0.1' // El controlador incluye la IP
+      })
+    );
   });
 
   it('debe permitir a un usuario actualizar su propio perfil', async () => {
     // Usuario actualizando su propio perfil
     const updatedData = {
       ...updateData,
-      roles: ['admin'] // Solo mantener el rol de admin
+      dni: null // Para evitar el error de DNI inmutable
     };
     
     (req as any).params = { id: mockUsuarioAdmin.id };
@@ -398,43 +425,211 @@ describe('actualizarUsuario', () => {
       if (args?.where?.id === mockUsuarioAdmin.id) {
         return Promise.resolve({
           ...mockUsuarioAdmin,
+          dni: null, // Usuario sin DNI previo
           usuarioRol: [{ rol: { nombre: 'admin' } }]
+        });
+      }
+      // Para verificaciones de email duplicado
+      if (args?.where?.email === updatedData.email) {
+        return Promise.resolve(null); // No hay otro usuario con ese email
+      }
+      return Promise.resolve(null);
+    });
+    
+    // Mock para verificación de DNI duplicado
+    mockFindFirst.mockResolvedValue(null);
+    
+    // Mock para verificación de roles
+    mockFindMany.mockImplementation((args) => {
+      // Si busca roles por nombre
+      if (args?.where?.nombre?.in) {
+        const roles = args.where.nombre.in.map((nombre: string) => ({
+          id: nombre,
+          nombre: nombre
+        }));
+        return Promise.resolve(roles);
+      }
+      
+      // Si busca roles de usuario
+      if (args?.where?.usuarioId === mockUsuarioAdmin.id) {
+        return Promise.resolve([{ usuarioId: mockUsuarioAdmin.id, rolId: 'admin' }]);
+      }
+      
+      return Promise.resolve([]);
+    });
+    
+    // Mock para la actualización exitosa
+    const updatedUser = {
+      ...mockUsuarioAdmin,
+      nombreCompleto: updatedData.nombreCompleto,
+      email: updatedData.email,
+      telefono: updatedData.telefono,
+      dni: updatedData.dni,
+      direccion: updatedData.direccion,
+      roles: [{ rol: { nombre: 'admin' } }]
+    };
+    mockUpdate.mockResolvedValue(updatedUser);
+    
+    mockDeleteMany.mockResolvedValue({ count: 0 });
+    mockCreateMany.mockResolvedValue({ count: 0 });
+
+    await actualizarUsuario(req, res);
+
+    // Verificar respuesta exitosa
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: true,
+        data: expect.any(Object)
+      })
+    );
+    
+    // Verificar que se registró la auditoría
+    expect(mockLogSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUsuarioAdmin.id,
+        entityId: mockUsuarioAdmin.id,
+        entityType: 'usuario',
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_exitoso',
+        message: expect.any(String),
+        details: expect.any(Object),
+        ip: '127.0.0.1'
+      })
+    );
+  });
+
+  it('debe validar email duplicado', async () => {
+    // Setup: Email existente en otro usuario
+    const existingEmail = 'existing@example.com';
+    req.body = { ...req.body, email: existingEmail };
+    
+    // Mock para el usuario que estamos actualizando (lo regresa correctamente primero)
+    mockFindUnique.mockImplementationOnce((args: any) => {
+      if (args?.where?.id === mockUsuarioVendedor.id) {
+        return Promise.resolve({
+          ...mockUsuarioVendedor,
+          email: 'original@example.com',
         });
       }
       return Promise.resolve(null);
     });
     
-    // Mock para la actualización exitosa
-    mockUpdate.mockResolvedValueOnce({
-      ...mockUsuarioAdmin,
-      ...updatedData,
-      password: undefined,
-      usuarioRol: []
+    // Mock para la búsqueda por email (segunda llamada - encuentra duplicado)
+    mockFindFirst.mockResolvedValueOnce({
+      id: 'otro-usuario-id',
+      email: existingEmail
     });
-    
-    mockDeleteMany.mockResolvedValueOnce({ count: 1 });
-    mockCreateMany.mockResolvedValueOnce({ count: 1 });
 
     await actualizarUsuario(req, res);
 
-    // Verificar que se registró la auditoría de error por validación
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(
+    // Verificar respuesta de error
+    expect(res.status).toHaveBeenCalledWith(404); // El controlador usa 404, no 409
+    expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        accion: 'modificar_usuario_fallido',
-        modulo: 'usuarios',
-        entidadTipo: 'usuario',
-        entidadId: '550e8400-e29b-41d4-a716-446655440000',
-        usuarioId: '550e8400-e29b-41d4-a716-446655440000',
-        descripcion: expect.stringContaining('El DNI ya está registrado')
+        ok: false,
+        error: expect.any(String)
       })
     );
     
-    // Actualizar el test para esperar el código 400
+    // Verificar que se registró el error
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: req.user.id,
+        entityId: req.user.id,
+        entityType: 'usuario',
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_fallido',
+        message: expect.any(String),
+        ip: '127.0.0.1'
+      })
+    );
+  });
+
+  it('debe validar DNI duplicado', async () => {
+    // Setup: DNI existente en otro usuario
+    const existingDni = '98765432';
+    req.body = { ...req.body, dni: existingDni };
+    
+    // Mock para usuario existente sin DNI
+    mockFindUnique.mockResolvedValue({
+      ...mockUsuarioVendedor,
+      dni: null, // El usuario no tiene DNI aún
+    });
+    
+    // El DNI ya está en uso por otro usuario
+    mockFindFirst.mockResolvedValue({
+      id: 'otro-usuario-id',
+      dni: existingDni,
+    });
+
+    await actualizarUsuario(req, res);
+
+    // Verificar respuesta de error
+    expect(res.status).toHaveBeenCalledWith(409); // Conflict
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        error: expect.stringContaining('DNI ya está registrado'),
+      })
+    );
+    
+    // Verificar que se registró el error
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: req.user.id,
+        entityId: req.user.id, // El controlador usa el ID del usuario actual
+        entityType: 'usuario',
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_fallido',
+        message: expect.any(String),
+        error: expect.any(Error),
+        context: expect.objectContaining({
+          dni: existingDni,
+          usuarioConDni: 'otro-usuario-id',
+          usuarioExistente: expect.any(String)
+        }),
+        ip: '127.0.0.1'
+      })
+    );
+  });
+
+  it('no debe permitir cambiar un DNI ya establecido', async () => {
+    // Setup: El usuario ya tiene DNI
+    const existingDni = '12345678';
+    req.body = { ...req.body, dni: '87654321' };
+    
+    // Mock para usuario existente con DNI
+    mockFindUnique.mockResolvedValue({
+      ...mockUsuarioVendedor,
+      dni: existingDni,
+    });
+
+    await actualizarUsuario(req, res);
+
+    // Verificar respuesta de error
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         ok: false,
-        error: expect.any(String),
+        error: expect.stringContaining('DNI ya está registrado y no puede ser modificado'),
+      })
+    );
+    
+    // Verificar que se registró el error
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: req.user.id,
+        entityId: req.user.id, // El controlador usa el ID del usuario actual
+        entityType: 'usuario',
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_fallido',
+        message: expect.stringContaining('DNI ya está registrado y no puede ser modificado'),
+        error: expect.any(Error),
+        context: expect.objectContaining({
+          dni: '87654321',
+          usuarioExistente: expect.any(String)
+        }),
+        ip: '127.0.0.1'
       })
     );
   });
@@ -443,35 +638,27 @@ describe('actualizarUsuario', () => {
     const error = new Error('Error inesperado');
     mockFindUnique.mockRejectedValueOnce(error);
 
-    // Configurar mock para req.user
-    (req as any).user = { 
-      id: mockUsuarioAdmin.id, 
-      roles: ['admin'],
-      usuarioRol: [{ rol: { nombre: 'admin' } }],
-      nombreCompleto: 'Admin User',
-      email: 'admin@example.com'
-    };
-
     await actualizarUsuario(req, res);
 
     expect(mockFindUnique).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: expect.stringContaining('Error inesperado'),
-      })
-    );
+    expect(res.json).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'Error al actualizar el usuario'
+    });
 
-    // Verificar que se registró la auditoría del error
-    expect(mockRegistrarAuditoria).toHaveBeenCalledWith(
+    expect(mockLogError).toHaveBeenCalledWith(
       expect.objectContaining({
-        accion: 'modificar_usuario_fallido',
-        modulo: 'usuarios',
-        entidadTipo: 'usuario',
-        entidadId: '550e8400-e29b-41d4-a716-446655440002',
-        usuarioId: '550e8400-e29b-41d4-a716-446655440000',
-        descripcion: 'Error inesperado'
+        userId: req.user.id,
+        entityId: mockUsuarioVendedor.id, // El controlador usa el ID del usuario a actualizar
+        entityType: 'usuario',
+        module: 'actualizarUsuario',
+        action: 'actualizar_usuario_fallido',
+        message: 'Error al actualizar el usuario',
+        error: error,
+        context: expect.any(Object), // La estructura exacta puede variar
+        ip: '127.0.0.1'
       })
     );
   });

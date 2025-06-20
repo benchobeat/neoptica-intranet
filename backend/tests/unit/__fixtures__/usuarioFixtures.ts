@@ -1,4 +1,5 @@
-import { Prisma, Usuario, UsuarioRol, Rol } from '@prisma/client';
+import type { Usuario, UsuarioRol, Rol } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 type UsuarioWithRoles = Usuario & {
   usuarioRol: (UsuarioRol & { rol: Rol })[];

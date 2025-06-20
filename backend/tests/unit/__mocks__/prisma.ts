@@ -25,7 +25,7 @@ const mockEntityFunctions = {
     return Promise.resolve({
       ...data,
       id: '1',
-      ultimoAcceso: new Date()
+      ultimoAcceso: new Date(),
     });
   }),
   updateMany: jest.fn().mockImplementation(() => Promise.resolve({ count: 0 })),
@@ -54,24 +54,14 @@ const prismaMock: any = {
         ultimoAcceso: new Date(),
         ultimoIp: '127.0.0.1',
         intentosFallidos: 0,
-        roles: []
+        roles: [],
       });
-    })
+    }),
   },
   color: { ...mockEntityFunctions },
   marca: { ...mockEntityFunctions },
   producto: { ...mockEntityFunctions },
   sucursal: { ...mockEntityFunctions },
-  usuario: {
-    ...mockEntityFunctions,
-    update: jest.fn().mockImplementation((args: any) => {
-      return Promise.resolve({
-        ...(args?.data || {}),
-        id: '1',
-        ultimoAcceso: new Date()
-      });
-    })
-  },
   rol: { ...mockEntityFunctions },
   usuarioRol: { ...mockEntityFunctions },
   // Agregar otros modelos según sea necesario
