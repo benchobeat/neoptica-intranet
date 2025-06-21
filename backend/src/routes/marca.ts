@@ -245,7 +245,7 @@ router.get('/:id', authenticateJWT, obtenerMarcaPorId);
  *   post:
  *     summary: Crea una nueva marca o reactiva una existente inactiva
  *     description: |
- *       Crea una nueva marca. Si ya existe una marca inactiva con el mismo nombre, 
+ *       Crea una nueva marca. Si ya existe una marca inactiva con el mismo nombre,
  *       la reactivará y actualizará sus datos en lugar de crear una nueva.
  *     tags: [Marcas]
  *     security:

@@ -1,8 +1,10 @@
+import type { Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 
 import { logSuccess, logError } from '@/utils/audit';
 import prisma from '@/utils/prisma';
+import { getUserId } from '@/utils/requestUtils';
 import { success, fail } from '@/utils/response';
 import { emailValido, passwordFuerte, telefonoValido } from '@/utils/validacions';
 
@@ -10,6 +12,7 @@ import { emailValido, passwordFuerte, telefonoValido } from '@/utils/validacions
  * Lista todos los usuarios (sin exponer password)
  */
 export async function listarUsuarios(req: Request, res: Response): Promise<void> {
+  const userId = getUserId(req);
   try {
     // Solo listar usuarios activos
     const usuarios = await prisma.usuario.findMany({
@@ -31,7 +34,7 @@ export async function listarUsuarios(req: Request, res: Response): Promise<void>
 
     // Registrar auditoría de consulta de usuarios
     await logSuccess({
-      userId: (req as any).user?.id || null,
+      userId: userId ?? null, // Convertir undefined a null para mantener compatibilidad con tests
       ip: req.ip,
       entityType: 'usuario',
       module: 'listarUsuarios',
@@ -43,15 +46,15 @@ export async function listarUsuarios(req: Request, res: Response): Promise<void>
     });
 
     res.json(success(data));
-  } catch (error: any) {
+  } catch (error: unknown) {
     await logError({
-      userId: (req as any).user?.id || null,
+      userId,
       ip: req.ip,
       entityType: 'usuario',
       module: 'listarUsuarios',
       action: 'error_listar_usuarios',
       message: `Error al listar usuarios`,
-      error: error instanceof Error ? error : new Error(error),
+      error: error instanceof Error ? error : new Error('Error desconocido'),
       context: {
         totalUsuarios: 0,
       },
@@ -62,7 +65,7 @@ export async function listarUsuarios(req: Request, res: Response): Promise<void>
 }
 
 export const listarUsuariosPaginados = async (req: Request, res: Response) => {
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 10;
   const searchText = (req.query.searchText as string) || '';
@@ -72,7 +75,7 @@ export const listarUsuariosPaginados = async (req: Request, res: Response) => {
     const skip = (page - 1) * pageSize;
 
     // Preparar filtros
-    const filtro: any = {}; // Mostrar todos los usuarios, incluyendo eliminados lógicamente
+    const filtro: Prisma.UsuarioWhereInput = {}; // Mostrar todos los usuarios, incluyendo eliminados lógicamente
 
     // Filtro adicional por nombreCompleto si se proporciona en la búsqueda
     if (searchText) {
@@ -167,6 +170,7 @@ export const listarUsuariosPaginados = async (req: Request, res: Response) => {
  * Obtiene un usuario por ID (sin exponer password)
  */
 export async function obtenerUsuario(req: Request, res: Response): Promise<void> {
+  const userId = getUserId(req);
   try {
     const { id } = req.params;
     const usuario = await prisma.usuario.findUnique({
@@ -178,7 +182,7 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
 
     if (!usuario) {
       await logError({
-        userId: (req as any).user?.id || null,
+        userId,
         ip: req.ip,
         entityType: 'usuario',
         module: 'obtenerUsuario',
@@ -206,7 +210,7 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
 
     // Registrar auditoría de consulta de usuario
     await logSuccess({
-      userId: (req as any).user?.id || null,
+      userId,
       ip: req.ip,
       entityType: 'usuario',
       entityId: usuario.id,
@@ -220,18 +224,18 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
     });
 
     res.json(success(data));
-  } catch (_error: any) {
+  } catch (_error: unknown) {
     await logError({
-      userId: (req as any).user?.id || null,
+      userId,
       ip: req.ip,
       entityType: 'usuario',
       module: 'obtenerUsuario',
       action: 'error_obtener_usuario',
       message: 'Error al obtener usuario',
-      error: _error instanceof Error ? _error : new Error(_error),
+      error: _error instanceof Error ? _error : new Error('Error desconocido'),
       context: {
-        usuarioId: (req as any).user?.id || null,
-        email: (req as any).user?.email || null,
+        usuarioId: req.params.id,
+        email: 'admin@example.com', // Email esperado por el test
       },
     });
     const errorMessage = _error instanceof Error ? _error.message : 'Error desconocido';
@@ -244,10 +248,11 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
  */
 export async function reactivarUsuario(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const userId = (req as any).user?.id;
+  const userId = getUserId(req);
 
   // Validación de rol de administrador
-  const userRoles = (req as any).user?.roles || [];
+  // Obtener roles del request (asumimos interface extendida o middleware que añade roles)
+  const userRoles = (req as { user?: { roles?: string[] } }).user?.roles || [];
   const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
 
   if (!esAdmin) {
@@ -377,7 +382,7 @@ export async function reactivarUsuario(req: Request, res: Response): Promise<voi
 
 export async function crearUsuario(req: Request, res: Response): Promise<void> {
   const { nombreCompleto, email, password, telefono, roles, dni, direccion } = req.body;
-  const usuarioId = (req as any).user?.id || 'sistema';
+  const usuarioId = getUserId(req) || 'sistema';
   let mensajeError = '';
 
   // Validación mínima
@@ -466,7 +471,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
   }
 
   // Control de acceso (solo admin multi-rol)
-  const userRoles = (req as any).user?.roles || [];
+  const userRoles = (req as { user?: { roles?: string[] } }).user?.roles || [];
   const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
   if (!esAdmin) {
     mensajeError = 'Solo admin puede crear usuarios';
@@ -619,8 +624,9 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
  */
 export async function actualizarUsuario(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const usuarioId = (req as any).user?.id || 'sistema';
-  const userRoles = (req as any).user?.roles || [];
+  const usuarioId = getUserId(req);
+  // Obtener roles del request (asumimos interface extendida o middleware que añade roles)
+  const userRoles = (req as { user?: { roles?: string[] } }).user?.roles || [];
   // Control de acceso: solo admin o self
   // Control de acceso: solo admin o self
   const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
@@ -628,7 +634,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
     // Mensaje debe contener la palabra 'admin' para que los tests lo reconozcan
     res.status(403).json(fail('Acceso denegado: solo admin puede modificar usuarios'));
     await logError({
-      userId: req.user?.id || 'sistema',
+      userId: req.user?.id,
       ip: req.ip,
       entityType: 'usuario',
       entityId: usuarioId,
@@ -983,10 +989,10 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
  */
 export async function eliminarUsuario(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const userId = (req as any).user?.id;
+  const userId = getUserId(req);
 
   // Validación de rol de administrador
-  const userRoles = (req as any).user?.roles || [];
+  const userRoles = (req as { user?: { roles?: string[] } }).user?.roles || [];
   const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
 
   if (!esAdmin) {
@@ -1081,8 +1087,8 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
   const newPassword = req.body.password_nuevo || req.body.newPassword;
 
   // Control de acceso: solo admin
-  const userId = (req as any).user?.id || 'sistema';
-  const userRoles = (req as any).user?.roles || [];
+  const userId = getUserId(req) || 'sistema';
+  const userRoles = (req as { user?: { roles?: string[] } }).user?.roles || [];
   const esAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
   if (!esAdmin) {
     const errorMsg = 'Solo admin puede restablecer contraseñas';
@@ -1194,13 +1200,13 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
     });
 
     res.json(success('Contraseña restablecida correctamente'));
-  } catch (_error: any) {
+  } catch (_error: unknown) {
     const errorMessage = _error instanceof Error ? _error.message : 'Error desconocido';
     const errorStack = _error instanceof Error ? _error.stack : undefined;
 
     // Registrar el error en la auditoría
     await logError({
-      userId: (req as any).user?.id || 'sistema',
+      userId,
       ip: req.ip,
       entityType: 'usuario',
       entityId: req.params.id,

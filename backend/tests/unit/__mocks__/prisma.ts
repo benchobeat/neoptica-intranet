@@ -2,25 +2,26 @@ import { jest } from '@jest/globals';
 
 /**
  * Mock de Prisma Client para pruebas unitarias
+ *
+ * Enfoque simplificado para evitar problemas de tipado
+ * y mantener compatibilidad con pruebas existentes
  */
 
-// Definir tipos básicos para los mocks
-type MockFn = jest.Mock;
-
-// Tipos para los mocks
-type UpdateArgs = {
-  data: Record<string, any>;
-  where: Record<string, any>;
-};
+/**
+ * Definimos un tipo genérico para los datos de entrada en los métodos mock
+ * Esto nos permite tener un tipado mínimo sin la complejidad de los tipos completos de Prisma
+ */
+type MockData = Record<string, unknown>;
 
 // Funciones mock básicas para cada entidad
-const mockEntityFunctions = {
+const createBasicMockFunctions = () => ({
   create: jest.fn().mockImplementation(() => Promise.resolve({})),
   findMany: jest.fn().mockImplementation(() => Promise.resolve([])),
   findUnique: jest.fn().mockImplementation(() => Promise.resolve(null)),
   findFirst: jest.fn().mockImplementation(() => Promise.resolve(null)),
-  update: jest.fn().mockImplementation((args: any) => {
-    // Handle both direct object and function arguments
+  findFirstOrThrow: jest.fn().mockImplementation(() => Promise.resolve({})),
+  findUniqueOrThrow: jest.fn().mockImplementation(() => Promise.resolve({})),
+  update: jest.fn().mockImplementation((args: { data?: MockData; where?: MockData }) => {
     const data = args?.data || {};
     return Promise.resolve({
       ...data,
@@ -30,13 +31,14 @@ const mockEntityFunctions = {
   }),
   updateMany: jest.fn().mockImplementation(() => Promise.resolve({ count: 0 })),
   delete: jest.fn().mockImplementation(() => Promise.resolve({})),
+  deleteMany: jest.fn().mockImplementation(() => Promise.resolve({ count: 0 })),
   count: jest.fn().mockImplementation(() => Promise.resolve(0)),
-} as const;
+  createMany: jest.fn().mockImplementation(() => Promise.resolve({ count: 1 })),
+});
 
 // Crear un mock reusable para todas las entidades
-const prismaMock: any = {
+const prismaMock = {
   $transaction: jest.fn(<T>(operations: Promise<T>[]) => Promise.all(operations)),
-  // Inicializar mocks para cada modelo de Prisma
   $on: jest.fn(),
   $connect: jest.fn(),
   $disconnect: jest.fn(),
@@ -45,12 +47,10 @@ const prismaMock: any = {
   $queryRaw: jest.fn(),
 
   // Inicializar mocks para cada modelo
-  categoria: {
-    ...mockEntityFunctions
-  },
+  categoria: createBasicMockFunctions(),
   usuario: {
-    ...mockEntityFunctions,
-    update: jest.fn().mockImplementation((args: any) => {
+    ...createBasicMockFunctions(),
+    update: jest.fn().mockImplementation((args: { data?: MockData; where?: MockData }) => {
       return Promise.resolve({
         ...args.data,
         id: args.where?.id || '1',
@@ -61,57 +61,75 @@ const prismaMock: any = {
       });
     }),
   },
-  color: { 
-    ...mockEntityFunctions,
+  color: {
+    ...createBasicMockFunctions(),
     findFirst: jest.fn().mockImplementation(() => Promise.resolve(null)),
-    create: jest.fn().mockImplementation((args: any) => {
+    create: jest.fn().mockImplementation((args: { data?: MockData }) => {
       return Promise.resolve({
         ...args.data,
-        id: args.id || '1',
+        id: '1',
       });
     }),
   },
-  marca: { ...mockEntityFunctions },
-  producto: { ...mockEntityFunctions },
-  sucursal: { 
-    ...mockEntityFunctions,
-    create: jest.fn().mockImplementation((args: any) => {
+  marca: createBasicMockFunctions(),
+  producto: createBasicMockFunctions(),
+  sucursal: {
+    ...createBasicMockFunctions(),
+    create: jest.fn().mockImplementation((args: { data?: MockData }) => {
       return Promise.resolve({
         ...args.data,
-        id: args.id || '123e4567-e89b-12d3-a456-426614174000',
-        activo: args.data.activo !== undefined ? args.data.activo : true,
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        activo: args.data?.activo !== undefined ? args.data.activo : true,
         creadoEn: new Date(),
         creadoPor: 'test-user-id',
       });
     }),
-    update: jest.fn().mockImplementation((args: any) => {
+    update: jest.fn().mockImplementation((args: { data?: MockData; where?: MockData }) => {
       return Promise.resolve({
         ...args.data,
         id: args.where?.id || '123e4567-e89b-12d3-a456-426614174000',
       });
     }),
   },
-  rol: { ...mockEntityFunctions },
-  usuarioRol: { ...mockEntityFunctions },
-  // Agregar otros modelos según sea necesario
+  rol: createBasicMockFunctions(),
+  usuarioRol: createBasicMockFunctions(),
+  // otros modelos según necesidad
 };
 
 // Función para resetear todos los mocks de Prisma
 const resetPrismaMocks = () => {
   // Resetear todos los métodos de todas las entidades
-  const entities = ['color', 'marca', 'producto', 'usuario', 'rol', 'usuarioRol'];
+  const entities = ['categoria', 'color', 'marca', 'producto', 'usuario', 'rol', 'usuarioRol'];
   entities.forEach((entity) => {
-    if (prismaMock[entity]) {
-      Object.keys(mockEntityFunctions).forEach((method) => {
-        if (prismaMock[entity][method]?.mockClear) {
-          prismaMock[entity][method].mockClear();
+    const mockEntity = prismaMock[entity as keyof typeof prismaMock];
+    if (mockEntity && typeof mockEntity === 'object') {
+      Object.keys(mockEntity).forEach((method) => {
+        const mockMethod = mockEntity[method as keyof typeof mockEntity];
+        if (typeof mockMethod === 'function' && mockMethod.mockClear) {
+          mockMethod.mockClear();
         }
       });
     }
   });
 
-  // Resetear $transaction
-  prismaMock.$transaction.mockClear();
+  // Resetear $transaction y otros métodos principales
+  const clientMethods = [
+    '$transaction',
+    '$on',
+    '$connect',
+    '$disconnect',
+    '$use',
+    '$executeRaw',
+    '$queryRaw',
+  ];
+  clientMethods.forEach((method) => {
+    const mockMethod = prismaMock[method as keyof typeof prismaMock];
+    if (typeof mockMethod === 'function' && mockMethod.mockClear) {
+      mockMethod.mockClear();
+    }
+  });
+
+  // Reinicializar $transaction
   prismaMock.$transaction.mockImplementation(<T>(ops: Promise<T>[]) => Promise.all(ops));
 };
 

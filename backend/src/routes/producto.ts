@@ -8,7 +8,6 @@ import {
   actualizarProducto,
   eliminarProducto,
 } from '../controllers/productoController';
-
 // Middlewares
 import { authenticateJWT } from '../middlewares/auth';
 import { requireRole } from '../middlewares/roles';

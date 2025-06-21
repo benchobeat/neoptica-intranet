@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import type { Request } from 'express';
-import { Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 
 // Ya NO importamos el mock de Prisma Client directamente aquí
 // Los archivos de test deben importarlo directamente desde './__mocks__/prisma'
@@ -14,23 +15,37 @@ interface MockResponse {
   json: jest.Mock;
   send: jest.Mock;
   end: jest.Mock;
-  [key: string]: any;
+  // Otras propiedades comunes de respuesta que podrían ser útiles en tests
+  set: jest.Mock;
+  get: jest.Mock;
+  cookie: jest.Mock;
+  clearCookie: jest.Mock;
+  [key: string]: unknown; // Cambiamos any por unknown para mayor seguridad
 }
 
 // Función para crear un mock de la petición HTTP
+// Define el tipo para un usuario de prueba
+interface TestUser {
+  id: string;
+  email: string;
+  nombreCompleto: string;
+  roles: string[];
+  [key: string]: unknown;
+}
+
 export function createMockRequest(
   options: {
-    body?: any;
-    params?: any;
-    query?: any;
-    user?: any;
+    body?: Record<string, unknown>;
+    params?: ParamsDictionary;
+    query?: ParsedQs;
+    user?: TestUser;
     ip?: string;
   } = {}
 ): Partial<Request> {
   const {
     body = {},
-    params = {},
-    query = {},
+    params = {} as ParamsDictionary,
+    query = {} as ParsedQs,
     user = {
       id: 'test-user-id',
       email: 'test@example.com',

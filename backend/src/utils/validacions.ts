@@ -1,3 +1,7 @@
+import type { Prisma } from '@prisma/client';
+
+import { toRelation } from './prisma';
+
 /**
  * Valida si un email tiene un formato válido
  * @param email Email a validar
@@ -42,6 +46,7 @@ export function urlValida(url: string): boolean {
     // Verifica que el protocolo sea http o https
     return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
   } catch (e) {
+    console.error('Error al validar la URL:', e);
     return false;
   }
 }
@@ -152,4 +157,169 @@ export function validarModelo3dUrl(url: string | null | undefined): string | nul
   }
 
   return null; // Válido
+}
+
+/**
+ * Función auxiliar para normalizar parámetros de consulta.
+ *
+ * @param {unknown} param - El parámetro a normalizar
+ * @param {T} fallback - Valor por defecto si el parámetro no existe
+ * @returns {T} - El valor normalizado
+ */
+export function normalizeParam<T = string>(param: unknown, fallback: T): T {
+  if (Array.isArray(param)) {
+    return (param[0] as T) ?? fallback;
+  }
+  return (param as T) ?? fallback;
+}
+
+/**
+ * Función auxiliar para normalizar parámetros booleanos de consulta.
+ *
+ * @param {unknown} param - El parámetro a normalizar
+ * @returns {boolean|undefined} - El valor booleano normalizado o undefined
+ */
+export function normalizeBooleanParam(param: unknown): boolean | undefined {
+  const value = Array.isArray(param) ? param[0] : param;
+
+  if (value === true || value === 'true' || value === 1 || value === '1') return true;
+  if (value === false || value === 'false' || value === 0 || value === '0') return false;
+  return undefined;
+}
+
+// Interfaz para los datos de entrada al crear o actualizar un producto
+interface ProductoInput {
+  nombre: string;
+  descripcion?: string;
+  precio: number;
+  categoriaId?: string;
+  marcaId?: string;
+  colorId?: string;
+  materialLente?: string | null;
+  tratamientoLente?: string | null;
+  graduacionEsfera?: number | null;
+  graduacionCilindro?: number | null;
+  eje?: number | null;
+  adicion?: number | null;
+  tipoArmazon?: string | null;
+  materialArmazon?: string | null;
+  tamanoPuente?: number | null;
+  tamanoAros?: number | null;
+  tamanoVarillas?: number | null;
+  activo?: boolean | null;
+  erpId?: number | null;
+  erpTipo?: string | null;
+  imagenUrl?: string | null;
+  modelo3dUrl?: string | null;
+}
+
+// Tipo para el producto con datos de entrada
+type ProductoCreateInput = Omit<ProductoInput, 'activo'> & {
+  activo?: boolean;
+};
+
+/**
+ * Valida y normaliza los datos de entrada para la creación/actualización de un producto.
+ *
+ * @param {unknown} data - Datos del producto a validar
+ * @returns {ProductoCreateInput | { error: string }} - Datos validados o mensaje de error
+ */
+export function validateProductoInput(
+  data: unknown
+): Prisma.ProductoCreateInput | { error: string } {
+  if (typeof data !== 'object' || data === null) {
+    return { error: 'Los datos del producto son inválidos' };
+  }
+
+  const input = data as Record<string, unknown>;
+  const result: Partial<Prisma.ProductoCreateInput> = {};
+
+  // Validar nombre (campo requerido)
+  if (!input.nombre || typeof input.nombre !== 'string' || input.nombre.trim().length < 2) {
+    return { error: 'El nombre es obligatorio y debe tener al menos 2 caracteres' };
+  }
+  result.nombre = input.nombre.trim();
+
+  // Validar precio (campo requerido)
+  if (input.precio === undefined || input.precio === null || input.precio === '') {
+    return { error: 'El precio es obligatorio' };
+  }
+
+  const precioNum =
+    typeof input.precio === 'string' ? parseFloat(input.precio) : Number(input.precio);
+
+  if (isNaN(precioNum) || precioNum <= 0) {
+    return { error: 'El precio debe ser un número mayor a 0' };
+  }
+  result.precio = precioNum;
+
+  // Campos opcionales con validación
+  if (input.descripcion !== undefined) {
+    result.descripcion = input.descripcion ? String(input.descripcion).trim() : null;
+  }
+
+  // Actualizado para usar categoriaId en lugar de categoria
+  if (input.categoriaId !== undefined && typeof input.categoriaId === 'string') {
+    result.categoria = toRelation(input.categoriaId);
+  }
+
+  // Validar URLs
+  const validateUrl = (url: unknown): string | null => {
+    if (!url) return null;
+    const urlStr = String(url);
+    return /^https?:\/\//.test(urlStr) ? urlStr : null;
+  };
+
+  result.imagenUrl = validateUrl(input.imagenUrl);
+  result.modelo3dUrl = validateUrl(input.modelo3dUrl);
+
+  // Validar campos numéricos opcionales
+  const numericFields = [
+    'graduacionEsfera',
+    'graduacionCilindro',
+    'eje',
+    'adicion',
+    'tamanoPuente',
+    'tamanoAros',
+    'tamanoVarillas',
+  ] as const;
+
+  for (const field of numericFields) {
+    if (input[field] !== undefined && input[field] !== null && input[field] !== '') {
+      const num = Number(input[field]);
+      result[field] = isNaN(num) ? null : num;
+    }
+  }
+
+  // Validar campos de texto opcionales
+  const textFields = [
+    'tipoProducto',
+    'tipoLente',
+    'materialLente',
+    'tratamientoLente',
+    'tipoArmazon',
+    'materialArmazon',
+    'erpTipo',
+  ] as const;
+
+  for (const field of textFields) {
+    if (input[field] !== undefined) {
+      result[field] = input[field] ? String(input[field]).trim() : null;
+    }
+  }
+
+  // Validar campos de ID
+  const idFields = ['marcaId', 'colorId'] as const;
+  for (const field of idFields) {
+    if (input[field] !== undefined) {
+      result[field] = input[field] ? String(input[field]) : null;
+    }
+  }
+
+  // Validar campos booleanos
+  if (input.activo !== undefined) {
+    result.activo = Boolean(input.activo);
+  }
+
+  return result as ProductoCreateInput;
 }

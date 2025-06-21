@@ -2,7 +2,6 @@ import type { Request, Response, NextFunction } from 'express';
 import type { ValidationChain } from 'express-validator';
 import { validationResult } from 'express-validator';
 
-import type { ApiResponse } from '../types/response';
 import { fail } from '../utils/response';
 
 // Tipo para errores de validación estandarizados
@@ -12,8 +11,16 @@ interface ValidationError {
   value?: unknown;
 }
 
+// Interfaz para los errores de express-validator
+interface ExpressValidatorError {
+  param?: string;
+  msg?: string;
+  value?: unknown;
+  [key: string]: unknown;
+}
+
 // Función auxiliar para mapear errores de express-validator
-function mapExpressValidatorErrors(errors: Array<Record<string, any>>): ValidationError[] {
+function mapExpressValidatorErrors(errors: ExpressValidatorError[]): ValidationError[] {
   return errors.map((err) => ({
     field: err.param || 'general',
     message: err.msg || 'Error de validación',
@@ -44,7 +51,7 @@ export const validateRequest = (validations: ValidationChain[]) => {
       return res.status(400).json(
         fail('Error de validación', {
           errors: errorMessages,
-        } as any)
+        })
       );
     } catch (error) {
       console.error('Error en el middleware de validación:', error);
@@ -65,7 +72,7 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
       return res.status(400).json(
         fail('Error de validación', {
           errors: errorMessages,
-        } as any)
+        })
       );
     }
     next();

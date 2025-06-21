@@ -1,7 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 
+import type { AuditChanges } from '../types/audit';
 import { logError, logSuccess } from '../utils/audit';
+import { getUserId } from '../utils/requestUtils';
 
 const prisma = new PrismaClient();
 
@@ -14,7 +16,7 @@ const prisma = new PrismaClient();
  */
 export const crearColor = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
 
   try {
     // No extraemos activo del req.body pues será ignorado
@@ -94,7 +96,7 @@ export const crearColor = async (req: Request, res: Response) => {
     // Verificar si ya existe un color con el mismo nombre
     const colorExistente = await prisma.color.findFirst({
       where: {
-        nombre: nombre,
+        nombre,
         anuladoEn: null,
       },
     });
@@ -298,10 +300,10 @@ export const crearColor = async (req: Request, res: Response) => {
  */
 export const listarColores = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   try {
-    // Preparar filtros
-    const filtro: any = {
+    // Preparar filtros con el tipo correcto de Prisma
+    const filtro: Prisma.ColorWhereInput = {
       anuladoEn: null, // Solo colores no anulados (soft delete)
     };
 
@@ -391,7 +393,7 @@ export const listarColores = async (req: Request, res: Response) => {
  */
 export const listarColoresPaginados = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
 
   try {
     // Obtener parámetros de paginación y búsqueda
@@ -466,8 +468,8 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
     // Calcular offset para paginación
     const skip = (page - 1) * pageSize;
 
-    // Preparar filtros
-    const filtro: any = {
+    // Preparar filtros con el tipo correcto de Prisma
+    const filtro: Prisma.ColorWhereInput = {
       anuladoEn: null, // Solo colores no anulados (soft delete)
     };
 
@@ -573,7 +575,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
  */
 export const obtenerColorPorId = async (req: Request, res: Response) => {
   // Capturar ID de usuario e ID de entidad para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   const { id } = req.params;
   try {
     const { id } = req.params;
@@ -655,8 +657,14 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
 
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    const errorCode =
-      error && typeof error === 'object' && 'code' in error ? (error as any).code : undefined;
+    // Type guard para extraer el código de error de forma segura
+    const errorCode = (() => {
+      if (error && typeof error === 'object' && 'code' in error) {
+        const err = error as { code?: string };
+        return err.code;
+      }
+      return undefined;
+    })();
 
     // Log the error with appropriate context
     await logError({
@@ -701,7 +709,7 @@ export const obtenerColorPorId = async (req: Request, res: Response) => {
  */
 export const actualizarColor = async (req: Request, res: Response) => {
   // Capturar ID de usuario e ID de entidad para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   const { id } = req.params;
   try {
     // No extraemos activo del req.body pues será ignorado
@@ -760,7 +768,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
     }
 
     // Preparar objeto de datos a actualizar
-    const datosActualizados: any = {
+    const datosActualizados: Prisma.ColorUpdateInput = {
       // Agregar campos de auditoría
       modificadoPor: userId || null,
       modificadoEn: new Date(),
@@ -948,8 +956,9 @@ export const actualizarColor = async (req: Request, res: Response) => {
     // Ya no procesamos el estado activo desde el body
     // El campo activo solo puede ser modificado por procesos internos como eliminación (soft delete)
 
-    // Si no hay datos para actualizar, retornar error
-    if (Object.keys(datosActualizados).length === 0) {
+    // Verificar si hay cambios para actualizar (excluyendo campos de auditoría)
+    const { modificadoEn, modificadoPor, ...camposReales } = datosActualizados;
+    if (Object.keys(camposReales).length === 0) {
       await logError({
         userId,
         ip: req.ip,
@@ -985,13 +994,15 @@ export const actualizarColor = async (req: Request, res: Response) => {
       message: 'Color actualizado exitosamente',
       entityId: colorActualizado.id,
       details: {
-        cambios: Object.keys(datosActualizados)
-          .filter((key) => !['modificadoPor', 'modificadoEn'].includes(key))
-          .reduce((obj: Record<string, any>, key) => {
-            obj[key] = {
-              anterior: colorExistente[key as keyof typeof colorExistente],
-              nuevo: colorActualizado[key as keyof typeof colorActualizado],
-            };
+        cambios: Object.entries(datosActualizados)
+          .filter(([key]) => !['modificadoPor', 'modificadoEn'].includes(key))
+          .reduce<AuditChanges>((obj, [key, value]) => {
+            if (key in colorExistente) {
+              obj[key] = {
+                anterior: colorExistente[key as keyof typeof colorExistente],
+                nuevo: value,
+              };
+            }
             return obj;
           }, {}),
       },
@@ -1086,7 +1097,7 @@ export const actualizarColor = async (req: Request, res: Response) => {
  */
 export const eliminarColor = async (req: Request, res: Response) => {
   // Capturar ID de usuario e ID de entidad para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   const { id } = req.params;
   try {
     // Validación avanzada del ID - verifica formato UUID
@@ -1207,8 +1218,10 @@ export const eliminarColor = async (req: Request, res: Response) => {
     console.error('Error al eliminar color:', error);
 
     // Registrar auditoría de error
-    const errorObj = error as any;
-    const tieneProductosAsociados = errorObj?.productosAsociados || 0;
+    const tieneProductosAsociados =
+      error && typeof error === 'object' && 'productosAsociados' in error
+        ? (error as { productosAsociados: number }).productosAsociados
+        : 0;
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido. 500';
     const errorStack = error instanceof Error && error.stack ? { stack: error.stack } : {};
 

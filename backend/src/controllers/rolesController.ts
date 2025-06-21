@@ -1,15 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
 
-import roles from '@/routes/roles';
 import { logSuccess, logError } from '@/utils/audit';
 import { success, fail } from '@/utils/response';
 
 const prisma = new PrismaClient();
 
-/**
- * Lista todos los roles
- */
 /**
  * GET /api/roles — Solo lectura
  * Lista todos los roles predefinidos del sistema.
@@ -44,9 +40,7 @@ export async function listarRoles(req: Request, res: Response): Promise<void> {
       action: 'error_listar_roles',
       message: 'Error al listar roles',
       error: errorMessage,
-      context: {
-        roles,
-      },
+      context: {},
     });
   }
 }

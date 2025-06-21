@@ -1,7 +1,28 @@
+import type { Prisma } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
 
+// Type guard para errores con código
+interface ErrorWithCode {
+  code: string;
+}
+
+/**
+ * Verifica si un error contiene una propiedad 'code'
+ * @param error - El error a verificar
+ * @returns true si el error tiene la propiedad 'code'
+ */
+function isErrorWithCode(error: unknown): error is ErrorWithCode {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as ErrorWithCode).code === 'string'
+  );
+}
+
 import { logSuccess, logError } from '../utils/audit';
+import { getUserId } from '../utils/requestUtils';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -20,7 +41,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
   try {
     const { nombre, direccion, latitud, longitud, telefono, email } = req.body;
     // El campo activo ya no se acepta del cliente
-    const userId = (req as any).usuario?.id || (req as any).user?.id;
+    const userId = getUserId(req);
 
     // Validación estricta del nombre
     if (!nombre || typeof nombre !== 'string') {
@@ -201,7 +222,11 @@ export const crearSucursal = async (req: Request, res: Response) => {
     });
 
     // Caso 1: Existe una sucursal con el mismo nombre y está activa
-    if (sucursalMismoNombre && sucursalMismoNombre.activo === true && sucursalMismoNombre.anuladoEn === null) {
+    if (
+      sucursalMismoNombre &&
+      sucursalMismoNombre.activo === true &&
+      sucursalMismoNombre.anuladoEn === null
+    ) {
       logError({
         userId,
         ip: req.ip,
@@ -227,9 +252,12 @@ export const crearSucursal = async (req: Request, res: Response) => {
         error: 'Ya existe una sucursal activa con ese nombre.',
       });
     }
-    
+
     // Caso 2: Existe una sucursal con el mismo nombre pero está inactiva (reactivar)
-    if (sucursalMismoNombre && (sucursalMismoNombre.activo === false || sucursalMismoNombre.anuladoEn !== null)) {
+    if (
+      sucursalMismoNombre &&
+      (sucursalMismoNombre.activo === false || sucursalMismoNombre.anuladoEn !== null)
+    ) {
       try {
         // Reactivar la sucursal y actualizar sus datos
         const sucursalReactivada = await prisma.sucursal.update({
@@ -244,10 +272,10 @@ export const crearSucursal = async (req: Request, res: Response) => {
             telefono: telefono || sucursalMismoNombre.telefono,
             email: email || sucursalMismoNombre.email,
             modificadoEn: new Date(),
-            modificadoPor: userId
+            modificadoPor: userId,
           },
         });
-        
+
         // Registrar éxito de reactivación
         await logSuccess({
           userId,
@@ -263,26 +291,26 @@ export const crearSucursal = async (req: Request, res: Response) => {
             estadoAnterior: {
               activo: false,
               modificadoEn: sucursalMismoNombre.modificadoEn,
-              anuladoEn: sucursalMismoNombre.anuladoEn
+              anuladoEn: sucursalMismoNombre.anuladoEn,
             },
             estadoNuevo: {
               activo: true,
               modificadoEn: sucursalReactivada.modificadoEn,
-              anuladoEn: null
-            }
-          }
+              anuladoEn: null,
+            },
+          },
         });
-        
+
         return res.status(200).json({
           ok: true,
           data: {
             id: sucursalReactivada.id,
             nombre: sucursalReactivada.nombre,
-            mensaje: 'Sucursal reactivada exitosamente'
+            mensaje: 'Sucursal reactivada exitosamente',
           },
-          error: null
+          error: null,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logError({
           userId,
           ip: req.ip,
@@ -298,13 +326,13 @@ export const crearSucursal = async (req: Request, res: Response) => {
             latitud,
             longitud,
             telefono,
-            email
+            email,
           },
         });
         return res.status(500).json({
           ok: false,
           data: null,
-          error: 'Error al reactivar la sucursal.'
+          error: 'Error al reactivar la sucursal.',
         });
       }
     }
@@ -388,13 +416,13 @@ export const crearSucursal = async (req: Request, res: Response) => {
       data: nuevaSucursal,
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al crear sucursal:', error);
-
+    const userId = getUserId(req);
     // Registrar error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     await logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId,
       ip: req.ip,
       entityType: 'sucursal',
       module: 'crearSucursal',
@@ -427,7 +455,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Lista paginada de sucursales o mensaje de error
  */
 export const listarSucursalesPaginadas = async (req: Request, res: Response) => {
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   // Extraer parámetros de paginación y búsqueda
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 10;
@@ -438,8 +466,8 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
     const skip = (page - 1) * pageSize;
 
     // Preparar filtros
-    const filtro: any = {
-      anuladoEn: null, // Solo sucursales no anuladas (soft delete)
+    const filtro: Prisma.SucursalWhereInput = {
+      activo: true, // Solo sucursales no anuladas (soft delete)
     };
 
     // Filtro adicional por nombre si se proporciona en la búsqueda
@@ -500,7 +528,7 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
       },
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al listar sucursales paginadas:', error);
 
     // Registrar error
@@ -543,12 +571,11 @@ export const listarSucursalesPaginadas = async (req: Request, res: Response) => 
  * @returns {Promise<Response>} Lista de sucursales o mensaje de error
  */
 export const listarSucursales = async (req: Request, res: Response) => {
-  // Capturar ID de usuario para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   try {
     // Preparar filtros
-    const filtro: any = {
-      anuladoEn: null, // Solo sucursales no anuladas (soft delete)
+    const filtro: Prisma.SucursalWhereInput = {
+      activo: true, // Solo sucursales no anuladas (soft delete)
     };
 
     // Filtro adicional por activo si se proporciona en la consulta
@@ -587,7 +614,7 @@ export const listarSucursales = async (req: Request, res: Response) => {
       data: sucursales,
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al listar sucursales:', error);
 
     // Registrar error
@@ -628,12 +655,9 @@ export const listarSucursales = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Datos de la sucursal o mensaje de error
  */
 export const obtenerSucursalPorId = async (req: Request, res: Response) => {
-  // Capturar ID de usuario para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   const { id } = req.params;
   try {
-    const { id } = req.params;
-
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || typeof id !== 'string' || !uuidRegex.test(id)) {
@@ -648,7 +672,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
     const sucursal = await prisma.sucursal.findUnique({
       where: {
         id,
-        anuladoEn: null, // Solo sucursales no anuladas (soft delete)
+        activo: true, // Solo sucursales no anuladas (soft delete)
       },
     });
 
@@ -696,7 +720,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
       data: sucursal,
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al obtener sucursal por ID:', error);
 
     // Registrar error
@@ -713,7 +737,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
       context: {
         idSolicitado: id,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
-        codigoError: (error as any).code || 'NO_CODE',
+        codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
         error: errorMessage,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
       },
@@ -739,7 +763,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
         context: {
           idSolicitado: id,
           tipoError: error instanceof Error ? error.name : 'Error desconocido',
-          codigoError: (error as any).code || 'NO_CODE',
+          codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
           error: errorMessage,
           ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
         },
@@ -763,7 +787,7 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
       context: {
         idSolicitado: id,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
-        codigoError: (error as any).code || 'NO_CODE',
+        codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
         error: errorMessage,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
       },
@@ -785,12 +809,11 @@ export const obtenerSucursalPorId = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Datos de la sucursal actualizada o mensaje de error
  */
 export const actualizarSucursal = async (req: Request, res: Response) => {
-  // Capturar ID de usuario para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   const { id } = req.params;
   try {
     const { nombre, direccion, latitud, longitud, telefono, email } = req.body;
-    
+
     // Verificar que no se esté intentando actualizar el campo activo
     if ('activo' in req.body) {
       logError({
@@ -866,7 +889,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
     }
 
     // Preparar objeto de datos a actualizar
-    const datosActualizados: any = {
+    const datosActualizados: Prisma.SucursalUpdateInput = {
       // Agregar campos de auditoría
       modificadoPor: userId || null,
       modificadoEn: new Date(),
@@ -1217,7 +1240,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           obj[key] = datosActualizados[key];
           return obj;
         },
-        {} as Record<string, any>
+        {} as Record<string, unknown>
       );
 
     await logSuccess({
@@ -1256,7 +1279,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
       data: sucursalActualizada,
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al actualizar sucursal:', error);
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
 
@@ -1274,7 +1297,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
         idSucursal: id,
         datosSolicitados: req.body,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
-        codigoError: (error as any).code || 'NO_CODE',
+        codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
         error: errorMessage,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
       },
@@ -1296,7 +1319,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             idSucursal: id,
             datosSolicitados: req.body,
             tipoError: error instanceof Error ? error.name : 'Error desconocido',
-            codigoError: (error as any).code || 'NO_CODE',
+            codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
             error: errorMessage,
             ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
           },
@@ -1322,7 +1345,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             idSucursal: id,
             datosSolicitados: req.body,
             tipoError: error instanceof Error ? error.name : 'Error desconocido',
-            codigoError: (error as any).code || 'NO_CODE',
+            codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
             error: errorMessage,
             ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
           },
@@ -1348,7 +1371,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
         idSucursal: id,
         datosSolicitados: req.body,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
-        codigoError: (error as any).code || 'NO_CODE',
+        codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
         error: errorMessage,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
       },
@@ -1370,8 +1393,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Confirmación de eliminación o mensaje de error
  */
 export const eliminarSucursal = async (req: Request, res: Response) => {
-  // Capturar ID de usuario para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   const { id } = req.params;
   let sucursalExistente;
 
@@ -1429,7 +1451,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     }
 
     // Verificar todas las relaciones que previenen eliminación de la sucursal
-    
+
     // 1. Verificar citas asociadas
     const citasAsociadas = await prisma.cita.count({
       where: {
@@ -1473,15 +1495,17 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
     // Estructurar las relaciones asociadas para el mensaje de error
     const relacionesAsociadas = [];
     if (citasAsociadas > 0) relacionesAsociadas.push(`${citasAsociadas} cita(s)`);
-    if (descansosEmpleadoAsociados > 0) relacionesAsociadas.push(`${descansosEmpleadoAsociados} descanso(s) de empleado`);
+    if (descansosEmpleadoAsociados > 0)
+      relacionesAsociadas.push(`${descansosEmpleadoAsociados} descanso(s) de empleado`);
     if (inventariosAsociados > 0) relacionesAsociadas.push(`${inventariosAsociados} inventario(s)`);
-    if (movimientosContablesAsociados > 0) relacionesAsociadas.push(`${movimientosContablesAsociados} movimiento(s) contable(s)`);
+    if (movimientosContablesAsociados > 0)
+      relacionesAsociadas.push(`${movimientosContablesAsociados} movimiento(s) contable(s)`);
     if (pedidosAsociados > 0) relacionesAsociadas.push(`${pedidosAsociados} pedido(s)`);
 
     // Si hay relaciones que previenen la eliminación, retornar error
     if (relacionesAsociadas.length > 0) {
       const mensajeError = `No se puede eliminar la sucursal porque tiene asociado(s): ${relacionesAsociadas.join(', ')}.`;
-      
+
       logError({
         userId,
         ip: req.ip,
@@ -1549,7 +1573,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
       data: { id, mensaje: 'Sucursal eliminada exitosamente' },
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al eliminar sucursal:', error);
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
 
@@ -1566,7 +1590,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
       context: {
         idSucursal: id,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
-        codigoError: (error as any).code || 'NO_CODE',
+        codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
         error: errorMessage,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
       },
@@ -1608,7 +1632,7 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
       context: {
         idSucursal: id,
         tipoError: error instanceof Error ? error.name : 'Error desconocido',
-        codigoError: (error as any).code || 'NO_CODE',
+        codigoError: isErrorWithCode(error) ? error.code : 'NO_CODE',
         error: errorMessage,
         ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
       },

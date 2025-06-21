@@ -5,9 +5,16 @@ import jwt from 'jsonwebtoken';
 import passport from '@/config/passport';
 import { login, forgotPassword, resetPassword } from '@/controllers/authController';
 
+// Interfaz para el objeto de usuario autenticado
+interface AuthUser {
+  id: number | string;
+  email: string;
+  usuario_rol?: Array<{ rol: { nombre: string } }>;
+}
+
 const router = Router();
 
-function issueJWT(user: any) {
+function issueJWT(user: AuthUser) {
   const roles = user.usuario_rol?.map((ur) => ur.rol.nombre) || ['cliente'];
   return jwt.sign({ id: user.id, email: user.email, roles }, process.env.JWT_SECRET!, {
     expiresIn: '7d',
@@ -20,7 +27,7 @@ router.get(
   '/google/callback',
   passport.authenticate('google', { failureRedirect: '/login', session: false }),
   (req: Request, res: Response) => {
-    const token = issueJWT((req as any).user);
+    const token = issueJWT(req.user as AuthUser);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
   }
 );
@@ -31,7 +38,7 @@ router.get(
   '/facebook/callback',
   passport.authenticate('facebook', { failureRedirect: '/login', session: false }),
   (req: Request, res: Response) => {
-    const token = issueJWT((req as any).user);
+    const token = issueJWT(req.user as AuthUser);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
   }
 );
@@ -42,7 +49,7 @@ router.get(
   '/instagram/callback',
   passport.authenticate('instagram', { failureRedirect: '/login', session: false }),
   (req: Request, res: Response) => {
-    const token = issueJWT((req as any).user);
+    const token = issueJWT(req.user as AuthUser);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
   }
 );

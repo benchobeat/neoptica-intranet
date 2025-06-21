@@ -124,7 +124,7 @@ export const registrarAuditoria = async (params: AuditoriaParams): Promise<void>
     };
 
     // Prepare the data for creation
-    const auditData: any = {
+    const auditData: Prisma.LogAuditoriaCreateInput = {
       accion,
       resultado,
       mensajeError: mensajeError || null,
@@ -140,10 +140,10 @@ export const registrarAuditoria = async (params: AuditoriaParams): Promise<void>
       usuarioId &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(usuarioId)
     ) {
-      auditData.usuarioId = usuarioId;
+      auditData.usuario = { connect: { id: usuarioId } };
     } else {
-      // If no valid usuarioId, set it to null
-      auditData.usuarioId = null;
+      // If no valid usuarioId, no connection is needed
+      // Prisma will handle null/undefined relationships
     }
 
     await prisma.logAuditoria.create({
@@ -185,13 +185,13 @@ export const obtenerRegistrosAuditoria = async (filtros: {
 
   const skip = (pagina - 1) * porPagina;
 
-  const where: any = {};
+  const where: Prisma.LogAuditoriaWhereInput = {};
 
   if (accion) where.accion = accion;
-  if (entidadTipo) where.entidad_tipo = entidadTipo;
-  if (entidadId) where.entidad_id = entidadId;
+  if (entidadTipo) where.entidadTipo = entidadTipo;
+  if (entidadId) where.entidadId = entidadId;
   if (modulo) where.modulo = modulo;
-  if (usuarioId) where.usuarioId = usuarioId;
+  if (usuarioId) where.usuario = { id: usuarioId };
 
   if (fechaInicio || fechaFin) {
     where.fecha = {};

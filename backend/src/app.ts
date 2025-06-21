@@ -3,9 +3,15 @@
 import 'module-alias/register';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import type { Request, Response, RequestHandler, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
+
+// Extendemos el tipo Request para incluir las propiedades que añadimos en los middlewares
+interface ExtendedRequest extends Request {
+  invalidJson?: boolean;
+  jsonError?: string;
+}
 
 import { authenticateJWT } from '@/middlewares/auth';
 import auditoriaRoutes from '@/routes/auditoria'; // Importamos la ruta de auditoría
@@ -39,41 +45,45 @@ app.use(
 app.use(
   express.json({
     strict: true, // Solo acepta objetos y arrays
-    verify: (req: any, res: any, buf: Buffer) => {
+    verify: (
+      req: Request & { invalidJson?: boolean; jsonError?: string },
+      res: Response,
+      buf: Buffer
+    ) => {
       try {
         JSON.parse(buf.toString());
       } catch (e) {
         const error = e as Error;
-        (req as any).invalidJson = true;
-        (req as any).jsonError = error.message;
+        req.invalidJson = true;
+        req.jsonError = error.message;
       }
     },
   })
 );
 
 // Middleware para manejar errores de JSON inválido
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error & { body?: unknown }, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof SyntaxError && 'body' in err) {
     return res.status(400).json(
       fail('JSON inválido en el cuerpo de la petición', {
         field: 'body',
         message: 'El cuerpo de la petición no es un JSON válido',
         details: err.message,
-      } as any)
+      })
     );
   }
   next();
 });
 
 // Middleware para verificar si el JSON era inválido
-app.use((req: Request, res: Response, next: NextFunction) => {
-  if ((req as any).invalidJson) {
+app.use((req: ExtendedRequest, res: Response, next: NextFunction) => {
+  if (req.invalidJson) {
     return res.status(400).json(
       fail('JSON inválido', {
         field: 'body',
         message: 'El cuerpo de la petición no es un JSON válido',
-        details: (req as any).jsonError,
-      } as any)
+        details: req.jsonError,
+      })
     );
   }
   next();
@@ -114,11 +124,14 @@ app.get('/test-email', async (req, res) => {
   }
 });
 
-// Usamos una aserción de tipo para el request
-app.get('/api/protegido', authenticateJWT, ((req: Request, res: Response) => {
-  // Usamos una aserción de tipo para acceder a req.user
-  const user = (req as any).user;
-  res.json(success(user));
+// Usamos la definición global de Express.User que ya existe en src/types/express.d.ts
+interface RequestWithUser extends Request {
+  user?: Express.User;
+}
+
+// Usamos el tipo extendido
+app.get('/api/protegido', authenticateJWT, ((req: RequestWithUser, res: Response) => {
+  res.json(success(req.user));
 }) as RequestHandler);
 
 export default app;

@@ -1,7 +1,8 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
 
 import { logSuccess, logError } from '../utils/audit';
+import { getUserId } from '../utils/requestUtils';
 import { success, fail } from '../utils/response';
 
 /**
@@ -12,14 +13,22 @@ const prisma = new PrismaClient();
 
 // Tipos para el controlador de auditoría
 type SortOrder = 'asc' | 'desc';
+// Define tipos específicos para filtros de auditoría
+type FilterValue =
+  | string
+  | number
+  | { contains: string; mode: string }
+  | { gte?: Date; lte?: Date };
+
 type FilterParams = {
-  [key: string]: any;
+  [key: string]: FilterValue;
+  fecha?: { gte?: Date; lte?: Date };
 };
 
 /**
  * Controlador unificado para obtener registros de auditoría con opciones avanzadas de filtrado y paginación.
  * Este endpoint permite consultar, filtrar y paginar los registros de auditoría del sistema.
- * 
+ *
  * @param {Request} req - Objeto de solicitud Express
  * @param {Response} res - Objeto de respuesta Express
  * @returns {Promise<Response>} Lista paginada y filtrada de registros de auditoría o mensaje de error
@@ -27,29 +36,35 @@ type FilterParams = {
 export const getAuditLogs = async (req: Request, res: Response) => {
   try {
     // Obtener ID del usuario actual para auditoría
-    const userId = (req as any).usuario?.id || (req as any).user?.id;
+    const userId = getUserId(req);
 
     // Parámetros de paginación
-    const page = parseInt(req.query.page as string || '1', 10);
-    const perPage = parseInt(req.query.perPage as string || '20', 10);
-    
+    const page = parseInt((req.query.page as string) || '1', 10);
+    const perPage = parseInt((req.query.perPage as string) || '20', 10);
+
     // Parámetros de ordenamiento
     const sortBy = (req.query.sortBy as string) || 'fecha';
-    const sortOrder = ((req.query.sortOrder as string)?.toLowerCase() === 'asc' ? 'asc' : 'desc') as SortOrder;
+    const sortOrder = (
+      (req.query.sortOrder as string)?.toLowerCase() === 'asc' ? 'asc' : 'desc'
+    ) as SortOrder;
 
     // Validación de parámetros de paginación
     if (isNaN(page) || isNaN(perPage) || page < 1 || perPage < 1 || perPage > 100) {
-      return res.status(400).json(
-        fail('Parámetros de paginación inválidos. Página debe ser >= 1 y registros por página entre 1 y 100.')
-      );
+      return res
+        .status(400)
+        .json(
+          fail(
+            'Parámetros de paginación inválidos. Página debe ser >= 1 y registros por página entre 1 y 100.'
+          )
+        );
     }
 
     // Calcular offset para paginación
     const skip = (page - 1) * perPage;
-    
+
     // Construir objeto where para filtros dinámicos
     const where: FilterParams = {};
-    
+
     // Procesar todos los posibles filtros
     const allowedFilters = [
       'id',
@@ -68,7 +83,7 @@ export const getAuditLogs = async (req: Request, res: Response) => {
       'intentos',
       'modulo',
       'movimientoId',
-      'resultado'
+      'resultado',
     ];
 
     // Aplicar los filtros permitidos desde query params
@@ -77,11 +92,11 @@ export const getAuditLogs = async (req: Request, res: Response) => {
         // Para campos de ID, asegurar que sea un string
         if (filter.endsWith('Id')) {
           where[filter] = req.query[filter] as string;
-        } 
+        }
         // Para campos numéricos
         else if (filter === 'intentos') {
           where[filter] = parseInt(req.query[filter] as string, 10);
-        } 
+        }
         // Para campos que requieren igualdad exacta
         else if (filter === 'resultado' || filter === 'accion') {
           where[filter] = req.query[filter] as string;
@@ -90,7 +105,7 @@ export const getAuditLogs = async (req: Request, res: Response) => {
         else {
           where[filter] = {
             contains: req.query[filter] as string,
-            mode: 'insensitive'
+            mode: 'insensitive',
           };
         }
       }
@@ -167,7 +182,7 @@ export const getAuditLogs = async (req: Request, res: Response) => {
         filtrosAplicados: where,
       },
     });
-    
+
     // Enviar respuesta con metadatos de paginación
     return res.status(200).json(
       success({
@@ -176,22 +191,31 @@ export const getAuditLogs = async (req: Request, res: Response) => {
           page,
           perPage,
           totalItems,
-          totalPages
-        }
+          totalPages,
+        },
       })
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al consultar registros de auditoría:', error);
 
     // Registrar error en auditoría
     await logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId:
+        (req as { usuario?: { id: string }; user?: { id: string } }).usuario?.id ||
+        (req as { usuario?: { id: string }; user?: { id: string } }).user?.id,
       ip: req.ip,
       entityType: 'log_auditoria',
       module: 'auditoria',
       action: 'error_consultar_auditoria',
       message: 'Error al consultar registros de auditoría',
-      error: error instanceof Error ? error : new Error(error.message) + '. 500',
+      error:
+        error instanceof Error
+          ? error
+          : new Error(
+              typeof error === 'object' && error !== null && 'message' in error
+                ? String(error.message)
+                : 'Unknown error'
+            ) + '. 500',
       context: {
         ipSolicitante: req.ip,
         totalRegistros: req.query.perPage,
@@ -204,5 +228,5 @@ export const getAuditLogs = async (req: Request, res: Response) => {
 };
 
 export default {
-  getAuditLogs
+  getAuditLogs,
 };

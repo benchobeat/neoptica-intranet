@@ -16,8 +16,6 @@ import { passwordFuerte } from '@/utils/validacions';
  */
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
   const { email } = req.body;
-  const mensajeError = '';
-
   if (!email) {
     await logError({
       userId: null,
@@ -166,7 +164,6 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
  */
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   const { token, email, password } = req.body;
-  const mensajeError = '';
 
   if (!token || !email || !password) {
     const camposFaltantes = [

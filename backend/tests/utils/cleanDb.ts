@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 /**
@@ -32,7 +32,7 @@ async function deleteCuentasContablesInOrder(prisma: PrismaClient): Promise<void
     });
 
     // Función para encontrar cuentas sin hijas (hojas del árbol)
-    function findLeafCuentas(): string[] {
+    const findLeafCuentas = (): string[] => {
       const leafCuentaIds: string[] = [];
 
       for (const [id, cuenta] of cuentaMap.entries()) {
@@ -48,7 +48,7 @@ async function deleteCuentasContablesInOrder(prisma: PrismaClient): Promise<void
       }
 
       return leafCuentaIds;
-    }
+    };
 
     // Proceso de eliminación por niveles
     let deletedCount = 0;
@@ -110,7 +110,7 @@ async function deleteCategoriesInOrder(prisma: PrismaClient): Promise<void> {
     });
 
     // Función para encontrar categorías sin hijos (hojas del árbol)
-    function findLeafCategories(): string[] {
+    const findLeafCategories = (): string[] => {
       const leafCategoryIds: string[] = [];
 
       for (const [id, category] of categoryMap.entries()) {
@@ -128,7 +128,7 @@ async function deleteCategoriesInOrder(prisma: PrismaClient): Promise<void> {
       }
 
       return leafCategoryIds;
-    }
+    };
 
     // Proceso de eliminación por niveles
     let deletedCount = 0;

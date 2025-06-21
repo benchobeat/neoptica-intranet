@@ -1,8 +1,10 @@
+import type { Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
 
 import { logSuccess, logError } from '@/utils/audit';
 import prisma from '@/utils/prisma';
+import { getUserId } from '@/utils/requestUtils';
 import { success, fail } from '@/utils/response';
 import { telefonoValido, passwordFuerte } from '@/utils/validacions';
 
@@ -10,7 +12,7 @@ import { telefonoValido, passwordFuerte } from '@/utils/validacions';
  * Obtiene el perfil del usuario autenticado
  */
 export async function obtenerPerfilUsuario(req: Request, res: Response): Promise<void> {
-  const userId = (req as any).user?.id;
+  const userId = getUserId(req);
 
   if (!userId) {
     res.status(401).json(fail('No autenticado'));
@@ -71,13 +73,13 @@ export async function obtenerPerfilUsuario(req: Request, res: Response): Promise
     });
 
     res.json(success(data));
-  } catch (error: any) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorStack = error instanceof Error ? error.stack : undefined;
 
     // Registrar el error en la auditoría
     await logError({
-      userId: (req as any).user?.id || null,
+      userId: getUserId(req) || null,
       ip: req.ip,
       entityType: 'usuario',
       module: 'obtenerPerfilUsuario',
@@ -99,7 +101,7 @@ export async function obtenerPerfilUsuario(req: Request, res: Response): Promise
  */
 export async function cambiarPasswordUsuario(req: Request, res: Response): Promise<void> {
   const { passwordActual, passwordNuevo } = req.body;
-  const userId = (req as any).user?.id;
+  const userId = getUserId(req);
   const ip = req.ip;
 
   if (!userId) {
@@ -283,7 +285,7 @@ export async function cambiarPasswordUsuario(req: Request, res: Response): Promi
     });
 
     res.json(success('Contraseña actualizada correctamente'));
-  } catch (error: any) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     const errorStack = error instanceof Error ? error.stack : undefined;
 
@@ -313,7 +315,7 @@ export async function cambiarPasswordUsuario(req: Request, res: Response): Promi
  * No permite modificar roles ni email para evitar escalada de privilegios
  */
 export async function actualizarPerfilUsuario(req: Request, res: Response): Promise<void> {
-  const usuarioId = (req as any).user?.id || 'sistema';
+  const usuarioId = getUserId(req) || 'sistema';
   const { nombreCompleto, telefono, direccion, dni, roles, email } = req.body;
 
   // Rechazar intentos de cambiar roles
@@ -413,7 +415,7 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
             return;
           }
         }
-      } catch (_error) {
+      } catch {
         res.status(500).json(fail('Error al procesar el DNI'));
         return;
       }
@@ -441,7 +443,7 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
     }
 
     // Preparar datos para actualización
-    const updateData: any = {
+    const updateData: Prisma.UsuarioUpdateInput = {
       modificadoEn: new Date(),
       modificadoPor: usuarioId,
     };
@@ -505,7 +507,7 @@ export async function actualizarPerfilUsuario(req: Request, res: Response): Prom
         direccion: usuarioActualizado.direccion,
         dni: usuarioActualizado.dni,
         email: usuarioActualizado.email,
-        roles: usuarioActualizado.roles.map((ur: any) => ur.rol.nombre),
+        roles: usuarioActualizado.roles.map((ur) => ur.rol.nombre),
       })
     );
   } catch (error) {

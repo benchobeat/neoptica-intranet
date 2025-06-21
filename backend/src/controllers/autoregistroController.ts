@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import type { Request, Response } from 'express';
-import validator from 'validator';
 import { z } from 'zod';
 
 import { logSuccess, logError } from '@/utils/audit';
@@ -35,7 +34,6 @@ const registroSocialSchema = z.object({
  */
 export async function autoregistroCliente(req: Request, res: Response): Promise<void> {
   const { nombreCompleto, email, password, telefono, proveedorOauth, oauthId, dni } = req.body;
-  const mensajeError = '';
 
   try {
     // Validación según el tipo de registro

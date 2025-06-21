@@ -1,7 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 
 import { logSuccess, logError } from '../utils/audit';
+import { getUserId } from '../utils/requestUtils';
 
 /**
  * Cliente Prisma para interacción con la base de datos.
@@ -17,12 +18,15 @@ const prisma = new PrismaClient();
  * @returns {Promise<Response>} Respuesta con la marca creada o mensaje de error
  */
 export const crearMarca = async (req: Request, res: Response) => {
+  // Capturar ID de usuario para auditoría y campos de control
+  const userId = getUserId(req);
+
   try {
     const { nombre, descripcion } = req.body;
     // Verificar si se intenta modificar el campo activo, que no está permitido
     if (req.body.activo !== undefined) {
       await logError({
-        userId: (req as any).usuario?.id || (req as any).user?.id,
+        userId,
         ip: req.ip,
         entityType: 'marca',
         entityId: null,
@@ -32,7 +36,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'No está permitido modificar el campo activo. 400',
         context: {
           nombre,
-          descripcion
+          descripcion,
         },
       });
       return res.status(400).json({
@@ -41,7 +45,6 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'No está permitido modificar el campo activo.',
       });
     }
-    const userId = (req as any).usuario?.id || (req as any).user?.id;
 
     // Validación estricta y avanzada de datos de entrada
     if (!nombre || typeof nombre !== 'string') {
@@ -56,7 +59,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'El nombre es obligatorio y debe ser una cadena de texto. 400',
         context: {
           nombre,
-          descripcion
+          descripcion,
         },
       });
       return res.status(400).json({
@@ -80,7 +83,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'El nombre debe tener entre 2 y 100 caracteres. 400',
         context: {
           nombre,
-          descripcion
+          descripcion,
         },
       });
       return res.status(400).json({
@@ -104,7 +107,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'El nombre contiene caracteres no permitidos. 400',
         context: {
           nombre,
-          descripcion
+          descripcion,
         },
       });
       return res.status(400).json({
@@ -153,7 +156,7 @@ export const crearMarca = async (req: Request, res: Response) => {
           details: {
             nombre: marcaActualizada.nombre,
             descripcion: marcaActualizada.descripcion,
-            reactivada: true
+            reactivada: true,
           },
         });
 
@@ -163,7 +166,7 @@ export const crearMarca = async (req: Request, res: Response) => {
           error: null,
         });
       }
-      
+
       // Si la marca existe y está activa, devolvemos error
       logError({
         userId,
@@ -176,7 +179,7 @@ export const crearMarca = async (req: Request, res: Response) => {
         error: 'Ya existe una marca activa con ese nombre. 409',
         context: {
           nombre,
-          descripcion
+          descripcion,
         },
       });
       return res.status(409).json({
@@ -217,12 +220,12 @@ export const crearMarca = async (req: Request, res: Response) => {
       data: nuevaMarca,
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al crear marca:', error);
 
     // Registrar error usando logError
     await logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId,
       ip: req.ip,
       entityType: 'marca',
       module: 'crearMarca',
@@ -259,7 +262,7 @@ export const crearMarca = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Lista paginada de marcas o mensaje de error
  */
 export const listarMarcasPaginadas = async (req: Request, res: Response) => {
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   try {
     // Extraer parámetros de paginación y búsqueda
     const page = parseInt(req.query.page as string) || 1;
@@ -270,7 +273,7 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
     const skip = (page - 1) * pageSize;
 
     // Preparar filtros
-    const filtro: any = {
+    const filtro: Prisma.MarcaWhereInput = {
       anuladoEn: null, // Solo marcas no anuladas (soft delete)
     };
 
@@ -331,7 +334,7 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
       },
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al listar marcas paginadas:', error);
 
     // Registrar error usando logError
@@ -368,10 +371,10 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Lista de marcas o mensaje de error
  */
 export const listarMarcas = async (req: Request, res: Response) => {
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   try {
     // Preparar filtros
-    const filtro: any = {
+    const filtro: Prisma.MarcaWhereInput = {
       anuladoEn: null, // Solo marcas no anuladas (soft delete)
     };
 
@@ -424,7 +427,7 @@ export const listarMarcas = async (req: Request, res: Response) => {
       data: marcas,
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al listar marcas:', error);
 
     // Registrar error usando logError
@@ -463,7 +466,7 @@ export const listarMarcas = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Datos de la marca o mensaje de error
  */
 export const obtenerMarcaPorId = async (req: Request, res: Response) => {
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
   try {
     const { id } = req.params;
 
@@ -543,7 +546,7 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
       data: marca,
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al obtener marca por ID:', error);
 
     // Registrar error usando logError
@@ -564,7 +567,7 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
     });
 
     // Manejo detallado de errores
-    if (error.code === 'P2023') {
+    if (error instanceof Error && error.message === 'P2023') {
       logError({
         userId,
         ip: req.ip,
@@ -618,11 +621,11 @@ export const obtenerMarcaPorId = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Datos de la marca actualizada o mensaje de error
  */
 export const actualizarMarca = async (req: Request, res: Response) => {
+  const userId = getUserId(req);
   try {
     const { id } = req.params;
     const { nombre, descripcion } = req.body;
-    const userId = (req as any).usuario?.id || (req as any).user?.id;
-    
+
     // Verificar si se intenta modificar el campo activo, que no está permitido
     if (req.body.activo !== undefined) {
       logError({
@@ -698,7 +701,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     }
 
     // Preparar objeto de datos a actualizar
-    const datosActualizados: any = {};
+    const datosActualizados: Prisma.MarcaUpdateInput = {};
 
     // Validar y procesar nombre si se proporcionó
     if (nombre !== undefined) {
@@ -882,12 +885,12 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       data: marcaActualizada,
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al actualizar marca:', error);
 
     // Registrar error usando logError
     await logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId,
       ip: req.ip,
       entityType: 'marca',
       entityId: req.params.id,
@@ -904,9 +907,9 @@ export const actualizarMarca = async (req: Request, res: Response) => {
     });
 
     // Manejo detallado de errores de Prisma
-    if (error.code === 'P2023') {
+    if (error instanceof Error && error.message === 'P2023') {
       logError({
-        userId: (req as any).usuario?.id || (req as any).user?.id,
+        userId,
         ip: req.ip,
         entityType: 'marca',
         entityId: req.params.id,
@@ -925,7 +928,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       });
     }
     logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId,
       ip: req.ip,
       entityType: 'marca',
       entityId: req.params.id,
@@ -954,9 +957,9 @@ export const actualizarMarca = async (req: Request, res: Response) => {
  * @returns {Promise<Response>} Confirmación de eliminación o mensaje de error
  */
 export const eliminarMarca = async (req: Request, res: Response) => {
+  const userId = getUserId(req);
   try {
     const { id } = req.params;
-    const userId = (req as any).usuario?.id || (req as any).user?.id;
 
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1071,12 +1074,12 @@ export const eliminarMarca = async (req: Request, res: Response) => {
       data: 'Marca eliminada correctamente.',
       error: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error al eliminar marca:', error);
 
     // Registrar error usando logError
     await logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId,
       ip: req.ip,
       entityType: 'marca',
       entityId: req.params.id,
@@ -1092,9 +1095,9 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     });
 
     // Manejo detallado de errores de Prisma
-    if (error.code === 'P2023') {
+    if (error instanceof Error && error.message === 'P2023') {
       logError({
-        userId: (req as any).usuario?.id || (req as any).user?.id,
+        userId,
         ip: req.ip,
         entityType: 'marca',
         entityId: req.params.id,
@@ -1114,7 +1117,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
     }
 
     logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId,
       ip: req.ip,
       entityType: 'marca',
       entityId: req.params.id,

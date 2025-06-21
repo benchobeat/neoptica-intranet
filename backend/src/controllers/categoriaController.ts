@@ -1,7 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 
 import { logError, logSuccess } from '../utils/audit';
+import { getUserId } from '../utils/requestUtils';
 import { validarIconoUrl } from '../utils/validacions';
 
 const prisma = new PrismaClient();
@@ -15,7 +16,7 @@ const prisma = new PrismaClient();
  */
 export const crearCategoria = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId = getUserId(req);
 
   try {
     const { nombre, descripcion, tipoCategoria, iconoUrl, orden, padreId, erpId, erpTipo } =
@@ -247,7 +248,9 @@ export const crearCategoria = async (req: Request, res: Response) => {
   } catch (error) {
     // Registrar el error para auditoría
     await logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId:
+        (req as { usuario?: { id: string }; user?: { id: string } }).usuario?.id ||
+        (req as { usuario?: { id: string }; user?: { id: string } }).user?.id,
       ip: req.ip,
       entityType: 'categoria',
       module: 'crearCategoria',
@@ -275,14 +278,16 @@ export const crearCategoria = async (req: Request, res: Response) => {
  */
 export const listarCategorias = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría
-  const userId = (req as any)?.user?.id || (req as any)?.usuario?.id;
+  const userId =
+    (req as { usuario?: { id: string }; user?: { id: string } }).usuario?.id ||
+    (req as { usuario?: { id: string }; user?: { id: string } }).user?.id;
 
   try {
     // Capturar los parámetros de filtro de la consulta
     const { activo, tipoCategoria, padreId, incluirSubcategorias } = req.query;
 
-    // Construimos el objeto de filtro (where)
-    const where: any = {};
+    // Construimos el objeto de filtro (where) con el tipo correcto de Prisma
+    const where: Prisma.CategoriaWhereInput = {};
 
     // Filtrar por estado activo/inactivo si se proporciona
     if (activo !== undefined) {
@@ -393,7 +398,9 @@ export const listarCategorias = async (req: Request, res: Response) => {
  */
 export const obtenerCategoriaPorId = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId =
+    (req as { usuario?: { id: string }; user?: { id: string } }).usuario?.id ||
+    (req as { usuario?: { id: string }; user?: { id: string } }).user?.id;
 
   try {
     const { id } = req.params;
@@ -522,7 +529,9 @@ export const obtenerCategoriaPorId = async (req: Request, res: Response) => {
  */
 export const actualizarCategoria = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría y campos de control
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId =
+    (req as { usuario?: { id: string }; user?: { id: string } }).usuario?.id ||
+    (req as { usuario?: { id: string }; user?: { id: string } }).user?.id;
 
   try {
     const { id } = req.params;
@@ -710,8 +719,8 @@ export const actualizarCategoria = async (req: Request, res: Response) => {
       // recursivos (A->B->C->A) pero eso requeriría una función recursiva adicional
     }
 
-    // Preparar datos para la actualización
-    const categoriaData: any = {};
+    // Preparar datos para la actualización con el tipo correcto de Prisma
+    const categoriaData: Prisma.CategoriaUpdateInput = {};
 
     // Solo actualizar los campos que se proporcionan
     if (nombreLimpio !== undefined) categoriaData.nombre = nombreLimpio;
@@ -722,7 +731,9 @@ export const actualizarCategoria = async (req: Request, res: Response) => {
     // El campo activo no se puede modificar a través de esta ruta
     if (erpId !== undefined) categoriaData.erpId = erpId !== null ? Number(erpId) : null;
     if (erpTipo !== undefined) categoriaData.erpTipo = erpTipo?.trim() || null;
-    if (padreId !== undefined) categoriaData.padreId = padreId || null;
+    if (padreId !== undefined) {
+      categoriaData.padre = padreId ? { connect: { id: padreId } } : { disconnect: true };
+    }
 
     // Datos de auditoría
     categoriaData.modificadoPor = userId || null;
@@ -774,7 +785,9 @@ export const actualizarCategoria = async (req: Request, res: Response) => {
   } catch (error) {
     // Registrar el error para auditoría
     await logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId:
+        (req as { usuario?: { id: string }; user?: { id: string } }).usuario?.id ||
+        (req as { usuario?: { id: string }; user?: { id: string } }).user?.id,
       ip: req.ip,
       entityType: 'categoria',
       module: 'actualizarCategoria',
@@ -803,7 +816,9 @@ export const actualizarCategoria = async (req: Request, res: Response) => {
  */
 export const eliminarCategoria = async (req: Request, res: Response) => {
   // Capturar ID de usuario para auditoría
-  const userId = (req as any).usuario?.id || (req as any).user?.id;
+  const userId =
+    (req as { usuario?: { id: string }; user?: { id: string } }).usuario?.id ||
+    (req as { usuario?: { id: string }; user?: { id: string } }).user?.id;
 
   try {
     const { id } = req.params;
@@ -940,7 +955,9 @@ export const eliminarCategoria = async (req: Request, res: Response) => {
   } catch (error) {
     // Registrar el error para auditoría
     await logError({
-      userId: (req as any).usuario?.id || (req as any).user?.id,
+      userId:
+        (req as { usuario?: { id: string }; user?: { id: string } }).usuario?.id ||
+        (req as { usuario?: { id: string }; user?: { id: string } }).user?.id,
       ip: req.ip,
       entityType: 'categoria',
       module: 'eliminarCategoria',

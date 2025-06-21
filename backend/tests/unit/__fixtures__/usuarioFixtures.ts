@@ -1,5 +1,7 @@
+import { jest } from '@jest/globals';
 import type { Usuario, UsuarioRol, Rol } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+import type { Request } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
 
 type UsuarioWithRoles = Usuario & {
   usuarioRol: (UsuarioRol & { rol: Rol })[];
@@ -141,7 +143,20 @@ export const mockUsuarioMultiRol: UsuarioWithRoles = {
 };
 
 // Mock request objects
-export const mockRequest = (body: any = {}, params: any = {}, user: any = null) => ({
+// Definición del tipo de usuario para los tests
+type TestUser = {
+  id: string;
+  email: string;
+  nombreCompleto: string;
+  roles?: string[];
+  [key: string]: unknown;
+} | null;
+
+export const mockRequest = (
+  body: Record<string, unknown> = {},
+  params: ParamsDictionary = {},
+  user: TestUser = null
+): Partial<Request> => ({
   body,
   params,
   user,
@@ -149,8 +164,15 @@ export const mockRequest = (body: any = {}, params: any = {}, user: any = null) 
   headers: {},
 });
 
-export const mockResponse = () => {
-  const res: any = {};
+// Interface para una respuesta mock con tipos correctos
+interface MockResponse {
+  status: jest.Mock;
+  json: jest.Mock;
+  [key: string]: unknown;
+}
+
+export const mockResponse = (): MockResponse => {
+  const res = {} as MockResponse;
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   return res;

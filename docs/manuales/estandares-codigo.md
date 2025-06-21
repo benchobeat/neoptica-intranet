@@ -95,9 +95,14 @@ src/
 
 ### 3.3 TypeScript
 - Usar tipos explícitos en lugar de `any`
-- Usar interfaces para definir la forma de los objetos
+  - Preferir `unknown` sobre `any` cuando el tipo es verdaderamente desconocido
+  - Usar type assertions solo cuando sea absolutamente necesario y con validación previa
+- Usar interfaces para definir la forma de los objetos que representan contratos públicos
+- Usar `type` para uniones, intersecciones o tipos mapeados
 - Usar tipos unión para manejar diferentes formas de datos
-- Usar tipos genéricos cuando sea apropiado
+- Usar tipos genéricos cuando sea apropiado para código reutilizable
+- Evitar el uso de `@ts-ignore` o `@ts-expect-error` sin una justificación clara
+- Usar tipos de utilidad de TypeScript (Pick, Omit, Partial, etc.) cuando corresponda
 
 ## 4. Manejo de Errores
 
@@ -136,10 +141,14 @@ src/
 ```
 
 ### 4.3 Tipos de Errores
-- Usar clases de error personalizadas
-- Incluir códigos de error estandarizados
-- Proporcionar mensajes claros para el usuario
-- Registrar detalles técnicos en los logs
+- Usar clases de error personalizadas que extiendan de `Error`
+- Incluir códigos de error estandarizados y tipos de error
+- Proporcionar mensajes claros para el usuario final
+- Incluir metadatos útiles para depuración
+- Registrar detalles técnicos en los logs con el nivel de severidad apropiado
+- Usar try/catch de manera estratégica, no para controlar el flujo del programa
+- Manejar adecuadamente las promesas rechazadas con `.catch()` o `try/catch` con `async/await`
+- Usar tipos discriminados para manejar diferentes tipos de errores
 
 ## 5. Pruebas
 

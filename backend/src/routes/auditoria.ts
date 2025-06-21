@@ -1,7 +1,8 @@
 import { Router } from 'express';
+
+import * as auditoriaController from '../controllers/auditoriaController';
 import { authenticateJWT } from '../middlewares/auth';
 import { requireRole } from '../middlewares/roles';
-import * as auditoriaController from '../controllers/auditoriaController';
 
 const router = Router();
 

@@ -9,8 +9,6 @@
  * @module __fixtures__/sucursalFixtures
  */
 
-import { v4 as uuidv4 } from 'uuid';
-
 // ID de usuario simulado para campos de auditoría
 export const mockUserId = '550e8400-e29b-41d4-a716-446655440000';
 

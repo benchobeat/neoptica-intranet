@@ -76,7 +76,7 @@ describe('listarSucursales', () => {
     // Assert
     expect(mockSucursalFindMany).toHaveBeenCalledWith({
       where: {
-        anuladoEn: null,
+        activo: true,
       },
       orderBy: {
         nombre: 'asc',

@@ -123,7 +123,7 @@ describe('listarSucursalesPaginadas', () => {
     
     // Verify Prisma was called with correct pagination
     expect(mockSucursalFindMany).toHaveBeenCalledWith({
-      where: { anuladoEn: null },
+      where: { activo: true },
       skip: 0,
       take: 10,
       orderBy: { nombre: 'asc' },
@@ -177,8 +177,7 @@ describe('listarSucursalesPaginadas', () => {
     expect(mockSucursalFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          activo: true,
-          anuladoEn: null,
+          activo: true
         }),
         orderBy: { nombre: 'asc' },
       })

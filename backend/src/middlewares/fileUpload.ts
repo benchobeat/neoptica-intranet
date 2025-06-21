@@ -54,8 +54,14 @@ export const uploadInventarioAdjunto = multer({
   },
 });
 
+// Interfaz para los errores de Multer
+interface MulterError extends Error {
+  code?: string;
+  field?: string;
+}
+
 // Función para formatear errores de multer
-export const handleMulterError = (err: any) => {
+export const handleMulterError = (err: MulterError) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
     return 'El archivo excede el tamaño máximo permitido de 2MB.';
   }

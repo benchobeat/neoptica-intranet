@@ -1,8 +1,640 @@
 # Mejores Prácticas para el Desarrollo Backend
 
-> **Versión:** 2.1 (Junio 2025)  
+> **Versión:** 3.0 (Junio 2025)  
 > **Autor:** Equipo de Desarrollo Neóptica  
 > **Estado:** Documento vivo - Se actualizará con nuevas prácticas y lecciones aprendidas
+
+## Tabla de Contenidos
+- [1. Estructura de Controladores](#1-estructura-de-controladores)
+- [2. Tipado con Prisma](#2-tipado-con-prisma)
+- [3. Manejo de Errores](#3-manejo-de-errores)
+- [4. Auditoría](#4-auditoría)
+- [5. Validación de Datos](#5-validación-de-datos)
+- [6. Estructura de Archivos](#6-estructura-de-archivos)
+- [7. Pruebas](#7-pruebas)
+
+## 1. Estructura de Controladores
+
+### 1.1. Estructura Básica de un Controlador
+
+Cada controlador debe seguir esta estructura básica:
+
+```typescript
+// 1. Importaciones
+import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
+import { registrarAuditoria } from '../utils/audit';
+import { createSuccessResponse, createErrorResponse } from '../utils/response';
+import { validateEntityInput } from '../utils/validations';
+import prisma from '../utils/prisma';
+
+// 2. Tipos personalizados si son necesarios
+type EntityWithRelations = Prisma.EntityGetPayload<{
+  include: {
+    // Relaciones a incluir
+  };
+}>;
+
+// 3. Funciones del controlador
+export const crearEntidad = async (
+  req: Request<{}, {}, EntityCreateInput>,
+  res: Response<ApiResponse<EntityWithRelations>>
+) => {
+  const userId = req.user?.id;
+  
+  try {
+    // 4. Validación de entrada
+    const validacion = validateEntityInput(req.body);
+    if ('error' in validacion) {
+      return res.status(400).json({
+        ok: false,
+        data: null,
+        error: validacion.error
+      });
+    }
+
+    // 5. Lógica de negocio
+    const entidad = await prisma.entity.create({
+      data: {
+        ...validacion,
+        creadoPor: userId,
+      },
+      include: {
+        // Incluir relaciones necesarias
+      },
+    });
+
+    // 6. Auditoría
+    await registrarAuditoria({
+      userId,
+      ip: req.ip,
+      entityType: 'entidad',
+      entityId: entidad.id,
+      module: 'entidadController',
+      action: 'crear_entidad',
+      message: 'Entidad creada exitosamente',
+    });
+
+    // 7. Respuesta exitosa
+    return res.status(201).json({
+      ok: true,
+      data: entidad,
+      error: null,
+    });
+  } catch (error) {
+    // 8. Manejo de errores
+    console.error('Error al crear entidad:', error);
+    
+    await registrarAuditoria({
+      userId,
+      ip: req.ip,
+      entityType: 'entidad',
+      module: 'entidadController',
+      action: 'error_crear_entidad',
+      message: 'Error al crear entidad',
+      error,
+    });
+
+    // 9. Respuesta de error
+    const { status, response } = createErrorResponse(
+      'Error interno del servidor al crear la entidad',
+      500
+    );
+    return res.status(status).json(response);
+  }
+};
+```
+
+### 1.2. Convenciones de Nombrado
+
+- Usar verbos para los nombres de las funciones: `crearProducto`, `actualizarProducto`, `eliminarProducto`
+- Usar nombres descriptivos para variables y funciones
+- Seguir el patrón `tipoAccion_entidad` para acciones de auditoría: `crear_producto`, `actualizar_producto`, `eliminar_producto`
+
+## 2. Tipado con Prisma
+
+### 2.1. Uso de Tipos Generados
+
+Siempre usar los tipos generados por Prisma para garantizar la seguridad de tipos:
+
+```typescript
+// Usar tipos generados por Prisma
+import { Prisma } from '@prisma/client';
+
+type ProductoWithRelations = Prisma.ProductoGetPayload<{
+  include: {
+    marca: true;
+    color: true;
+    categoria: true;
+    inventarios: {
+      include: {
+        sucursal: true;
+      };
+    };
+  };
+}>;
+```
+
+### 2.2. Operaciones CRUD Tipadas
+
+```typescript
+// Crear
+const producto = await prisma.producto.create({
+  data: {
+    nombre: 'Producto de prueba',
+    precio: 100,
+    // Usar relaciones con connect
+    marca: { connect: { id: marcaId } },
+    color: { connect: { id: colorId } },
+    // Usar campos de auditoría
+    creadoPor: userId,
+    creadoEn: new Date(),
+  },
+  // Incluir relaciones en la respuesta
+  include: {
+    marca: true,
+    color: true,
+  },
+});
+
+// Actualizar
+const productoActualizado = await prisma.producto.update({
+  where: { id: productoId },
+  data: {
+    nombre: 'Nuevo nombre',
+    // Usar operaciones de actualización de Prisma
+    precio: { increment: 10 },
+    // Campos de auditoría
+    actualizadoPor: userId,
+    actualizadoEn: new Date(),
+  },
+  include: {
+    marca: true,
+    color: true,
+  },
+});
+
+// Eliminación lógica
+const productoEliminado = await prisma.producto.update({
+  where: { id: productoId },
+  data: {
+    activo: false,
+    eliminadoPor: userId,
+    eliminadoEn: new Date(),
+  },
+});
+```
+
+## 3. Manejo de Errores
+
+### 3.1. Estructura de Respuesta de Error
+
+Todas las respuestas de error deben seguir el formato:
+
+```typescript
+{
+  ok: false,
+  data: null,
+  error: 'Mensaje de error descriptivo',
+  // Opcional: detalles adicionales para desarrollo
+  meta?: any;
+}
+```
+
+### 3.2. Códigos de Estado HTTP
+
+- `200 OK`: Operación exitosa
+- `201 Created`: Recurso creado exitosamente
+- `400 Bad Request`: Error de validación o datos inválidos
+- `401 Unauthorized`: No autenticado
+- `403 Forbidden`: No autorizado
+- `404 Not Found`: Recurso no encontrado
+- `409 Conflict`: Conflicto (ej: duplicados)
+- `500 Internal Server Error`: Error del servidor
+
+### 3.3. Manejo de Errores de Prisma
+
+```typescript
+try {
+  // Operación con Prisma
+} catch (error) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    // Manejar errores conocidos de Prisma
+    switch (error.code) {
+      case 'P2002': // Violación de restricción única
+        return res.status(409).json({
+          ok: false,
+          data: null,
+          error: 'Ya existe un registro con estos datos',
+        });
+      case 'P2025': // Registro no encontrado
+        return res.status(404).json({
+          ok: false,
+          data: null,
+          error: 'Registro no encontrado',
+        });
+      default:
+        throw error; // Pasar otros errores al manejador global
+    }
+  }
+  throw error; // Pasar otros errores al manejador global
+}
+```
+
+## 4. Auditoría
+
+### 4.1. Registrar Todas las Acciones
+
+Todas las operaciones CRUD deben registrar auditorías tanto en éxito como en error. Para esto, utilizamos las funciones auxiliares `logSuccess` y `logError` del módulo de auditoría:
+
+#### 4.1.1. Registro de operaciones exitosas
+
+```typescript
+try {
+  // Código de la operación exitosa...
+  
+  await logSuccess({
+    userId: req.user?.id,
+    ip: req.ip,
+    entityType: 'producto',
+    entityId: producto.id,
+    module: 'productoController',
+    action: 'crear_producto',
+    message: 'Producto creado exitosamente',
+    details: {
+      // Datos relevantes del producto creado
+      nombre: producto.nombre,
+      precio: producto.precio,
+      // ... otros campos relevantes
+    },
+  });
+} catch (error) {
+  // Manejo del error...
+}
+```
+
+#### 4.1.2. Registro de operaciones fallidas
+
+```typescript
+try {
+  // Código que podría fallar...
+} catch (error) {
+  await logError({
+    userId: req.user?.id,
+    ip: req.ip,
+    entityType: 'producto',
+    entityId: producto?.id, // Usar opcional en caso de que el producto no se haya creado
+    module: 'productoController',
+    action: 'error_crear_producto',
+    message: 'Error al crear producto',
+    error: error, // Pasar el error completo
+    context: {
+      // Datos relevantes del contexto al momento del error
+      datosEntrada: req.body,
+      // ... otros campos relevantes
+    },
+  });
+  
+  // Relanzar el error o manejarlo según corresponda
+  throw error;
+}
+```
+
+#### 4.1.3. Parámetros de las funciones de auditoría
+
+**`logSuccess` - Para operaciones exitosas:**
+- `userId`: ID del usuario que realizó la acción (opcional)
+- `ip`: Dirección IP de la solicitud
+- `entityType`: Tipo de entidad afectada (ej: 'producto', 'usuario')
+- `entityId`: ID de la entidad afectada (opcional)
+- `module`: Módulo o controlador donde ocurrió la acción
+- `action`: Identificador de la acción realizada
+- `message`: Mensaje descriptivo de la acción
+- `details`: Objeto con detalles adicionales relevantes (opcional)
+
+**`logError` - Para operaciones fallidas:**
+- `userId`: ID del usuario que intentó realizar la acción (opcional)
+- `ip`: Dirección IP de la solicitud
+- `entityType`: Tipo de entidad afectada
+- `entityId`: ID de la entidad afectada (opcional)
+- `module`: Módulo o controlador donde ocurrió el error
+- `action`: Identificador de la acción que falló
+- `message`: Mensaje descriptivo del error
+- `error`: Objeto de error o mensaje de error
+- `context`: Objeto con información adicional del contexto del error
+
+#### 4.1.4. Convenciones para los nombres de acciones
+
+- Usar prefijos descriptivos:
+  - `crear_` para operaciones de creación
+  - `obtener_` para operaciones de lectura
+  - `actualizar_` para operaciones de actualización
+  - `eliminar_` para operaciones de eliminación
+  - `error_` para prefijar acciones fallidas
+
+- Usar nombres en minúsculas separados por guiones bajos (`_`)
+
+Ejemplos:
+- `crear_producto`
+- `actualizar_usuario`
+- `error_eliminar_producto`
+- `iniciar_sesion`
+
+### 4.2. Campos de Auditoría en Modelos
+
+Todos los modelos deben incluir campos de auditoría:
+
+```prisma
+model Producto {
+  id            String   @id @default(uuid())
+  nombre        String
+  // Otros campos...
+  
+  // Campos de auditoría
+  creadoEn      DateTime @default(now())
+  creadoPor     String?
+  actualizadoEn DateTime @updatedAt
+  actualizadoPor String?
+  eliminadoEn   DateTime?
+  eliminadoPor  String?
+  activo        Boolean  @default(true)
+  
+  // Relaciones
+  marca        Marca?   @relation(fields: [marcaId], references: [id])
+  marcaId      String?
+}
+```
+
+## 5. Validación de Datos
+
+### 5.1. Validación de Entrada
+
+Usar funciones de validación centralizadas:
+
+```typescript
+// utils/validations/producto.validations.ts
+export const validateProductoInput = (
+  data: any
+): { error: string } | Prisma.ProductoCreateInput => {
+  const errors: string[] = [];
+  
+  if (!data.nombre?.trim()) {
+    errors.push('El nombre es requerido');
+  }
+  
+  if (data.precio <= 0) {
+    errors.push('El precio debe ser mayor a 0');
+  }
+  
+  // Validar relaciones
+  if (data.categoriaId && !isValidId(data.categoriaId)) {
+    errors.push('ID de categoría inválido');
+  }
+  
+  if (errors.length > 0) {
+    return { error: errors.join(', ') };
+  }
+  
+  // Retornar datos validados con el tipo correcto
+  return data as Prisma.ProductoCreateInput;
+};
+```
+
+### 5.2. Validación de Relaciones
+
+Validar la existencia de relaciones antes de usarlas:
+
+```typescript
+const validarRelaciones = async (data: any) => {
+  const { categoriaId, marcaId, colorId } = data;
+  const errors: string[] = [];
+  
+  // Validar categoría
+  if (categoriaId) {
+    const categoria = await prisma.categoria.findUnique({
+      where: { id: categoriaId, activo: true },
+    });
+    
+    if (!categoria) {
+      errors.push('La categoría especificada no existe o está inactiva');
+    }
+  }
+  
+  // Validar marca y color de manera similar...
+  
+  return errors.length > 0 ? { error: errors.join(', ') } : { data };
+};
+```
+
+## 6. Estructura de Archivos
+
+```
+src/
+  controllers/          # Controladores
+    producto.controller.ts
+    marca.controller.ts
+    # ...otros controladores
+  
+  middlewares/         # Middlewares de Express
+    auth.middleware.ts
+    error.middleware.ts
+  
+  routes/              # Rutas
+    producto.routes.ts
+    marca.routes.ts
+    # ...otras rutas
+  
+  services/            # Lógica de negocio
+    producto.service.ts
+    marca.service.ts
+    # ...otros servicios
+  
+  types/               # Tipos TypeScript
+    index.d.ts
+    response.ts
+    # ...otros tipos
+  
+  utils/               # Utilidades
+    audit.ts
+    prisma.ts
+    validations/
+      producto.validations.ts
+      marca.validations.ts
+      # ...otras validaciones
+    
+  app.ts              # Configuración de Express
+  index.ts             # Punto de entrada
+```
+
+## 7. Pruebas
+
+### 7.1. Estructura de Pruebas
+
+```
+tests/
+  unit/                # Pruebas unitarias
+    controllers/
+      producto.controller.test.ts
+      marca.controller.test.ts
+    services/
+      producto.service.test.ts
+      marca.service.test.ts
+    
+  integration/         # Pruebas de integración
+    api/
+      producto.api.test.ts
+      marca.api.test.ts
+    
+  e2e/                # Pruebas de extremo a extremo
+    flujos-completos.test.ts
+    
+  helpers/            # Utilidades para pruebas
+    test-utils.ts
+    test-db.ts
+    
+  __fixtures__/       # Datos de prueba
+    productos.ts
+    marcas.ts
+```
+
+### 7.2. Ejemplo de Prueba
+
+```typescript
+// tests/unit/controllers/producto.controller.test.ts
+import { crearProducto } from '../../../src/controllers/producto.controller';
+import { prisma } from '../../../src/utils/prisma';
+import { registrarAuditoria } from '../../../src/utils/audit';
+import { mockProducto, mockUsuario } from '../../__fixtures__/productos';
+
+// Mock de Prisma y otras dependencias
+jest.mock('../../../src/utils/prisma');
+jest.mock('../../../src/utils/audit');
+
+describe('Producto Controller', () => {
+  let req: any;
+  let res: any;
+  let next: jest.Mock;
+
+  beforeEach(() => {
+    // Configurar mocks
+    req = {
+      body: { ...mockProducto },
+      user: { id: mockUsuario.id },
+      ip: '127.0.0.1',
+    };
+    
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    
+    next = jest.fn();
+    
+    // Resetear mocks
+    jest.clearAllMocks();
+  });
+  
+  describe('crearProducto', () => {
+    it('debe crear un producto exitosamente', async () => {
+      // Configurar mocks
+      const productoMock = { id: '1', ...mockProducto };
+      (prisma.producto.create as jest.Mock).mockResolvedValue(productoMock);
+      
+      // Ejecutar
+      await crearProducto(req as any, res as any, next);
+      
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        ok: true,
+        data: productoMock,
+        error: null,
+      });
+      
+      // Verificar auditoría
+      expect(registrarAuditoria).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'crear_producto',
+          entityId: '1',
+        })
+      );
+    });
+    
+    it('debe manejar errores de validación', async () => {
+      // Configurar solicitud inválida
+      req.body = { nombre: '' }; // Nombre vacío
+      
+      // Ejecutar
+      await crearProducto(req as any, res as any, next);
+      
+      // Verificar
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ok: false,
+          error: expect.any(String),
+        })
+      );
+    });
+  });
+});
+```
+
+### 7.3. Configuración de Pruebas
+
+```typescript
+// jest.config.js
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  testMatch: ['**/tests/**/*.test.ts'],
+  setupFilesAfterEnv: ['./tests/setup.ts'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  testTimeout: 10000, // 10 segundos
+};
+
+// tests/setup.ts
+import { PrismaClient } from '@prisma/client';
+import { clearDatabase } from './helpers/test-db';
+
+const prisma = new PrismaClient();
+
+beforeAll(async () => {
+  // Configuración antes de todas las pruebas
+  await clearDatabase(prisma);
+});
+
+afterAll(async () => {
+  // Limpieza después de todas las pruebas
+  await prisma.$disconnect();
+});
+
+// tests/helpers/test-db.ts
+export const clearDatabase = async (prisma: PrismaClient) => {
+  const tablas = ['Producto', 'Marca', 'Categoria', 'Color'];
+  
+  // Desactivar restricciones de clave foránea temporalmente
+  await prisma.$executeRaw`SET FOREIGN_KEY_CHECKS = 0;`;
+  
+  // Vaciar tablas
+  for (const tabla of tablas) {
+    try {
+      await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${tabla}\`;`);
+    } catch (error) {
+      console.error(`Error al vaciar tabla ${tabla}:`, error);
+    }
+  }
+  
+  // Reactivar restricciones
+  await prisma.$executeRaw`SET FOREIGN_KEY_CHECKS = 1;`;
+};
+```
+
+---
+
+Este documento se actualizará continuamente a medida que evolucionen las prácticas recomendadas y se identifiquen nuevas oportunidades de mejora.
 
 Este documento detalla las mejores prácticas establecidas para el desarrollo del backend de la Intranet Neóptica, basadas en nuestra experiencia y lecciones aprendidas durante el desarrollo. Seguir estas prácticas ayudará a mantener un código robusto, testeable y mantenible.
 
