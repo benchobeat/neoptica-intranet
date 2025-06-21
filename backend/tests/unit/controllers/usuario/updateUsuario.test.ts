@@ -391,7 +391,7 @@ describe('actualizarUsuario', () => {
         entityId: 'non-admin-id', // El controlador usa el ID del usuario que intenta acceder
         entityType: 'usuario',
         module: 'actualizarUsuario',
-        action: 'actualizar_usuario_fallido',
+        action: 'error_actualizar_usuario',
         message: expect.stringContaining('Acceso denegado'),
         error: expect.any(Error),
         context: expect.objectContaining({
@@ -538,7 +538,7 @@ describe('actualizarUsuario', () => {
         entityId: req.user.id,
         entityType: 'usuario',
         module: 'actualizarUsuario',
-        action: 'actualizar_usuario_fallido',
+        action: 'error_actualizar_usuario',
         message: expect.any(String),
         ip: '127.0.0.1'
       })
@@ -580,7 +580,7 @@ describe('actualizarUsuario', () => {
         entityId: req.user.id, // El controlador usa el ID del usuario actual
         entityType: 'usuario',
         module: 'actualizarUsuario',
-        action: 'actualizar_usuario_fallido',
+        action: 'error_actualizar_usuario',
         message: expect.any(String),
         error: expect.any(Error),
         context: expect.objectContaining({
@@ -622,7 +622,7 @@ describe('actualizarUsuario', () => {
         entityId: req.user.id, // El controlador usa el ID del usuario actual
         entityType: 'usuario',
         module: 'actualizarUsuario',
-        action: 'actualizar_usuario_fallido',
+        action: 'error_actualizar_usuario',
         message: expect.stringContaining('DNI ya está registrado y no puede ser modificado'),
         error: expect.any(Error),
         context: expect.objectContaining({
@@ -654,7 +654,7 @@ describe('actualizarUsuario', () => {
         entityId: mockUsuarioVendedor.id, // El controlador usa el ID del usuario a actualizar
         entityType: 'usuario',
         module: 'actualizarUsuario',
-        action: 'actualizar_usuario_fallido',
+        action: 'error_actualizar_usuario',
         message: 'Error al actualizar el usuario',
         error: error,
         context: expect.any(Object), // La estructura exacta puede variar

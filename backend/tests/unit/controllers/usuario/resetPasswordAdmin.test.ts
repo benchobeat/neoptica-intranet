@@ -211,7 +211,7 @@ describe('resetPasswordAdmin', () => {
       entityType: 'usuario',
       entityId: targetUserId,
       module: 'resetPasswordAdmin',
-      action: 'reset_password_admin_fallido',
+      action: 'error_reset_password_admin',
       message: 'Solo admin puede restablecer contraseñas',
       error: expect.any(Error),
       context: expect.objectContaining({
@@ -242,7 +242,7 @@ describe('resetPasswordAdmin', () => {
       entityType: 'usuario',
       entityId: targetUserId,
       module: 'resetPasswordAdmin',
-      action: 'reset_password_admin_fallido',
+      action: 'error_reset_password_admin',
       message: 'Usuario no encontrado',
       error: expect.any(Error),
       context: expect.objectContaining({
@@ -278,7 +278,7 @@ describe('resetPasswordAdmin', () => {
       entityType: 'usuario',
       entityId: targetUserId,
       module: 'resetPasswordAdmin',
-      action: 'reset_password_admin_fallido',
+      action: 'error_reset_password_admin',
       message: 'Validación de contraseña fallida. 400',
       error: expect.any(Error),
       context: expect.objectContaining({
@@ -311,7 +311,7 @@ describe('resetPasswordAdmin', () => {
       entityType: 'usuario',
       entityId: targetUserId,
       module: 'resetPasswordAdmin',
-      action: 'reset_password_admin_error',
+      action: 'error_reset_password_admin',
       message: 'Error al restablecer contraseña',
       error: expect.any(Error),
       context: expect.objectContaining({

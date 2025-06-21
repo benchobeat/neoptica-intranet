@@ -156,7 +156,7 @@ describe('eliminarUsuario', () => {
 
     // Verificar que se registró la auditoría exitosa
     expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'usuario_eliminado',
+      action: 'eliminar_usuario_exitoso',
       entityType: 'usuario',
       entityId: targetUserId,
       module: 'eliminarUsuario',
@@ -179,7 +179,7 @@ describe('eliminarUsuario', () => {
     
     // Verificar que se registró la auditoría exitosa
     expect(mockLogSuccess).toHaveBeenCalledWith({
-      action: 'usuario_eliminado',
+      action: 'eliminar_usuario_exitoso',
       entityType: 'usuario',
       entityId: targetUserId,
       module: 'eliminarUsuario',
@@ -217,7 +217,7 @@ describe('eliminarUsuario', () => {
 
     // Verificar que se registró el error de auditoría
     expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'eliminar_usuario_no_encontrado',
+      action: 'error_eliminar_usuario',
       entityType: 'usuario',
       entityId: nonExistentUserId,
       module: 'eliminarUsuario',
@@ -241,7 +241,7 @@ describe('eliminarUsuario', () => {
     
     // Verificar que se registró el error de auditoría
     expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'eliminar_usuario_no_encontrado',
+      action: 'error_eliminar_usuario',
       message: expect.stringContaining('Intento de eliminar usuario no encontrado')
     }));
   });
@@ -318,7 +318,7 @@ describe('eliminarUsuario', () => {
     
     // Verificar que se registró la auditoría exitosa
     expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'usuario_eliminado',
+      action: 'eliminar_usuario_exitoso',
       message: `Usuario eliminado: ${mockInactiveUser.email}`,
       details: {
         email: mockInactiveUser.email,

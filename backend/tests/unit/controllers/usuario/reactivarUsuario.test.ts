@@ -161,7 +161,7 @@ describe('reactivarUsuario', () => {
       entityType: 'usuario',
       entityId: 'inactive-user-id',
       module: 'reactivarUsuario',
-      action: 'reactivar_usuario_fallido',
+      action: 'error_reactivar_usuario',
       message: 'Intento de reactivar usuario no autorizado: inactive-user-id',
       error: expect.any(Error),
       context: {
@@ -204,7 +204,7 @@ describe('reactivarUsuario', () => {
       entityType: 'usuario',
       entityId: 'inactive-user-id',
       module: 'reactivarUsuario',
-      action: 'reactivar_usuario_fallido',
+      action: 'error_reactivar_usuario',
       message: 'Intento de reactivar usuario no encontrado: inactive-user-id',
       error: expect.any(Error),
       context: {
@@ -252,7 +252,7 @@ describe('reactivarUsuario', () => {
       entityType: 'usuario',
       entityId: 'inactive-user-id',
       module: 'reactivarUsuario',
-      action: 'reactivar_usuario_fallido',
+      action: 'error_reactivar_usuario',
       message: 'Intento de reactivar usuario ya activo: inactive-user-id',
       error: expect.any(Error),
       context: {
@@ -296,7 +296,7 @@ describe('reactivarUsuario', () => {
       entityType: 'usuario',
       entityId: 'inactive-user-id',
       module: 'reactivarUsuario',
-      action: 'reactivar_usuario_fallido',
+      action: 'error_reactivar_usuario',
       message: 'Error al reactivar usuario: inactive-user-id',
       error: testError,
       context: {

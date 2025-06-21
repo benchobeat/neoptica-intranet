@@ -110,7 +110,7 @@ describe('obtenerPerfilUsuario', () => {
       entityType: 'usuario',
       entityId: mockUser.id,
       module: 'obtenerPerfilUsuario',
-      action: 'consultar_perfil',
+      action: 'consultar_perfil_exitoso',
       message: 'Usuario consultó su perfil',
       details: {
         usuarioId: mockUser.id,
@@ -154,7 +154,7 @@ describe('obtenerPerfilUsuario', () => {
       ip: req.ip,
       entityType: 'usuario',
       module: 'obtenerPerfilUsuario',
-      action: 'obtener_perfil_usuario_fallido',
+      action: 'error_obtener_perfil_usuario',
       message: 'Usuario no encontrado',
       error: expect.any(Error),
       context: {
@@ -183,7 +183,7 @@ describe('obtenerPerfilUsuario', () => {
       ip: req.ip,
       entityType: 'usuario',
       module: 'obtenerPerfilUsuario',
-      action: 'obtener_perfil_usuario_error',
+      action: 'error_obtener_perfil_usuario',
       message: 'Error al obtener perfil',
       error: expect.any(Error),
       context: expect.objectContaining({

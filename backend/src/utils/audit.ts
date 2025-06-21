@@ -118,7 +118,6 @@ export const registrarAuditoria = async (params: AuditoriaParams): Promise<void>
     // Ensure we have a valid JSON object
     const descripcionJson: Prisma.InputJsonValue = {
       timestamp: new Date().toISOString(),
-      accion,
       ...(typeof descripcion === 'string'
         ? { mensaje: descripcion, ...(datosAdicionales || {}) }
         : { ...(descripcion as Record<string, unknown>), ...(datosAdicionales || {}) }),

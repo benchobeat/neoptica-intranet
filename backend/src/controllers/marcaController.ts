@@ -126,15 +126,54 @@ export const crearMarca = async (req: Request, res: Response) => {
     });
 
     if (marcaExistente) {
+      // Si la marca existe pero está inactiva, la reactivamos y actualizamos
+      if (!marcaExistente.activo) {
+        const marcaActualizada = await prisma.marca.update({
+          where: { id: marcaExistente.id },
+          data: {
+            nombre: nombreLimpio, // Usamos el nombre limpio (con formato correcto)
+            descripcion: descripcion?.trim() || null,
+            activo: true,
+            anuladoEn: null, // Limpiamos la fecha de anulación
+            anuladoPor: null, // Limpiamos el usuario que anuló
+            modificadoPor: userId || null,
+            modificadoEn: new Date(),
+          },
+        });
+
+        // Registrar la reactivación exitosa
+        await logSuccess({
+          userId,
+          ip: req.ip,
+          entityType: 'marca',
+          module: 'crearMarca',
+          action: 'reactivar_marca_exitosa',
+          message: 'Marca reactivada exitosamente',
+          entityId: marcaActualizada.id,
+          details: {
+            nombre: marcaActualizada.nombre,
+            descripcion: marcaActualizada.descripcion,
+            reactivada: true
+          },
+        });
+
+        return res.status(200).json({
+          ok: true,
+          data: marcaActualizada,
+          error: null,
+        });
+      }
+      
+      // Si la marca existe y está activa, devolvemos error
       logError({
         userId,
         ip: req.ip,
         entityType: 'marca',
-        entityId: null,
+        entityId: marcaExistente.id,
         module: 'crearMarca',
         action: 'error_crear_marca',
         message: 'Error al crear la marca',
-        error: 'Ya existe una marca con ese nombre. 409',
+        error: 'Ya existe una marca activa con ese nombre. 409',
         context: {
           nombre,
           descripcion
@@ -187,7 +226,7 @@ export const crearMarca = async (req: Request, res: Response) => {
       ip: req.ip,
       entityType: 'marca',
       module: 'crearMarca',
-      action: 'crear_marca_fallido',
+      action: 'error_crear_marca',
       message: 'Error al crear la marca',
       error,
       context: {
@@ -301,7 +340,7 @@ export const listarMarcasPaginadas = async (req: Request, res: Response) => {
       ip: req.ip,
       entityType: 'marca',
       module: 'listarMarcasPaginadas',
-      action: 'listar_marcas_paginadas',
+      action: 'error_listar_marcas_paginadas',
       message: 'Error al obtener el listado paginado de marcas',
       error,
       context: {
@@ -368,7 +407,7 @@ export const listarMarcas = async (req: Request, res: Response) => {
       ip: req.ip,
       entityType: 'marca',
       module: 'listarMarcas',
-      action: 'listar_marcas',
+      action: 'listar_marcas_exitoso',
       message: 'Listado de marcas obtenido exitosamente',
       details: {
         totalRegistros: marcas.length,
@@ -819,7 +858,7 @@ export const actualizarMarca = async (req: Request, res: Response) => {
       entityType: 'marca',
       entityId: id,
       module: 'actualizarMarca',
-      action: 'actualizar_marca',
+      action: 'actualizar_marca_exitoso',
       message: 'Marca actualizada exitosamente',
       details: {
         id: marcaActualizada.id,
@@ -1018,7 +1057,7 @@ export const eliminarMarca = async (req: Request, res: Response) => {
       entityType: 'marca',
       entityId: id,
       module: 'eliminarMarca',
-      action: 'eliminar_marca',
+      action: 'eliminar_marca_exitoso',
       message: 'Marca eliminada exitosamente',
       details: {
         id,

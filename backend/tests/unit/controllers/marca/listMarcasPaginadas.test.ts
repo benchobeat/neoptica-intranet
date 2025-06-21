@@ -294,7 +294,7 @@ describe('Controlador de Marcas - Listar Marcas Paginadas', () => {
       ip: mockRequest.ip,
       entityType: 'marca',
       module: 'listarMarcasPaginadas',
-      action: 'listar_marcas_paginadas',
+      action: 'error_listar_marcas_paginadas',
       message: 'Error al obtener el listado paginado de marcas',
       error: testError,
       context: expect.objectContaining({

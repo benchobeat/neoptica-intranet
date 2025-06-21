@@ -18,7 +18,8 @@ const prisma = new PrismaClient();
  */
 export const crearSucursal = async (req: Request, res: Response) => {
   try {
-    const { nombre, direccion, latitud, longitud, telefono, email, activo } = req.body;
+    const { nombre, direccion, latitud, longitud, telefono, email } = req.body;
+    // El campo activo ya no se acepta del cliente
     const userId = (req as any).usuario?.id || (req as any).user?.id;
 
     // Validación estricta del nombre
@@ -38,7 +39,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          activo,
+          activo: true, // Siempre activo en la creación
         },
       });
       return res.status(400).json({
@@ -66,7 +67,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          activo,
+          activo: true, // Siempre activo en la creación
         },
       });
       return res.status(400).json({
@@ -93,7 +94,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          activo,
+          activo: true, // Siempre activo en la creación
         },
       });
       return res.status(400).json({
@@ -121,7 +122,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
             longitud,
             telefono,
             email,
-            activo,
+            activo: true, // Siempre activo en la creación
           },
         });
         return res.status(400).json({
@@ -152,7 +153,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          activo,
+          activo: true, // Siempre activo en la creación
         },
       });
       return res.status(400).json({
@@ -178,7 +179,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          activo,
+          activo: true, // Siempre activo en la creación
         },
       });
       return res.status(400).json({
@@ -188,18 +189,19 @@ export const crearSucursal = async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar si ya existe una sucursal con el mismo nombre
-    const sucursalExistente = await prisma.sucursal.findFirst({
+    // Verificar si ya existe una sucursal con el mismo nombre (activa o inactiva)
+    // Primero buscamos solo por nombre sin importar si está anulada
+    const sucursalMismoNombre = await prisma.sucursal.findFirst({
       where: {
         nombre: {
           equals: nombreLimpio,
           mode: 'insensitive', // Búsqueda case-insensitive
         },
-        anuladoEn: null, // Solo sucursales no anuladas
       },
     });
 
-    if (sucursalExistente) {
+    // Caso 1: Existe una sucursal con el mismo nombre y está activa
+    if (sucursalMismoNombre && sucursalMismoNombre.activo === true && sucursalMismoNombre.anuladoEn === null) {
       logError({
         userId,
         ip: req.ip,
@@ -207,7 +209,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
         module: 'crearSucursal',
         action: 'error_crear_sucursal',
         message: 'Error al crear la sucursal',
-        error: 'Ya existe una sucursal con ese nombre.',
+        error: 'Ya existe una sucursal activa con ese nombre.',
         context: {
           nombre,
           direccion,
@@ -215,15 +217,96 @@ export const crearSucursal = async (req: Request, res: Response) => {
           longitud,
           telefono,
           email,
-          activo,
-          error: 'Ya existe una sucursal con ese nombre.',
+          activo: true, // Siempre activo en la creación
+          error: 'Ya existe una sucursal activa con ese nombre.',
         },
       });
       return res.status(409).json({
         ok: false,
         data: null,
-        error: 'Ya existe una sucursal con ese nombre.',
+        error: 'Ya existe una sucursal activa con ese nombre.',
       });
+    }
+    
+    // Caso 2: Existe una sucursal con el mismo nombre pero está inactiva (reactivar)
+    if (sucursalMismoNombre && (sucursalMismoNombre.activo === false || sucursalMismoNombre.anuladoEn !== null)) {
+      try {
+        // Reactivar la sucursal y actualizar sus datos
+        const sucursalReactivada = await prisma.sucursal.update({
+          where: { id: sucursalMismoNombre.id },
+          data: {
+            activo: true,
+            anuladoEn: null,
+            anuladoPor: null,
+            direccion: direccion || sucursalMismoNombre.direccion,
+            latitud: latitud !== undefined ? latitudParsed : sucursalMismoNombre.latitud,
+            longitud: longitud !== undefined ? longitudParsed : sucursalMismoNombre.longitud,
+            telefono: telefono || sucursalMismoNombre.telefono,
+            email: email || sucursalMismoNombre.email,
+            modificadoEn: new Date(),
+            modificadoPor: userId
+          },
+        });
+        
+        // Registrar éxito de reactivación
+        await logSuccess({
+          userId,
+          ip: req.ip,
+          entityType: 'sucursal',
+          entityId: sucursalReactivada.id,
+          module: 'crearSucursal',
+          action: 'reactivar_sucursal_exitoso',
+          message: 'Sucursal reactivada exitosamente',
+          details: {
+            id: sucursalReactivada.id,
+            nombre: sucursalReactivada.nombre,
+            estadoAnterior: {
+              activo: false,
+              modificadoEn: sucursalMismoNombre.modificadoEn,
+              anuladoEn: sucursalMismoNombre.anuladoEn
+            },
+            estadoNuevo: {
+              activo: true,
+              modificadoEn: sucursalReactivada.modificadoEn,
+              anuladoEn: null
+            }
+          }
+        });
+        
+        return res.status(200).json({
+          ok: true,
+          data: {
+            id: sucursalReactivada.id,
+            nombre: sucursalReactivada.nombre,
+            mensaje: 'Sucursal reactivada exitosamente'
+          },
+          error: null
+        });
+      } catch (error: any) {
+        logError({
+          userId,
+          ip: req.ip,
+          entityType: 'sucursal',
+          entityId: sucursalMismoNombre.id,
+          module: 'crearSucursal',
+          action: 'error_reactivar_sucursal',
+          message: 'Error al reactivar la sucursal',
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          context: {
+            nombre,
+            direccion,
+            latitud,
+            longitud,
+            telefono,
+            email
+          },
+        });
+        return res.status(500).json({
+          ok: false,
+          data: null,
+          error: 'Error al reactivar la sucursal.'
+        });
+      }
     }
 
     // Verificar si ya existe una sucursal con el mismo email (si se proporciona)
@@ -254,7 +337,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
             longitud,
             telefono,
             email,
-            activo,
+            activo: true, // Siempre activo en la creación
           },
         });
         return res.status(409).json({
@@ -274,7 +357,7 @@ export const crearSucursal = async (req: Request, res: Response) => {
         longitud: longitudParsed,
         telefono: telefono?.trim() || null,
         email: email?.trim().toLowerCase() || null,
-        activo: activo !== undefined ? activo : true,
+        activo: true, // Siempre se crea activa
         creadoPor: userId || null,
         creadoEn: new Date(),
       },
@@ -706,7 +789,29 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
   const userId = (req as any).usuario?.id || (req as any).user?.id;
   const { id } = req.params;
   try {
-    const { nombre, direccion, latitud, longitud, telefono, email, activo } = req.body;
+    const { nombre, direccion, latitud, longitud, telefono, email } = req.body;
+    
+    // Verificar que no se esté intentando actualizar el campo activo
+    if ('activo' in req.body) {
+      logError({
+        userId,
+        ip: req.ip,
+        entityType: 'sucursal',
+        entityId: id,
+        module: 'actualizarSucursal',
+        action: 'error_actualizar_sucursal',
+        message: 'Error al actualizar la sucursal',
+        error: 'No está permitido modificar el estado activo mediante esta función. 400',
+        context: {
+          idSolicitado: id,
+        },
+      });
+      return res.status(400).json({
+        ok: false,
+        data: null,
+        error: 'No está permitido modificar el estado activo mediante esta función.',
+      });
+    }
 
     // Validación avanzada del ID - verifica formato UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -786,7 +891,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             telefono,
             direccion,
             email,
-            activo,
+            activo: true, // Siempre activo en la creación
             idSolicitado: id,
           },
         });
@@ -817,7 +922,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             telefono,
             direccion,
             email,
-            activo,
+            activo: true, // Siempre activo en la creación
             idSolicitado: id,
           },
         });
@@ -859,7 +964,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
             telefono,
             direccion,
             email,
-            activo,
+            activo: true, // Siempre activo en la creación
             idSolicitado: id,
           },
         });
@@ -898,7 +1003,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              activo,
+              activo: true, // Siempre activo en la creación
               idSolicitado: id,
             },
           });
@@ -934,7 +1039,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              activo,
+              activo: true, // Siempre activo en la creación
               idSolicitado: id,
             },
           });
@@ -976,7 +1081,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              activo,
+              activo: true, // Siempre activo en la creación
               idSolicitado: id,
             },
           });
@@ -1014,7 +1119,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              activo,
+              activo: true, // Siempre activo en la creación
               idSolicitado: id,
             },
           });
@@ -1050,7 +1155,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
               telefono,
               direccion,
               email,
-              activo,
+              activo: true, // Siempre activo en la creación
               idSolicitado: id,
             },
           });
@@ -1066,10 +1171,8 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
       }
     }
 
-    // Procesar estado si se proporcionó
-    if (activo !== undefined) {
-      datosActualizados.activo = activo;
-    }
+    // El estado activo ya no se puede modificar desde aquí
+    // Se ha eliminado la validación para cambiar el campo activo
 
     // Si no hay datos para actualizar, retornar error
     if (Object.keys(datosActualizados).length === 0) {
@@ -1089,7 +1192,7 @@ export const actualizarSucursal = async (req: Request, res: Response) => {
           telefono,
           direccion,
           email,
-          activo,
+          activo: true, // Siempre activo en la creación
           idSolicitado: id,
         },
       });
@@ -1325,15 +1428,60 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
       });
     }
 
-    // Check for associated appointments that would prevent deletion
+    // Verificar todas las relaciones que previenen eliminación de la sucursal
+    
+    // 1. Verificar citas asociadas
     const citasAsociadas = await prisma.cita.count({
       where: {
         sucursalId: id,
-        anuladoEn: null, // Only count non-deleted appointments
+        anuladoEn: null,
       },
     });
 
-    if (citasAsociadas > 0) {
+    // 2. Verificar descansos de empleados asociados
+    const descansosEmpleadoAsociados = await prisma.descansoEmpleado.count({
+      where: {
+        sucursalId: id,
+        anuladoEn: null,
+      },
+    });
+
+    // 3. Verificar inventarios asociados
+    const inventariosAsociados = await prisma.inventario.count({
+      where: {
+        sucursalId: id,
+        anuladoEn: null,
+      },
+    });
+
+    // 4. Verificar movimientos contables asociados
+    const movimientosContablesAsociados = await prisma.movimientoContable.count({
+      where: {
+        sucursalId: id,
+        anuladoEn: null,
+      },
+    });
+
+    // 5. Verificar pedidos asociados
+    const pedidosAsociados = await prisma.pedido.count({
+      where: {
+        sucursalId: id,
+        anuladoEn: null,
+      },
+    });
+
+    // Estructurar las relaciones asociadas para el mensaje de error
+    const relacionesAsociadas = [];
+    if (citasAsociadas > 0) relacionesAsociadas.push(`${citasAsociadas} cita(s)`);
+    if (descansosEmpleadoAsociados > 0) relacionesAsociadas.push(`${descansosEmpleadoAsociados} descanso(s) de empleado`);
+    if (inventariosAsociados > 0) relacionesAsociadas.push(`${inventariosAsociados} inventario(s)`);
+    if (movimientosContablesAsociados > 0) relacionesAsociadas.push(`${movimientosContablesAsociados} movimiento(s) contable(s)`);
+    if (pedidosAsociados > 0) relacionesAsociadas.push(`${pedidosAsociados} pedido(s)`);
+
+    // Si hay relaciones que previenen la eliminación, retornar error
+    if (relacionesAsociadas.length > 0) {
+      const mensajeError = `No se puede eliminar la sucursal porque tiene asociado(s): ${relacionesAsociadas.join(', ')}.`;
+      
       logError({
         userId,
         ip: req.ip,
@@ -1342,16 +1490,21 @@ export const eliminarSucursal = async (req: Request, res: Response) => {
         module: 'eliminarSucursal',
         action: 'error_eliminar_sucursal',
         message: 'Error al eliminar la sucursal',
-        error: 'No se puede eliminar la sucursal porque tiene citas asociadas. 409',
+        error: `${mensajeError} 409`,
         context: {
           idSucursal: id,
           citasAsociadas,
+          descansosEmpleadoAsociados,
+          inventariosAsociados,
+          movimientosContablesAsociados,
+          pedidosAsociados,
         },
       });
+
       return res.status(409).json({
         ok: false,
         data: null,
-        error: `No se puede eliminar la sucursal porque tiene ${citasAsociadas} cita(s) asociada(s).`,
+        error: mensajeError,
       });
     }
 

@@ -121,6 +121,13 @@ export const crearCategoria = async (req: Request, res: Response) => {
       const categoriaReactivada = await prisma.categoria.update({
         where: { id: categoriaExistente.id },
         data: {
+          descripcion: descripcion?.trim() || null,
+          tipoCategoria: tipoCategoria?.trim() || null,
+          iconoUrl: iconoUrl?.trim() || null,
+          orden: orden !== undefined ? Number(orden) : null, // Ensure it's a number
+          padreId: padreId || null,
+          erpId: erpId || null,
+          erpTipo: erpTipo || null,
           activo: true,
           modificadoPor: userId || null,
           modificadoEn: new Date(),

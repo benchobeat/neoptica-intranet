@@ -123,7 +123,31 @@ router.get('/', authenticateJWT, listarSucursales);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/SucursalInput'
+ *             type: object
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *                 description: Nombre de la sucursal (requerido)
+ *               direccion:
+ *                 type: string
+ *                 description: Dirección física de la sucursal
+ *               telefono:
+ *                 type: string
+ *                 description: Teléfono de la sucursal (debe tener 10 dígitos)
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email de contacto de la sucursal
+ *               latitud:
+ *                 type: number
+ *                 format: float
+ *                 description: Coordenada geográfica - latitud (entre -90 y 90)
+ *               longitud:
+ *                 type: number
+ *                 format: float
+ *                 description: Coordenada geográfica - longitud (entre -180 y 180)
+ *             required:
+ *               - nombre
  *     responses:
  *       201:
  *         description: Sucursal creada exitosamente
@@ -205,7 +229,29 @@ router.get('/:id', authenticateJWT, obtenerSucursalPorId);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/SucursalInput'
+ *             type: object
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *                 description: Nombre de la sucursal
+ *               direccion:
+ *                 type: string
+ *                 description: Dirección física de la sucursal
+ *               telefono:
+ *                 type: string
+ *                 description: Teléfono de la sucursal (debe tener 10 dígitos)
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email de contacto de la sucursal
+ *               latitud:
+ *                 type: number
+ *                 format: float
+ *                 description: Coordenada geográfica - latitud (entre -90 y 90)
+ *               longitud:
+ *                 type: number
+ *                 format: float
+ *                 description: Coordenada geográfica - longitud (entre -180 y 180)
  *     responses:
  *       200:
  *         description: Sucursal actualizada exitosamente
@@ -224,7 +270,7 @@ router.get('/:id', authenticateJWT, obtenerSucursalPorId);
  *                   nullable: true
  *                   example: null
  *       400:
- *         description: Datos inválidos o ID inválido
+ *         description: Datos inválidos, ID inválido o intento de modificar el campo 'activo'
  *       401:
  *         description: No autorizado
  *       404:
@@ -277,7 +323,7 @@ router.put('/:id', authenticateJWT, requireRole('admin'), actualizarSucursal);
  *       404:
  *         description: Sucursal no encontrada
  *       409:
- *         description: No se puede eliminar (tiene elementos asociados)
+ *         description: No se puede eliminar (tiene citas, descansos de empleados, inventarios, movimientos contables o pedidos asociados)
  *       500:
  *         description: Error interno del servidor
  */

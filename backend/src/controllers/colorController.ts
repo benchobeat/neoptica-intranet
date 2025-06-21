@@ -91,25 +91,61 @@ export const crearColor = async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar si ya existe un color con el mismo nombre (case-insensitive)
+    // Verificar si ya existe un color con el mismo nombre
     const colorExistente = await prisma.color.findFirst({
       where: {
-        nombre: {
-          equals: nombreLimpio,
-          mode: 'insensitive', // Búsqueda case-insensitive
-        },
-        anuladoEn: null, // Solo colores no anulados
+        nombre: nombre,
+        anuladoEn: null,
       },
     });
 
     if (colorExistente) {
+      // Si existe un color inactivo con el mismo nombre, lo reactivamos
+      if (!colorExistente.activo) {
+        const colorActualizado = await prisma.color.update({
+          where: { id: colorExistente.id },
+          data: {
+            descripcion,
+            codigoHex,
+            activo: true,
+            modificadoPor: userId,
+            modificadoEn: new Date(),
+          },
+        });
+
+        await logSuccess({
+          userId,
+          ip: req.ip,
+          entityType: 'color',
+          module: 'crearColor',
+          action: 'reactivar_color_exitoso',
+          message: 'Color reactivado exitosamente',
+          details: {
+            colorId: colorActualizado.id,
+            nombre: colorActualizado.nombre,
+            cambios: {
+              activo: { anterior: false, nuevo: true },
+              descripcion: { anterior: colorExistente.descripcion, nuevo: descripcion },
+              codigoHex: { anterior: colorExistente.codigoHex, nuevo: codigoHex },
+            },
+          },
+        });
+
+        return res.status(200).json({
+          ok: true,
+          data: colorActualizado,
+          message: 'Color reactivado exitosamente',
+        });
+      }
+
+      // Si el color existe y está activo, devolvemos error
       await logError({
         userId,
         ip: req.ip,
         entityType: 'color',
         module: 'crearColor',
         action: 'error_crear_color',
-        message: 'Se presento un error durante la creacion del color',
+        message: 'Ya existe un color activo con ese nombre',
         error: new Error('Ya existe un color con ese nombre. 409'),
         context: {
           nombre,
@@ -378,7 +414,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
         ip: req.ip,
         entityType: 'color',
         module: 'listarColoresPaginados',
-        action: 'validacion_paginacion_fallido',
+        action: 'error_validacion_paginacion',
         message: 'Error de validación en parámetros de paginación',
         error: new Error('Error de validación en parámetros de paginación. 500'),
         context: {
@@ -408,7 +444,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
         ip: req.ip,
         entityType: 'color',
         module: 'listarColoresPaginados',
-        action: 'validacion_paginacion_fallido',
+        action: 'error_validacion_paginacion',
         message: 'Error de validación en parámetros de paginación',
         error: new Error('Error de validación en parámetros de paginación. 500'),
         context: {
@@ -506,7 +542,7 @@ export const listarColoresPaginados = async (req: Request, res: Response) => {
       ip: req.ip,
       entityType: 'color',
       module: 'listarColoresPaginados',
-      action: 'listar_colores_paginados_fallido',
+      action: 'error_listar_colores_paginados',
       message: 'Error al listar colores paginados',
       error: new Error(errorMessage + ' - Error al listar colores paginados. 500'),
       context: {

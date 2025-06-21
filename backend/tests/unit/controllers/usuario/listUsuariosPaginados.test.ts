@@ -228,7 +228,7 @@ describe('listarUsuariosPaginados', () => {
       ip: '127.0.0.1',
       entityType: 'usuario',
       module: 'listarUsuariosPaginados',
-      action: 'listar_usuarios_paginados_fallido',
+      action: 'error_listar_usuarios_paginados',
       message: 'Error al listar usuarios paginados',
       error: dbError,
       context: {

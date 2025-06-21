@@ -1450,7 +1450,7 @@ export const obtenerProductoPorId = async (
       entityType: 'producto',
       entityId: id,
       module: 'productoController',
-      action: 'obtener_producto',
+      action: 'obtener_producto_exitoso',
       message: `Consulta exitosa del producto: ${producto.nombre}`,
       details: {
         productoId: id,

@@ -57,7 +57,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
           ip: req.ip,
           entityType: 'usuario',
           module: 'autoregistroCliente',
-          action: 'autoregistro_cliente_fallido',
+          action: 'error_autoregistro_cliente',
           message: 'Error al procesar el registro. Por favor, intente nuevamente.',
           error: new Error('Error de validación. 400' + errorMessage.toString()),
           context: {
@@ -88,7 +88,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
           ip: req.ip,
           entityType: 'usuario',
           module: 'autoregistroCliente',
-          action: 'autoregistro_cliente_fallido',
+          action: 'error_autoregistro_cliente',
           message: 'Error al procesar el registro. Por favor, intente nuevamente.',
           error: new Error(
             'Error de validación. 400' +
@@ -142,7 +142,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
         ip: req.ip,
         entityType: 'usuario',
         module: 'autoregistroCliente',
-        action: 'autoregistro_cliente_fallido',
+        action: 'error_autoregistro_cliente',
         message: 'Error al procesar el registro. Por favor, intente nuevamente.',
         error: new Error('Ya existe un usuario con este correo electrónico. 409'),
         context: {
@@ -164,7 +164,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
         ip: req.ip,
         entityType: 'usuario',
         module: 'autoregistroCliente',
-        action: 'autoregistro_cliente_fallido',
+        action: 'error_autoregistro_cliente',
         message: 'Error al procesar el registro. Por favor, intente nuevamente.',
         error: new Error('Ya existe un usuario con este número de cédula. 409'),
         context: {
@@ -258,7 +258,7 @@ export async function autoregistroCliente(req: Request, res: Response): Promise<
       ip: req.ip,
       entityType: 'usuario',
       module: 'autoregistroCliente',
-      action: 'autoregistro_cliente_fallido',
+      action: 'error_autoregistro_cliente',
       message: 'Error al procesar el registro. Por favor, intente nuevamente.',
       error: error instanceof Error ? error : new Error(error as string),
       context: {

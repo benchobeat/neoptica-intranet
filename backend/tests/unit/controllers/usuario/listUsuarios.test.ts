@@ -191,7 +191,7 @@ describe('listarUsuarios', () => {
       ip: '127.0.0.1',
       entityType: 'usuario',
       module: 'listarUsuarios',
-      action: 'listar_usuarios_fallido',
+      action: 'error_listar_usuarios',
       message: 'Error al listar usuarios',
       error: dbError,
       context: {

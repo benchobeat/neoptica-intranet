@@ -11,6 +11,19 @@ export const mockMarca = {
   anuladoPor: null,
 };
 
+export const mockMarcaInactiva = {
+  id: '2',
+  nombre: 'Marca Inactiva',
+  descripcion: 'Descripción de marca inactiva',
+  activo: false,
+  anuladoEn: new Date(),
+  anuladoPor: 'user-id',
+  creadoPor: 'user-id',
+  creadoEn: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
+  modificadoPor: 'user-id',
+  modificadoEn: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
+};
+
 export const createMarcaData = {
   nombre: 'Nueva Marca',
   descripcion: 'Descripción de prueba',

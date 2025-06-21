@@ -49,7 +49,7 @@ export async function listarUsuarios(req: Request, res: Response): Promise<void>
       ip: req.ip,
       entityType: 'usuario',
       module: 'listarUsuarios',
-      action: 'listar_usuarios_fallido',
+      action: 'error_listar_usuarios',
       message: `Error al listar usuarios`,
       error: error instanceof Error ? error : new Error(error),
       context: {
@@ -145,7 +145,7 @@ export const listarUsuariosPaginados = async (req: Request, res: Response) => {
       ip: req.ip,
       entityType: 'usuario',
       module: 'listarUsuariosPaginados',
-      action: 'listar_usuarios_paginados_fallido',
+      action: 'error_listar_usuarios_paginados',
       message: 'Error al listar usuarios paginados',
       error: error instanceof Error ? error : new Error(errorMessage),
       context: {
@@ -182,7 +182,7 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
         ip: req.ip,
         entityType: 'usuario',
         module: 'obtenerUsuario',
-        action: 'obtener_usuario_fallido',
+        action: 'error_obtener_usuario',
         message: 'Usuario no encontrado',
         error: new Error('Usuario no encontrado. 404'),
         context: {
@@ -211,7 +211,7 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
       entityType: 'usuario',
       entityId: usuario.id,
       module: 'obtenerUsuario',
-      action: 'obtener_usuario',
+      action: 'obtener_usuario_exitoso',
       message: `Se consultó el usuario: ${usuario.email}`,
       details: {
         usuarioId: usuario.id,
@@ -226,7 +226,7 @@ export async function obtenerUsuario(req: Request, res: Response): Promise<void>
       ip: req.ip,
       entityType: 'usuario',
       module: 'obtenerUsuario',
-      action: 'obtener_usuario_fallido',
+      action: 'error_obtener_usuario',
       message: 'Error al obtener usuario',
       error: _error instanceof Error ? _error : new Error(_error),
       context: {
@@ -257,7 +257,7 @@ export async function reactivarUsuario(req: Request, res: Response): Promise<voi
       entityType: 'usuario',
       entityId: id,
       module: 'reactivarUsuario',
-      action: 'reactivar_usuario_fallido',
+      action: 'error_reactivar_usuario',
       message: `Intento de reactivar usuario no autorizado: ${id}`,
       error: new Error('Acceso denegado: solo administradores pueden reactivar usuarios. 403'),
       context: {
@@ -288,7 +288,7 @@ export async function reactivarUsuario(req: Request, res: Response): Promise<voi
         entityType: 'usuario',
         entityId: id,
         module: 'reactivarUsuario',
-        action: 'reactivar_usuario_fallido',
+        action: 'error_reactivar_usuario',
         message: `Intento de reactivar usuario no encontrado: ${id}`,
         error: new Error('Usuario no encontrado. 404'),
         context: {
@@ -308,7 +308,7 @@ export async function reactivarUsuario(req: Request, res: Response): Promise<voi
         entityType: 'usuario',
         entityId: id,
         module: 'reactivarUsuario',
-        action: 'reactivar_usuario_fallido',
+        action: 'error_reactivar_usuario',
         message: `Intento de reactivar usuario ya activo: ${id}`,
         error: new Error('El usuario ya está activo. 400'),
         context: {
@@ -358,7 +358,7 @@ export async function reactivarUsuario(req: Request, res: Response): Promise<voi
       entityType: 'usuario',
       entityId: id,
       module: 'reactivarUsuario',
-      action: 'reactivar_usuario_fallido',
+      action: 'error_reactivar_usuario',
       message: `Error al reactivar usuario: ${id}`,
       error: error instanceof Error ? error : new Error(errorMessage),
       context: {
@@ -389,7 +389,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       ip: req.ip,
       entityType: 'usuario',
       module: 'crearUsuario',
-      action: 'crear_usuario_fallido',
+      action: 'error_crear_usuario',
       message: mensajeError,
       error: new Error('Datos de entrada inválidos'),
       context: {
@@ -412,7 +412,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       ip: req.ip,
       entityType: 'usuario',
       module: 'crearUsuario',
-      action: 'crear_usuario_fallido',
+      action: 'error_crear_usuario',
       message: mensajeError,
       error: new Error('Formato de teléfono inválido'),
       context: {
@@ -431,7 +431,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       ip: req.ip,
       entityType: 'usuario',
       module: 'crearUsuario',
-      action: 'crear_usuario_fallido',
+      action: 'error_crear_usuario',
       message: mensajeError,
       error: new Error('Formato de email inválido'),
       context: {
@@ -450,7 +450,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       ip: req.ip,
       entityType: 'usuario',
       module: 'crearUsuario',
-      action: 'crear_usuario_fallido',
+      action: 'error_crear_usuario',
       message: mensajeError,
       error: new Error('Contraseña no cumple con los requisitos de seguridad'),
       context: {
@@ -476,7 +476,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       ip: req.ip,
       entityType: 'usuario',
       module: 'crearUsuario',
-      action: 'crear_usuario_fallido',
+      action: 'error_crear_usuario',
       message: mensajeError,
       error: new Error('Permisos insuficientes'),
       context: {
@@ -498,7 +498,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
         ip: req.ip,
         entityType: 'usuario',
         module: 'crearUsuario',
-        action: 'crear_usuario_fallido',
+        action: 'error_crear_usuario',
         message: mensajeError,
         error: new Error('Email duplicado'),
         context: {
@@ -526,7 +526,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
         ip: req.ip,
         entityType: 'usuario',
         module: 'crearUsuario',
-        action: 'crear_usuario_fallido',
+        action: 'error_crear_usuario',
         message: mensajeError,
         error: new Error('Roles inválidos'),
         context: {
@@ -596,7 +596,7 @@ export async function crearUsuario(req: Request, res: Response): Promise<void> {
       ip: req.ip,
       entityType: 'usuario',
       module: 'crearUsuario',
-      action: 'crear_usuario_fallido',
+      action: 'error_crear_usuario',
       message: 'Error al crear el usuario',
       error: error instanceof Error ? error : new Error(errorMessage),
       context: {
@@ -633,7 +633,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
       entityType: 'usuario',
       entityId: usuarioId,
       module: 'actualizarUsuario',
-      action: 'actualizar_usuario_fallido',
+      action: 'error_actualizar_usuario',
       message: 'Acceso denegado: solo admin puede modificar usuarios',
       error: new Error('Permisos insuficientes'),
       context: {
@@ -661,7 +661,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
         entityType: 'usuario',
         entityId: usuarioId,
         module: 'actualizarUsuario',
-        action: 'actualizar_usuario_fallido',
+        action: 'error_actualizar_usuario',
         message: mensajeError,
         error: new Error('Usuario no encontrado. 404'),
         context: {
@@ -681,7 +681,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
         entityType: 'usuario',
         entityId: usuarioId,
         module: 'actualizarUsuario',
-        action: 'actualizar_usuario_fallido',
+        action: 'error_actualizar_usuario',
         message: mensajeError,
         error: new Error('Email inválido. 400'),
         context: {
@@ -703,7 +703,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
         entityType: 'usuario',
         entityId: usuarioId,
         module: 'actualizarUsuario',
-        action: 'actualizar_usuario_fallido',
+        action: 'error_actualizar_usuario',
         message: mensajeError,
         error: new Error('Teléfono inválido'),
         context: {
@@ -727,7 +727,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
           entityType: 'usuario',
           entityId: usuarioId,
           module: 'actualizarUsuario',
-          action: 'actualizar_usuario_fallido',
+          action: 'error_actualizar_usuario',
           message: mensajeError,
           error: new Error('DNI ya registrado'),
           context: {
@@ -749,7 +749,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
             entityType: 'usuario',
             entityId: usuarioId,
             module: 'actualizarUsuario',
-            action: 'actualizar_usuario_fallido',
+            action: 'error_actualizar_usuario',
             message: mensajeError,
             error: new Error('DNI duplicado'),
             context: {
@@ -776,7 +776,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
           entityType: 'usuario',
           entityId: usuarioId,
           module: 'actualizarUsuario',
-          action: 'actualizar_usuario_fallido',
+          action: 'error_actualizar_usuario',
           message: mensajeError,
           error: new Error('Email duplicado'),
           context: {
@@ -819,7 +819,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
           entityType: 'usuario',
           entityId: usuarioId,
           module: 'actualizarUsuario',
-          action: 'actualizar_usuario_fallido',
+          action: 'error_actualizar_usuario',
           message: 'Acceso denegado: solo admin puede modificar roles de usuario',
           error: new Error('Permisos insuficientes'),
           context: {
@@ -839,7 +839,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
           entityType: 'usuario',
           entityId: usuarioId,
           module: 'actualizarUsuario',
-          action: 'actualizar_usuario_fallido',
+          action: 'error_actualizar_usuario',
           message: mensajeError,
           error: new Error('Roles inválidos'),
           context: {
@@ -861,7 +861,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
           entityType: 'usuario',
           entityId: usuarioId,
           module: 'actualizarUsuario',
-          action: 'actualizar_usuario_fallido',
+          action: 'error_actualizar_usuario',
           message: mensajeError,
           error: new Error('Roles inválidos'),
           context: {
@@ -955,7 +955,7 @@ export async function actualizarUsuario(req: Request, res: Response): Promise<vo
       entityType: 'usuario',
       entityId: id,
       module: 'actualizarUsuario',
-      action: 'actualizar_usuario_fallido',
+      action: 'error_actualizar_usuario',
       message: 'Error al actualizar el usuario',
       error: err instanceof Error ? err : new Error(errorMessage),
       context: {
@@ -1012,7 +1012,7 @@ export async function eliminarUsuario(req: Request, res: Response): Promise<void
         entityType: 'usuario',
         entityId: id,
         module: 'eliminarUsuario',
-        action: 'eliminar_usuario_no_encontrado',
+        action: 'error_eliminar_usuario',
         message: `Intento de eliminar usuario no encontrado: ${id}`,
         error: new Error('Usuario no encontrado'),
         context: {
@@ -1041,7 +1041,7 @@ export async function eliminarUsuario(req: Request, res: Response): Promise<void
       entityType: 'usuario',
       entityId: id,
       module: 'eliminarUsuario',
-      action: 'usuario_eliminado',
+      action: 'eliminar_usuario_exitoso',
       message: `Usuario eliminado: ${usuarioAEliminar.email}`,
       details: {
         email: usuarioAEliminar.email,
@@ -1093,7 +1093,7 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
       entityType: 'usuario',
       entityId: id,
       module: 'resetPasswordAdmin',
-      action: 'reset_password_admin_fallido',
+      action: 'error_reset_password_admin',
       message: errorMsg,
       error: new Error('Permisos insuficientes. 403'),
       context: {
@@ -1115,7 +1115,7 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
       entityType: 'usuario',
       entityId: id,
       module: 'resetPasswordAdmin',
-      action: 'reset_password_admin_fallido',
+      action: 'error_reset_password_admin',
       message: errorMsg,
       error: new Error('Datos de solicitud inválidos. 400'),
       context: {
@@ -1136,7 +1136,7 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
       entityType: 'usuario',
       entityId: id,
       module: 'resetPasswordAdmin',
-      action: 'reset_password_admin_fallido',
+      action: 'error_reset_password_admin',
       message: 'Validación de contraseña fallida. 400',
       error: new Error(errorMsg),
       context: {
@@ -1159,7 +1159,7 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
         entityType: 'usuario',
         entityId: id,
         module: 'resetPasswordAdmin',
-        action: 'reset_password_admin_fallido',
+        action: 'error_reset_password_admin',
         message: errorMsg,
         error: new Error('Usuario no encontrado. 404'),
         context: {
@@ -1205,7 +1205,7 @@ export async function resetPasswordAdmin(req: Request, res: Response): Promise<v
       entityType: 'usuario',
       entityId: req.params.id,
       module: 'resetPasswordAdmin',
-      action: 'reset_password_admin_error',
+      action: 'error_reset_password_admin',
       message: 'Error al restablecer contraseña',
       error: new Error(errorMessage),
       context: {

@@ -164,7 +164,7 @@ describe('Controlador cambiarPasswordUsuario', () => {
         expect.objectContaining({
           userId: 'sistema',
           module: 'cambiarPasswordUsuario',
-          action: 'cambiar_password_fallido',
+          action: 'error_cambiar_password',
           message: 'Usuario no autenticado. 401',
           entityType: 'usuario',
           entityId: 'no-autenticado',
@@ -227,7 +227,7 @@ describe('Controlador cambiarPasswordUsuario', () => {
         expect.objectContaining({
           userId,
           module: 'cambiarPasswordUsuario',
-          action: 'cambiar_password_fallido',
+          action: 'error_cambiar_password',
           message: 'Usuario no encontrado',
           entityType: 'usuario',
           entityId: userId,
@@ -255,7 +255,7 @@ describe('Controlador cambiarPasswordUsuario', () => {
         expect.objectContaining({
           userId,
           module: 'cambiarPasswordUsuario',
-          action: 'cambiar_password_fallido',
+          action: 'error_cambiar_password',
           message: 'El password actual es incorrecto',
           entityType: 'usuario',
           entityId: userId,
@@ -303,7 +303,7 @@ describe('Controlador cambiarPasswordUsuario', () => {
         expect.objectContaining({
           userId,
           module: 'cambiarPasswordUsuario',
-          action: 'cambiar_password_error',
+          action: 'error_cambiar_password',
           message: expect.stringContaining('Error al cambiar la contraseña'),
           entityType: 'usuario',
           entityId: userId,

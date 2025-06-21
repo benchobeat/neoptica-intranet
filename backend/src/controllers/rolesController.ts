@@ -23,7 +23,7 @@ export async function listarRoles(req: Request, res: Response): Promise<void> {
       ip: req.ip,
       entityType: 'rol',
       module: 'roles',
-      action: 'listar_roles',
+      action: 'listar_roles_exitoso',
       message: 'Roles listados exitosamente',
       details: {
         roles: roles.map((rol) => ({
@@ -41,7 +41,7 @@ export async function listarRoles(req: Request, res: Response): Promise<void> {
       ip: req.ip,
       entityType: 'rol',
       module: 'listarRoles',
-      action: 'listar_roles',
+      action: 'error_listar_roles',
       message: 'Error al listar roles',
       error: errorMessage,
       context: {
@@ -61,7 +61,7 @@ export function metodoNoPermitido(_req: Request, res: Response): void {
     ip: _req.ip,
     entityType: 'rol',
     module: 'metodoNoPermitido',
-    action: 'metodo_no_permitido',
+    action: 'error_metodo_no_permitido',
     message: 'Método no permitido',
     error: 'Método no permitido. 405',
     context: {

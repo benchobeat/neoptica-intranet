@@ -215,7 +215,7 @@ describe('crearUsuario', () => {
         ip: '127.0.0.1',
         entityType: 'usuario',
         module: 'crearUsuario',
-        action: 'crear_usuario_fallido',
+        action: 'error_crear_usuario',
         message: 'El email ya está registrado',
         error: expect.any(Error),
         context: expect.objectContaining({
@@ -292,7 +292,7 @@ describe('crearUsuario', () => {
       ip: '127.0.0.1',
       entityType: 'usuario',
       module: 'crearUsuario',
-      action: 'crear_usuario_fallido',
+      action: 'error_crear_usuario',
       message: 'Error al crear el usuario',
       error: expect.any(Error)
     });

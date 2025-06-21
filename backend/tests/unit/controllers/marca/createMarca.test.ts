@@ -22,7 +22,7 @@ jest.mock('../../../../src/utils/audit', () => ({
 
 // Importar el controlador después de los mocks
 import { crearMarca } from '../../../../src/controllers/marcaController';
-import { mockMarca, createMarcaData as originalCreateMarcaData } from '../../__fixtures__/marcaFixtures';
+import { mockMarca, mockMarcaInactiva, createMarcaData as originalCreateMarcaData } from '../../__fixtures__/marcaFixtures';
 
 describe('Controlador de Marcas - Crear Marca', () => {
   let mockRequest: Partial<Request>;
@@ -226,8 +226,8 @@ describe('Controlador de Marcas - Crear Marca', () => {
     );
   });
 
-  it('debe validar que no exista otra marca con el mismo nombre', async () => {
-    // Configurar el mock para simular que ya existe una marca con el mismo nombre
+  it('debe validar que no exista otra marca activa con el mismo nombre', async () => {
+    // Configurar el mock para simular que ya existe una marca activa con el mismo nombre
     const existingMarca = {
       ...mockMarca,
       nombre: createMarcaData.nombre.toUpperCase(), // Para probar case-insensitive
@@ -252,10 +252,128 @@ describe('Controlador de Marcas - Crear Marca', () => {
         entityType: 'marca',
         module: 'crearMarca',
         message: 'Error al crear la marca',
-        error: 'Ya existe una marca con ese nombre. 409',
+        error: 'Ya existe una marca activa con ese nombre. 409',
         context: expect.objectContaining({
           nombre: createMarcaData.nombre,
           descripcion: createMarcaData.descripcion
+        })
+      })
+    );
+  });
+
+  it('debe reactivar y actualizar una marca inactiva con el mismo nombre', async () => {
+    // Configurar el mock para simular que existe una marca inactiva con el mismo nombre
+    const inactiveMarca = {
+      ...mockMarcaInactiva,
+      nombre: createMarcaData.nombre.toUpperCase(), // Para probar case-insensitive
+    };
+    
+    const updatedMarca = {
+      ...inactiveMarca,
+      nombre: createMarcaData.nombre, // El nombre se actualiza al formato correcto
+      descripcion: createMarcaData.descripcion,
+      activo: true,
+      anuladoEn: null, // Aseguramos que estos campos estén explícitamente en null
+      anuladoPor: null,
+      modificadoPor: mockRequest.user?.id,
+      modificadoEn: new Date()
+    };
+
+    // Configurar los mocks
+    prismaMock.marca.findFirst.mockResolvedValue(inactiveMarca);
+    prismaMock.marca.update.mockResolvedValue(updatedMarca);
+
+    // Act
+    await crearMarca(mockRequest as Request, mockResponse as Response);
+    const responseData = mockResponse.json.mock.calls[0][0];
+
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(200);
+    
+    // Verify the response structure and important fields
+    expect(responseData).toMatchObject({
+      ok: true,
+      error: null,
+    });
+    
+    // Verify the data object contains the expected fields with correct values
+    expect(responseData.data).toMatchObject({
+      id: inactiveMarca.id,
+      nombre: createMarcaData.nombre,
+      descripcion: createMarcaData.descripcion,
+      activo: true,
+    });
+    
+    // Verify anulación fields are cleared
+    expect(responseData.data.anuladoEn).toBeNull();
+    expect(responseData.data.anuladoPor).toBeNull();
+
+    // Verificar que se llamó a prisma.marca.update con los parámetros correctos
+    expect(prismaMock.marca.update).toHaveBeenCalledWith({
+      where: { id: inactiveMarca.id },
+      data: {
+        nombre: createMarcaData.nombre,
+        descripcion: createMarcaData.descripcion,
+        activo: true,
+        anuladoEn: null,
+        anuladoPor: null,
+        modificadoPor: mockRequest.user?.id,
+        modificadoEn: expect.any(Date)
+      }
+    });
+
+    // Verificar que se registró el éxito de la reactivación
+    expect(mockLogSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'reactivar_marca_exitosa',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Marca reactivada exitosamente',
+        entityId: inactiveMarca.id,
+        details: expect.objectContaining({
+          nombre: createMarcaData.nombre,
+          descripcion: createMarcaData.descripcion,
+          reactivada: true
+        })
+      })
+    );
+  });
+
+  it('debe manejar errores al reactivar una marca inactiva', async () => {
+    // Configurar el mock para simular que existe una marca inactiva
+    const inactiveMarca = {
+      ...mockMarcaInactiva,
+      nombre: createMarcaData.nombre.toUpperCase(),
+    };
+    
+    const testError = new Error('Error al actualizar la marca');
+    
+    prismaMock.marca.findFirst.mockResolvedValue(inactiveMarca);
+    prismaMock.marca.update.mockRejectedValue(testError);
+
+    // Act
+    await crearMarca(mockRequest as Request, mockResponse as Response);
+
+    // Assert
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'Error interno del servidor al crear la marca',
+    });
+
+    // Verificar que se llamó a logError
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'error_crear_marca',
+        entityType: 'marca',
+        module: 'crearMarca',
+        message: 'Error al crear la marca',
+        error: testError,
+        context: expect.objectContaining({
+          datosSolicitud: expect.any(Object),
+          error: testError.message,
+          stack: expect.any(String)
         })
       })
     );
@@ -283,7 +401,7 @@ describe('Controlador de Marcas - Crear Marca', () => {
     // Verificar que se llamó a logError con los parámetros correctos
     expect(mockLogError).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: 'crear_marca_fallido',
+        action: 'error_crear_marca',
         entityType: 'marca',
         module: 'crearMarca',
         message: 'Error al crear la marca',

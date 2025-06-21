@@ -64,6 +64,18 @@ jest.mock('@prisma/client', () => {
     cita: {
       count: jest.fn(() => Promise.resolve(0)),
     },
+    descansoEmpleado: {
+      count: jest.fn(() => Promise.resolve(0)),
+    },
+    inventario: {
+      count: jest.fn(() => Promise.resolve(0)),
+    },
+    movimientoContable: {
+      count: jest.fn(() => Promise.resolve(0)),
+    },
+    pedido: {
+      count: jest.fn(() => Promise.resolve(0)),
+    },
     $transaction: jest.fn(callback => callback()),
   };
 
@@ -323,5 +335,284 @@ describe('eliminarSucursal', () => {
       data: null,
       error: 'ID inválido',
     });
+  });
+
+  it('debe impedir eliminar si hay citas asociadas', async () => {
+    // Arrange
+    jest.clearAllMocks();
+    const testUserId = 'test-user-id';
+    req = createMockRequest({
+      params: { id: existingSucursal.id },
+      user: { id: testUserId, email: 'test@example.com' },
+    });
+    
+    jsonMock = jest.fn();
+    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    res = { status: statusMock, json: jsonMock };
+    
+    // Importante: Resetear todos los counts para asegurar que no hay estado compartido entre pruebas
+    mockPrismaClient.cita.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.descansoEmpleado.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.inventario.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.movimientoContable.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.pedido.count.mockReset().mockResolvedValue(0);
+    
+    // Mock findUnique para devolver la sucursal
+    mockPrismaClient.sucursal.findUnique.mockReset().mockImplementation(({ where }) => {
+      if (where && where.id === existingSucursal.id && where.anuladoEn === null) {
+        return Promise.resolve(existingSucursal);
+      }
+      return Promise.resolve(null);
+    });
+    
+    // Mock count para indicar que hay citas asociadas
+    mockPrismaClient.cita.count.mockResolvedValueOnce(3);
+    
+    // Act
+    await eliminarSucursal(req as Request, res as Response);
+
+    // Assert - Debe devolver error 409
+    expect(statusMock).toHaveBeenCalledWith(409);
+    expect(jsonMock).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'No se puede eliminar la sucursal porque tiene asociado(s): 3 cita(s).',
+    });
+    
+    // Verificar que no se intentó hacer update
+    expect(mockPrismaClient.sucursal.update).not.toHaveBeenCalled();
+  });
+
+
+  it('debe impedir eliminar si hay descansos de empleados asociados', async () => {
+    // Arrange
+    jest.clearAllMocks();
+    const testUserId = 'test-user-id';
+    req = createMockRequest({
+      params: { id: existingSucursal.id },
+      user: { id: testUserId, email: 'test@example.com' },
+    });
+    
+    jsonMock = jest.fn();
+    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    res = { status: statusMock, json: jsonMock };
+    
+    // Importante: Resetear todos los counts para asegurar que no hay estado compartido
+    mockPrismaClient.cita.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.descansoEmpleado.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.inventario.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.movimientoContable.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.pedido.count.mockReset().mockResolvedValue(0);
+    
+    // Mock findUnique para devolver la sucursal
+    mockPrismaClient.sucursal.findUnique.mockReset().mockImplementation(({ where }) => {
+      if (where && where.id === existingSucursal.id && where.anuladoEn === null) {
+        return Promise.resolve(existingSucursal);
+      }
+      return Promise.resolve(null);
+    });
+    
+    // Mock count para indicar que hay descansos de empleados asociados
+    mockPrismaClient.descansoEmpleado.count.mockResolvedValueOnce(2);
+    
+    // Act
+    await eliminarSucursal(req as Request, res as Response);
+
+    // Assert - Debe devolver error 409
+    expect(statusMock).toHaveBeenCalledWith(409);
+    expect(jsonMock).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'No se puede eliminar la sucursal porque tiene asociado(s): 2 descanso(s) de empleado.',
+    });
+    
+    // Verificar que no se intentó hacer update
+    expect(mockPrismaClient.sucursal.update).not.toHaveBeenCalled();
+  });
+
+  it('debe impedir eliminar si hay inventarios asociados', async () => {
+    // Arrange
+    jest.clearAllMocks();
+    const testUserId = 'test-user-id';
+    req = createMockRequest({
+      params: { id: existingSucursal.id },
+      user: { id: testUserId, email: 'test@example.com' },
+    });
+    
+    jsonMock = jest.fn();
+    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    res = { status: statusMock, json: jsonMock };
+    
+    // Importante: Resetear todos los counts para asegurar que no hay estado compartido
+    mockPrismaClient.cita.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.descansoEmpleado.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.inventario.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.movimientoContable.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.pedido.count.mockReset().mockResolvedValue(0);
+    
+    // Mock findUnique para devolver la sucursal
+    mockPrismaClient.sucursal.findUnique.mockReset().mockImplementation(({ where }) => {
+      if (where && where.id === existingSucursal.id && where.anuladoEn === null) {
+        return Promise.resolve(existingSucursal);
+      }
+      return Promise.resolve(null);
+    });
+    
+    // Mock count para indicar que hay inventarios asociados
+    mockPrismaClient.inventario.count.mockResolvedValueOnce(5);
+    
+    // Act
+    await eliminarSucursal(req as Request, res as Response);
+
+    // Assert - Debe devolver error 409
+    expect(statusMock).toHaveBeenCalledWith(409);
+    expect(jsonMock).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'No se puede eliminar la sucursal porque tiene asociado(s): 5 inventario(s).',
+    });
+    
+    // Verificar que no se intentó hacer update
+    expect(mockPrismaClient.sucursal.update).not.toHaveBeenCalled();
+  });
+
+  it('debe impedir eliminar si hay movimientos contables asociados', async () => {
+    // Arrange
+    jest.clearAllMocks();
+    const testUserId = 'test-user-id';
+    req = createMockRequest({
+      params: { id: existingSucursal.id },
+      user: { id: testUserId, email: 'test@example.com' },
+    });
+    
+    jsonMock = jest.fn();
+    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    res = { status: statusMock, json: jsonMock };
+    
+    // Importante: Resetear todos los counts para asegurar que no hay estado compartido
+    mockPrismaClient.cita.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.descansoEmpleado.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.inventario.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.movimientoContable.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.pedido.count.mockReset().mockResolvedValue(0);
+    
+    // Mock findUnique para devolver la sucursal
+    mockPrismaClient.sucursal.findUnique.mockReset().mockImplementation(({ where }) => {
+      if (where && where.id === existingSucursal.id && where.anuladoEn === null) {
+        return Promise.resolve(existingSucursal);
+      }
+      return Promise.resolve(null);
+    });
+    
+    // Mock count para indicar que hay movimientos contables asociados
+    mockPrismaClient.movimientoContable.count.mockResolvedValueOnce(10);
+    
+    // Act
+    await eliminarSucursal(req as Request, res as Response);
+
+    // Assert - Debe devolver error 409
+    expect(statusMock).toHaveBeenCalledWith(409);
+    expect(jsonMock).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'No se puede eliminar la sucursal porque tiene asociado(s): 10 movimiento(s) contable(s).',
+    });
+    
+    // Verificar que no se intentó hacer update
+    expect(mockPrismaClient.sucursal.update).not.toHaveBeenCalled();
+  });
+
+  it('debe impedir eliminar si hay pedidos asociados', async () => {
+    // Arrange
+    jest.clearAllMocks();
+    const testUserId = 'test-user-id';
+    req = createMockRequest({
+      params: { id: existingSucursal.id },
+      user: { id: testUserId, email: 'test@example.com' },
+    });
+    
+    jsonMock = jest.fn();
+    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    res = { status: statusMock, json: jsonMock };
+    
+    // Importante: Resetear todos los counts para asegurar que no hay estado compartido
+    mockPrismaClient.cita.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.descansoEmpleado.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.inventario.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.movimientoContable.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.pedido.count.mockReset().mockResolvedValue(0);
+    
+    // Mock findUnique para devolver la sucursal
+    mockPrismaClient.sucursal.findUnique.mockReset().mockImplementation(({ where }) => {
+      if (where && where.id === existingSucursal.id && where.anuladoEn === null) {
+        return Promise.resolve(existingSucursal);
+      }
+      return Promise.resolve(null);
+    });
+    
+    // Mock count para indicar que hay pedidos asociados
+    mockPrismaClient.pedido.count.mockResolvedValueOnce(7);
+    
+    // Act
+    await eliminarSucursal(req as Request, res as Response);
+
+    // Assert - Debe devolver error 409
+    expect(statusMock).toHaveBeenCalledWith(409);
+    expect(jsonMock).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'No se puede eliminar la sucursal porque tiene asociado(s): 7 pedido(s).',
+    });
+    
+    // Verificar que no se intentó hacer update
+    expect(mockPrismaClient.sucursal.update).not.toHaveBeenCalled();
+  });
+
+  it('debe impedir eliminar si hay múltiples tipos de registros asociados', async () => {
+    // Arrange
+    jest.clearAllMocks();
+    const testUserId = 'test-user-id';
+    req = createMockRequest({
+      params: { id: existingSucursal.id },
+      user: { id: testUserId, email: 'test@example.com' },
+    });
+    
+    jsonMock = jest.fn();
+    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    res = { status: statusMock, json: jsonMock };
+    
+    // Importante: Resetear todos los counts para asegurar que no hay estado compartido
+    mockPrismaClient.cita.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.descansoEmpleado.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.inventario.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.movimientoContable.count.mockReset().mockResolvedValue(0);
+    mockPrismaClient.pedido.count.mockReset().mockResolvedValue(0);
+    
+    // Mock findUnique para devolver la sucursal
+    mockPrismaClient.sucursal.findUnique.mockReset().mockImplementation(({ where }) => {
+      if (where && where.id === existingSucursal.id && where.anuladoEn === null) {
+        return Promise.resolve(existingSucursal);
+      }
+      return Promise.resolve(null);
+    });
+    
+    // Mock counts para indicar múltiples tipos de registros asociados
+    mockPrismaClient.cita.count.mockResolvedValueOnce(2);
+    mockPrismaClient.inventario.count.mockResolvedValueOnce(3);
+    mockPrismaClient.pedido.count.mockResolvedValueOnce(1);
+    
+    // Act
+    await eliminarSucursal(req as Request, res as Response);
+
+    // Assert - Debe devolver error 409 con mensaje que incluya todos los tipos
+    expect(statusMock).toHaveBeenCalledWith(409);
+    expect(jsonMock).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'No se puede eliminar la sucursal porque tiene asociado(s): 2 cita(s), 3 inventario(s), 1 pedido(s).',
+    });
+    
+    // Verificar que no se intentó hacer update
+    expect(mockPrismaClient.sucursal.update).not.toHaveBeenCalled();
   });
 });

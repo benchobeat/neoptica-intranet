@@ -243,7 +243,10 @@ router.get('/:id', authenticateJWT, obtenerMarcaPorId);
  * @swagger
  * /api/marcas:
  *   post:
- *     summary: Crea una nueva marca
+ *     summary: Crea una nueva marca o reactiva una existente inactiva
+ *     description: |
+ *       Crea una nueva marca. Si ya existe una marca inactiva con el mismo nombre, 
+ *       la reactivará y actualizará sus datos en lugar de crear una nueva.
  *     tags: [Marcas]
  *     security:
  *       - bearerAuth: []
@@ -254,8 +257,23 @@ router.get('/:id', authenticateJWT, obtenerMarcaPorId);
  *           schema:
  *             $ref: '#/components/schemas/MarcaInput'
  *     responses:
+ *       200:
+ *         description: Marca reactivada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Marca'
+ *                 error:
+ *                   type: string
+ *                   example: null
  *       201:
- *         description: Marca creada exitosamente
+ *         description: Nueva marca creada exitosamente
  *         content:
  *           application/json:
  *             schema:
@@ -287,11 +305,15 @@ router.get('/:id', authenticateJWT, obtenerMarcaPorId);
  *                   data: null
  *                   error: 'No está permitido modificar el campo activo.'
  *       409:
- *         description: Conflicto - Marca ya existe
+ *         description: Conflicto - Ya existe una marca activa con el mismo nombre
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               ok: false
+ *               data: null
+ *               error: 'Ya existe una marca con ese nombre.'
  *       500:
  *         description: Error interno del servidor
  *         content:

@@ -301,7 +301,7 @@ describe('Auth Controller - Reset Password', () => {
       ip: '127.0.0.1',
       entityType: 'usuario',
       module: 'resetPassword',
-      action: 'reset_password_error',
+      action: 'error_reset_password',
       message: 'Error al procesar el restablecimiento de contraseña',
       error: expect.any(Error),
       context: expect.objectContaining({
@@ -348,7 +348,7 @@ describe('Auth Controller - Reset Password', () => {
       entityType: 'usuario',
       entityId: mockUser.id,
       module: 'resetPassword',
-      action: 'reset_password_fallido',
+      action: 'error_reset_password',
       message: 'Intento de restablecimiento con token inválido',
       error: expect.any(Error),
       context: {

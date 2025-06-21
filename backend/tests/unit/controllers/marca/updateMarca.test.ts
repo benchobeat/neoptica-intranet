@@ -122,7 +122,7 @@ describe('Controlador de Marcas - Actualizar Marca', () => {
       ip: mockRequest.ip,
       entityType: 'marca',
       module: 'actualizarMarca',
-      action: 'actualizar_marca',
+      action: 'actualizar_marca_exitoso',
       message: 'Marca actualizada exitosamente',
       entityId: mockMarca.id,
       details: expect.objectContaining({

@@ -126,7 +126,7 @@ describe('Controlador de Roles - Método No Permitido', () => {
       ip: '127.0.0.1',
       entityType: 'rol',
       module: 'metodoNoPermitido',
-      action: 'metodo_no_permitido',
+      action: 'error_metodo_no_permitido',
       message: 'Método no permitido',
       error: 'Método no permitido. 405',
       context: expect.any(Object)

@@ -334,4 +334,49 @@ describe('actualizarSucursal', () => {
     expect(mockPrisma.sucursal.findUnique).not.toHaveBeenCalled();
     expect(mockPrisma.sucursal.update).not.toHaveBeenCalled();
   });
+
+  it('debe rechazar cualquier intento de modificar el campo activo', async () => {
+    // Configurar el mock para devolver la sucursal existente
+    mockPrisma.sucursal.findUnique.mockResolvedValueOnce(existingSucursal);
+    
+    // Modificar el req para incluir el campo activo
+    const reqConActivo = createMockRequest({
+      params: { id: '123e4567-e89b-12d3-a456-426614174000' },
+      body: {
+        nombre: 'Sucursal Actualizada',
+        direccion: 'Nueva Dirección',
+        activo: false // Intentamos cambiar el estado activo
+      },
+      user: { id: 'test-user-id' },
+      ip: '127.0.0.1',
+    });
+    
+    await actualizarSucursal(reqConActivo as Request, res as Response);
+
+    // Verificar que se devolvió un error 400
+    expect(statusMock).toHaveBeenCalledWith(400);
+    expect(jsonMock).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'No está permitido modificar el estado activo mediante esta función.',
+    });
+
+    // Verificar que no se intentó actualizar
+    expect(mockPrisma.sucursal.update).not.toHaveBeenCalled();
+    
+    // Verificar que se registró el error
+    expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'sucursal',
+      entityId: '123e4567-e89b-12d3-a456-426614174000',
+      module: 'actualizarSucursal',
+      action: 'error_actualizar_sucursal',
+      message: 'Error al actualizar la sucursal',
+      error: 'No está permitido modificar el estado activo mediante esta función. 400',
+      context: expect.objectContaining({
+        idSolicitado: '123e4567-e89b-12d3-a456-426614174000'
+      })
+    }));
+  });
 });

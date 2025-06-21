@@ -139,7 +139,7 @@ describe('Controlador de Marcas - Eliminar Marca', () => {
       entityType: 'marca',
       entityId: mockMarca.id,
       module: 'eliminarMarca',
-      action: 'eliminar_marca',
+      action: 'eliminar_marca_exitoso',
       message: 'Marca eliminada exitosamente',
       details: {
         id: mockMarca.id,

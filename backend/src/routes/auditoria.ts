@@ -1,8 +1,7 @@
 import { Router } from 'express';
-
-import * as auditoriaController from '../controllers/auditoriaController';
 import { authenticateJWT } from '../middlewares/auth';
 import { requireRole } from '../middlewares/roles';
+import * as auditoriaController from '../controllers/auditoriaController';
 
 const router = Router();
 
@@ -31,8 +30,8 @@ const router = Router();
  *           type: string
  *           description: Tipo de acción realizada (crear, listar, actualizar, eliminar, etc.)
  *         descripcion:
- *           type: string
- *           description: Descripción detallada de la acción
+ *           type: object
+ *           description: Descripción detallada de la acción (formato JSON)
  *         fecha:
  *           type: string
  *           format: date-time
@@ -40,6 +39,15 @@ const router = Router();
  *         ip:
  *           type: string
  *           description: Dirección IP desde donde se realizó la acción
+ *         tipoCorreo:
+ *           type: string
+ *           description: Tipo de correo relacionado con la acción
+ *         correoDestino:
+ *           type: string
+ *           description: Dirección de correo destino
+ *         usuarioDestino:
+ *           type: string
+ *           description: Usuario destino de la acción
  *         entidadTipo:
  *           type: string
  *           description: Tipo de entidad afectada
@@ -47,16 +55,39 @@ const router = Router();
  *           type: string
  *           format: uuid
  *           description: ID de la entidad afectada
+ *         estadoEnvio:
+ *           type: string
+ *           description: Estado del envío relacionado
+ *         mensajeError:
+ *           type: string
+ *           description: Mensaje de error si la acción falló
+ *         enviadoPor:
+ *           type: string
+ *           description: Usuario que envió la acción
+ *         origenEnvio:
+ *           type: string
+ *           description: Origen del envío
+ *         intentos:
+ *           type: integer
+ *           description: Número de intentos realizados
  *         modulo:
  *           type: string
  *           description: Módulo al que pertenece la acción
+ *         movimientoId:
+ *           type: string
+ *           format: uuid
+ *           description: ID del movimiento contable relacionado
+ *         resultado:
+ *           type: string
+ *           enum: [exitoso, fallido, pendiente]
+ *           description: Resultado de la acción
  *         usuario:
  *           type: object
  *           properties:
  *             id:
  *               type: string
  *               format: uuid
- *             nombre_completo:
+ *             nombreCompleto:
  *               type: string
  *             email:
  *               type: string
@@ -67,65 +98,93 @@ const router = Router();
  * @swagger
  * /api/auditoria:
  *   get:
- *     summary: Lista registros de auditoría con filtros y paginación
+ *     summary: Consulta registros de auditoría con filtros avanzados y paginación
+ *     description: >
+ *       **IMPORTANTE**: Este endpoint requiere autenticación. Debe incluir un token JWT válido
+ *       en el encabezado 'Authorization' en formato 'Bearer {token}'. Los usuarios deben tener
+ *       rol de administrador para acceder a estos registros.
  *     tags: [Auditoría]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: modulo
+ *         name: page
  *         schema:
- *           type: string
- *         description: Filtrar por módulo (ej. usuarios, marcas, colores)
+ *           type: integer
+ *           default: 1
+ *         description: Número de página (≥ 1)
  *       - in: query
- *         name: accion
+ *         name: perPage
  *         schema:
- *           type: string
- *         description: Filtrar por tipo de acción (ej. crear, listar, actualizar)
+ *           type: integer
+ *           default: 20
+ *         description: Número de registros por página (entre 1 y 100)
  *       - in: query
- *         name: usuarioId
+ *         name: sortBy
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Filtrar por ID de usuario que realizó la acción
+ *           default: fecha
+ *         description: Campo por el cual ordenar los resultados
  *       - in: query
- *         name: entidadTipo
+ *         name: sortOrder
  *         schema:
  *           type: string
- *         description: Filtrar por tipo de entidad afectada
- *       - in: query
- *         name: entidadId
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Filtrar por ID de entidad afectada
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Orden de los resultados (ascendente o descendente)
  *       - in: query
  *         name: fechaInicio
  *         schema:
  *           type: string
  *           format: date
- *         description: Fecha de inicio para filtrar (formato YYYY-MM-DD)
+ *         description: Filtrar desde esta fecha (formato YYYY-MM-DD)
  *       - in: query
  *         name: fechaFin
  *         schema:
  *           type: string
  *           format: date
- *         description: Fecha de fin para filtrar (formato YYYY-MM-DD)
+ *         description: Filtrar hasta esta fecha (formato YYYY-MM-DD)
  *       - in: query
- *         name: page
+ *         name: usuarioId
  *         schema:
- *           type: integer
- *           default: 1
- *         description: Número de página para paginación
+ *           type: string
+ *           format: uuid
+ *         description: Filtrar por ID del usuario
  *       - in: query
- *         name: limit
+ *         name: accion
  *         schema:
- *           type: integer
- *           default: 10
- *         description: Número de registros por página (máximo 100)
+ *           type: string
+ *         description: Filtrar por tipo de acción
+ *       - in: query
+ *         name: ip
+ *         schema:
+ *           type: string
+ *         description: Filtrar por dirección IP
+ *       - in: query
+ *         name: entidadTipo
+ *         schema:
+ *           type: string
+ *         description: Filtrar por tipo de entidad
+ *       - in: query
+ *         name: entidadId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filtrar por ID de entidad
+ *       - in: query
+ *         name: modulo
+ *         schema:
+ *           type: string
+ *         description: Filtrar por módulo del sistema
+ *       - in: query
+ *         name: resultado
+ *         schema:
+ *           type: string
+ *           enum: [exitoso, fallido, pendiente]
+ *         description: Filtrar por resultado de la acción
  *     responses:
  *       200:
- *         description: Lista de registros de auditoría con metadatos de paginación
+ *         description: Lista paginada de registros de auditoría
  *         content:
  *           application/json:
  *             schema:
@@ -137,57 +196,31 @@ const router = Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     registros:
+ *                     items:
  *                       type: array
  *                       items:
  *                         $ref: '#/components/schemas/LogAuditoria'
- *                     paginacion:
+ *                     meta:
  *                       type: object
  *                       properties:
- *                         total:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         perPage:
+ *                           type: integer
+ *                           example: 20
+ *                         totalItems:
  *                           type: integer
  *                           example: 120
- *                         pagina:
+ *                         totalPages:
  *                           type: integer
- *                           example: 1
- *                         limite:
- *                           type: integer
- *                           example: 10
- *                         paginas:
- *                           type: integer
- *                           example: 12
+ *                           example: 6
  *                 error:
  *                   type: null
  *       400:
- *         description: Parámetros de paginación o filtro inválidos
+ *         description: Parámetros de filtro o paginación inválidos
  *       401:
  *         description: No autorizado, token inválido o expirado
- *       403:
- *         description: Prohibido, el usuario no tiene rol de administrador
- *       500:
- *         description: Error interno del servidor
- */
-router.get('/', authenticateJWT, requireRole('admin'), auditoriaController.listarAuditoria);
-
-/**
- * @swagger
- * /api/auditoria/{id}:
- *   get:
- *     summary: Obtiene un registro de auditoría por su ID
- *     tags: [Auditoría]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID del registro de auditoría
- *     responses:
- *       200:
- *         description: Registro de auditoría encontrado
  *         content:
  *           application/json:
  *             schema:
@@ -195,197 +228,17 @@ router.get('/', authenticateJWT, requireRole('admin'), auditoriaController.lista
  *               properties:
  *                 ok:
  *                   type: boolean
- *                   example: true
+ *                   example: false
  *                 data:
- *                   $ref: '#/components/schemas/LogAuditoria'
- *                 error:
  *                   type: null
- *       400:
- *         description: ID inválido
- *       401:
- *         description: No autorizado, token inválido o expirado
- *       403:
- *         description: Prohibido, el usuario no tiene rol de administrador
- *       404:
- *         description: Registro de auditoría no encontrado
- *       500:
- *         description: Error interno del servidor
- */
-router.get(
-  '/:id',
-  authenticateJWT,
-  requireRole('admin'),
-  auditoriaController.obtenerAuditoriaPorId
-);
-
-/**
- * @swagger
- * /api/auditoria/modulo/{modulo}:
- *   get:
- *     summary: Filtra registros de auditoría por módulo
- *     tags: [Auditoría]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: modulo
- *         required: true
- *         schema:
- *           type: string
- *         description: Nombre del módulo (ej. usuarios, marcas, colores)
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Número de página para paginación
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Número de registros por página (máximo 100)
- *     responses:
- *       200:
- *         description: Lista de registros de auditoría filtrados por módulo
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     registros:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/LogAuditoria'
- *                     modulo:
- *                       type: string
- *                       example: "usuarios"
- *                     paginacion:
- *                       type: object
- *                       properties:
- *                         total:
- *                           type: integer
- *                           example: 45
- *                         pagina:
- *                           type: integer
- *                           example: 1
- *                         limite:
- *                           type: integer
- *                           example: 10
- *                         paginas:
- *                           type: integer
- *                           example: 5
  *                 error:
- *                   type: null
- *       400:
- *         description: Módulo inválido o parámetros de paginación inválidos
- *       401:
- *         description: No autorizado, token inválido o expirado
+ *                   type: string
+ *                   example: "Token inválido o no enviado"
  *       403:
  *         description: Prohibido, el usuario no tiene rol de administrador
  *       500:
  *         description: Error interno del servidor
  */
-router.get(
-  '/modulo/:modulo',
-  authenticateJWT,
-  requireRole('admin'),
-  auditoriaController.filtrarAuditoriaPorModulo
-);
-
-/**
- * @swagger
- * /api/auditoria/usuario/{id}:
- *   get:
- *     summary: Filtra registros de auditoría por usuario
- *     tags: [Auditoría]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID del usuario
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Número de página para paginación
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Número de registros por página (máximo 100)
- *     responses:
- *       200:
- *         description: Lista de registros de auditoría filtrados por usuario
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     registros:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/LogAuditoria'
- *                     usuario:
- *                       type: object
- *                       properties:
- *                         id:
- *                           type: string
- *                           format: uuid
- *                         nombre_completo:
- *                           type: string
- *                     paginacion:
- *                       type: object
- *                       properties:
- *                         total:
- *                           type: integer
- *                           example: 30
- *                         pagina:
- *                           type: integer
- *                           example: 1
- *                         limite:
- *                           type: integer
- *                           example: 10
- *                         paginas:
- *                           type: integer
- *                           example: 3
- *                 error:
- *                   type: null
- *       400:
- *         description: ID de usuario inválido o parámetros de paginación inválidos
- *       401:
- *         description: No autorizado, token inválido o expirado
- *       403:
- *         description: Prohibido, el usuario no tiene rol de administrador
- *       404:
- *         description: Usuario no encontrado
- *       500:
- *         description: Error interno del servidor
- */
-router.get(
-  '/usuario/:id',
-  authenticateJWT,
-  requireRole('admin'),
-  auditoriaController.filtrarAuditoriaPorUsuario
-);
+router.get('/', authenticateJWT, requireRole('admin'), auditoriaController.getAuditLogs);
 
 export default router;

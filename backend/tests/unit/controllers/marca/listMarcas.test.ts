@@ -120,7 +120,7 @@ describe('Controlador de Marcas - Listar Marcas', () => {
       ip: mockRequest.ip,
       entityType: 'marca',
       module: 'listarMarcas',
-      action: 'listar_marcas',
+      action: 'listar_marcas_exitoso',
       message: 'Listado de marcas obtenido exitosamente',
       details: {
         totalRegistros: mockMarcaList.length,

@@ -69,7 +69,10 @@ const router = Router();
  * @swagger
  * /api/colores:
  *   post:
- *     summary: Crear un nuevo color
+ *     summary: Crear un nuevo color o reactivar uno existente
+ *     description: |
+ *       Crea un nuevo color. Si ya existe un color inactivo con el mismo nombre,
+ *       lo reactivará actualizando sus datos.
  *     tags: [Colores]
  *     security:
  *       - bearerAuth: []
@@ -80,6 +83,21 @@ const router = Router();
  *           schema:
  *             $ref: '#/components/schemas/ColorInput'
  *     responses:
+ *       200:
+ *         description: Color reactivado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Color'
+ *                 message:
+ *                   type: string
+ *                   example: 'Color reactivado exitosamente'
  *       201:
  *         description: Color creado exitosamente
  *         content:
@@ -105,7 +123,7 @@ const router = Router();
  *       401:
  *         description: No autorizado
  *       409:
- *         description: Conflicto (p. ej. nombre duplicado)
+ *         description: Conflicto (ya existe un color activo con el mismo nombre)
  *         content:
  *           application/json:
  *             schema:

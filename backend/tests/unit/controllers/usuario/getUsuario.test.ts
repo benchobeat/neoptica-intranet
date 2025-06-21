@@ -206,7 +206,7 @@ describe('obtenerUsuario', () => {
       entityType: 'usuario',
       entityId: mockUserId,
       module: 'obtenerUsuario',
-      action: 'obtener_usuario',
+      action: 'obtener_usuario_exitoso',
       message: `Se consultó el usuario: ${mockUser.email}`,
       details: {
         usuarioId: mockUser.id,
@@ -251,7 +251,7 @@ describe('obtenerUsuario', () => {
       ip: '127.0.0.1',
       entityType: 'usuario',
       module: 'obtenerUsuario',
-      action: 'obtener_usuario_fallido',
+      action: 'error_obtener_usuario',
       message: 'Usuario no encontrado',
       error: expect.any(Error),
       context: {
@@ -284,7 +284,7 @@ expect(res.json).toHaveBeenCalledWith(
       ip: '127.0.0.1',
       entityType: 'usuario',
       module: 'obtenerUsuario',
-      action: 'obtener_usuario_fallido',
+      action: 'error_obtener_usuario',
       message: 'Error al obtener usuario',
       error: error,
       context: {
@@ -354,7 +354,7 @@ expect(res.json).toHaveBeenCalledWith(
       entityType: 'usuario',
       entityId: mockUserId,
       module: 'obtenerUsuario',
-      action: 'obtener_usuario',
+      action: 'obtener_usuario_exitoso',
       message: `Se consultó el usuario: ${mockUser.email}`,
       details: {
         usuarioId: mockUser.id,

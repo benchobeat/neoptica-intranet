@@ -303,7 +303,7 @@ describe('actualizarPerfilUsuario', () => {
         entityType: 'usuario',
         entityId: userId,
         module: 'actualizarPerfilUsuario',
-        action: 'actualizar_perfil_fallido',
+        action: 'error_actualizar_perfil',
         message: 'Error al actualizar el perfil',
         error: dbError,
         context: {

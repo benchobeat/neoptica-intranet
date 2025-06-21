@@ -256,7 +256,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         entityType: 'usuario',
         entityId: usuario.id,
         module: 'resetPassword',
-        action: 'reset_password_fallido',
+        action: 'error_reset_password',
         message: 'Intento de restablecimiento con token inválido',
         error: new Error('Token inválido. 400'),
         context: {
@@ -362,7 +362,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       ip: req.ip,
       entityType: 'usuario',
       module: 'resetPassword',
-      action: 'reset_password_error',
+      action: 'error_reset_password',
       message: 'Error al procesar el restablecimiento de contraseña',
       error: errorObj,
       context: {

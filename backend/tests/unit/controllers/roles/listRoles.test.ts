@@ -159,7 +159,7 @@ describe('Controlador de Roles - Listar Roles', () => {
       ip: mockRequest.ip,
       entityType: 'rol',
       module: 'roles',
-      action: 'listar_roles',
+      action: 'listar_roles_exitoso',
       message: 'Roles listados exitosamente',
       details: expect.objectContaining({
         roles: expect.arrayContaining([
@@ -195,7 +195,7 @@ describe('Controlador de Roles - Listar Roles', () => {
       ip: mockRequest.ip,
       entityType: 'rol',
       module: 'listarRoles',
-      action: 'listar_roles',
+      action: 'error_listar_roles',
       message: 'Error al listar roles',
       error: errorMessage,
       context: expect.any(Object)

@@ -138,49 +138,143 @@ describe('Controlador de Colores - Crear Color', () => {
     }));
   });
 
-  it('debe devolver error si ya existe un color con el mismo nombre', async () => {
-    // Configura el mock para simular que ya existe un color con el mismo nombre
-    (prismaMock.color.findFirst as jest.Mock).mockImplementation(() => 
-      Promise.resolve({ ...mockColor })
-    );
+  it('debe devolver error si ya existe un color activo con el mismo nombre', async () => {
+    // Configura el mock para simular que ya existe un color activo con el mismo nombre
+    const colorActivo = {
+      ...mockColor,
+      activo: true
+    };
+
+    jest.spyOn(prismaMock.color, 'findFirst').mockResolvedValueOnce(colorActivo);
+    
+    // Configura el body de la request
+    mockRequest.body = { ...validColorData, nombre: mockColor.nombre };
 
     // Ejecuta el controlador
-    await crearColor(mockRequest as Request, mockResponse as unknown as Response);
+    await crearColor(mockRequest as Request, mockResponse as Response);
 
-    // Verifica que se haya llamado a la función de búsqueda
-    expect(prismaMock.color.findFirst).toHaveBeenCalled();
-    
-    // Verifica que no se haya intentado crear el color
+    // Verifica que se llamó a findFirst con los parámetros correctos
+    expect(prismaMock.color.findFirst).toHaveBeenCalledWith({
+      where: {
+        nombre: mockColor.nombre,
+        anuladoEn: null,
+      },
+    });
+
+    // Verifica que no se intentó crear el color
     expect(prismaMock.color.create).not.toHaveBeenCalled();
-
-    // Debug: Log the actual call to mockLogError
-    const mockCalls = (mockLogError as jest.Mock).mock.calls[0][0];
     
     // Verifica que se llamó a logError con los parámetros correctos
-    expect(mockLogError).toHaveBeenCalledWith({
+    expect(mockLogError).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'test-user-id',
       ip: '127.0.0.1',
       entityType: 'color',
       module: 'crearColor',
       action: 'error_crear_color',
-      message: 'Se presento un error durante la creacion del color',
+      message: 'Ya existe un color activo con ese nombre',
       error: expect.any(Error),
-      context: {
-        nombre: 'Rojo',
-        descripcion: 'Color rojo estándar',
-        codigoHex: '#FF0000',
-        colorExistenteId: '550e8400-e29b-41d4-a716-446655440000'
-      }
-    });
+      context: expect.objectContaining({
+        nombre: mockColor.nombre,
+        colorExistenteId: mockColor.id
+      })
+    }));
 
     // Verifica la respuesta de error
     expect(mockResponse.status).toHaveBeenCalledWith(409);
-    expect(mockResponse.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: 'Ya existe un color con ese nombre.'
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      ok: false,
+      data: null,
+      error: 'Ya existe un color con ese nombre.'
+    });
+  });
+
+  it('debe reactivar y actualizar un color inactivo cuando se intenta crear uno con el mismo nombre', async () => {
+    // Configurar un color inactivo existente
+    const colorInactivo = { 
+      ...mockColor, 
+      activo: false,
+      descripcion: 'Descripción antigua',
+      codigoHex: '#000000'
+    };
+    
+    const colorReactivado = {
+      ...colorInactivo,
+      activo: true,
+      descripcion: validColorData.descripcion,
+      codigoHex: validColorData.codigoHex,
+      modificadoPor: 'test-user-id',
+      modificadoEn: expect.any(Date)
+    };
+
+    // Configurar mocks
+    jest.spyOn(prismaMock.color, 'findFirst').mockResolvedValueOnce(colorInactivo);
+    jest.spyOn(prismaMock.color, 'update').mockResolvedValueOnce(colorReactivado);
+
+    // Configurar solicitud con datos válidos y mismo nombre que el color inactivo
+    mockRequest.body = { 
+      nombre: mockColor.nombre,
+      descripcion: validColorData.descripcion,
+      codigoHex: validColorData.codigoHex
+    };
+
+    // Ejecutar la función del controlador
+    await crearColor(mockRequest as Request, mockResponse as Response);
+
+    // Verificar que se llamó a findFirst con los parámetros correctos
+    expect(prismaMock.color.findFirst).toHaveBeenCalledWith({
+      where: {
+        nombre: mockColor.nombre,
+        anuladoEn: null,
+      },
+    });
+
+    // Verificar que se llamó a update para reactivar el color
+    expect(prismaMock.color.update).toHaveBeenCalledWith({
+      where: { id: colorInactivo.id },
+      data: {
+        descripcion: validColorData.descripcion,
+        codigoHex: validColorData.codigoHex,
+        activo: true,
+        modificadoPor: 'test-user-id',
+        modificadoEn: expect.any(Date)
+      }
+    });
+
+    // Verificar que no se intentó crear un nuevo color
+    expect(prismaMock.color.create).not.toHaveBeenCalled();
+
+    // Verificar que se registró el éxito de la operación
+    expect(mockLogSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'test-user-id',
+      ip: '127.0.0.1',
+      entityType: 'color',
+      module: 'crearColor',
+      action: 'reactivar_color_exitoso',
+      message: 'Color reactivado exitosamente',
+      details: expect.objectContaining({
+        colorId: colorInactivo.id,
+        nombre: colorInactivo.nombre,
+        cambios: expect.objectContaining({
+          activo: { anterior: false, nuevo: true },
+          descripcion: { 
+            anterior: colorInactivo.descripcion, 
+            nuevo: validColorData.descripcion 
+          },
+          codigoHex: { 
+            anterior: colorInactivo.codigoHex, 
+            nuevo: validColorData.codigoHex 
+          }
+        })
       })
-    );
+    }));
+
+    // Verificar la respuesta exitosa
+    expect(mockResponse.status).toHaveBeenCalledWith(200);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      ok: true,
+      data: colorReactivado,
+      message: 'Color reactivado exitosamente'
+    });
   });
 
   it('debe validar que el nombre es requerido', async () => {
